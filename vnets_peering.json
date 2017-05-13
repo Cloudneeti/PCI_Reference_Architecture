@@ -1,0 +1,144 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "prefix": {
+            "type": "string"
+        },
+        "classicVnet": {
+            "type": "string"
+        },
+        "applicationSubnet": {
+            "type": "string"
+        },
+        "dmzSubnet": {
+            "type": "string"
+        },
+        "securitySubnet": {
+            "type": "string"
+        },
+        "managementSubnet": {
+            "type": "string"
+        },
+        "location": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "vNets": [
+            {
+                "name": "[concat(parameters('prefix'), '-application')]",
+                "subnetName": "applicationSubnet",
+                "addressSpacePrefix": "[parameters('applicationSubnet')]"
+            },
+            {
+                "name": "[concat(parameters('prefix'), '-dmz')]",
+                "subnetName": "dmzSubnet",
+                "addressSpacePrefix": "[parameters('dmzSubnet')]"
+            },
+            {
+                "name": "[concat(parameters('prefix'), '-security')]",
+                "subnetName": "securitySubnet",
+                "addressSpacePrefix": "[parameters('securitySubnet')]"
+            },
+            {
+                "name": "[concat(parameters('prefix'), '-management')]",
+                "subnetName": "managementSubnet",
+                "addressSpacePrefix": "[parameters('managementSubnet')]"
+            }
+        ]
+    },
+    "resources": [
+        {
+            "apiVersion": "2016-03-30",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[variables('vNets')[copyIndex()].Name]",
+            "location": "[parameters('location')]",
+            "copy": {
+                "name": "vNetLoop",
+                "count": "[length(variables('vNets'))]"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('vNets')[copyIndex()].addressSpacePrefix]"
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    "apiVersion": "2016-06-01",
+                    "type": "virtualNetworkPeerings",
+                    "name": "[concat(variables('vNets')[copyIndex()].Name, '-classicPeering')]",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[concat(variables('vNets')[copyIndex()].Name)]",
+                        "[parameters('classicVnet')]"
+                    ],
+                    "properties": {
+                        "allowVirtualNetworkAccess": true,
+                        "allowForwardedTraffic": false,
+                        "allowGatewayTransit": false,
+                        "useRemoteGateways": false,
+                        "remoteVirtualNetwork": {
+                            "id": "[resourceId('Microsoft.ClassicNetwork/virtualNetworks', parameters('classicVnet'))]"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "apiVersion": "2015-06-01",
+            "type": "Microsoft.ClassicNetwork/virtualNetworks",
+            "name": "[parameters('classicVnet')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/8"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "dcSubnet",
+                        "addressPrefix": "10.0.0.0/24"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[concat('peerings-nested-', copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "copy": {
+                "name": "peering",
+                "count": "[length(variables('vNets'))]",
+                "mode": "serial"
+            },
+            "dependsOn": [
+                "[parameters('classicVnet')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://paste.ee/d/GwYUA/0",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "bossObject": {
+                        "value": "[variables('vNets')]"
+                    },
+                    "prefix": {
+                        "value": "[parameters('prefix')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "count": {
+                        "value": "[copyIndex()]"
+                    }
+                }
+            }
+        }
+    ]
+}

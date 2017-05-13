@@ -1,0 +1,52 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "testArray": {
+            "defaultValue": [
+                "one",
+                "two",
+                "three"
+            ],
+            "type": "Array"
+        },
+        "elementsToTake": {
+            "defaultValue": 2,
+            "type": "Int"
+        },
+        "testString": {
+            "defaultValue": "one two three",
+            "type": "String"
+        },
+        "charactersToTake": {
+            "defaultValue": 2,
+            "type": "Int"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[concat('avset-', copyIndex())]",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "roro",
+                "count": "[length(parameters('testArray'))]"
+            },
+            "tags": {
+                "displayName": "[concat(take(parameters('testArray'),copyIndex()), skip(parameters('testArray'),min(add(copyIndex(),1), length(parameters('testArray')))))]"
+            },
+            "properties": {}
+        }
+    ],
+    "outputs": {
+        "arrayOutput": {
+            "type": "Array",
+            "value": "[take(parameters('testArray'),parameters('elementsToTake'))]"
+        },
+        "stringOutput": {
+            "type": "String",
+            "value": "[take(parameters('testString'),parameters('charactersToTake'))]"
+        }
+    }
+}

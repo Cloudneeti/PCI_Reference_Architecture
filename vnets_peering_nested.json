@@ -1,0 +1,40 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "prefix": {
+            "type": "string"
+        },
+        "location": {
+            "type": "string"
+        },
+        "bossObject": {
+            "type": "array"
+        },
+        "count": {
+            "type": "int"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "apiVersion": "2017-04-01",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[concat(parameters('bossObject')[parameters('count')].name, '/Peering-', copyIndex())]",
+            "location": "[parameters('location')]",
+            "copy": {
+                "name": "peerings",
+                "count": "[sub(length(parameters('bossObject')), 1)]"
+            },
+            "properties": {
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', concat(take(parameters('bossObject'), parameters('count')), skip(parameters('bossObject'), parameters('count')))[copyIndex()].name)]"
+                },
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": false,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false
+            }
+        }
+    ]
+}
