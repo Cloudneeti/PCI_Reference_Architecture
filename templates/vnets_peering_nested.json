@@ -28,7 +28,7 @@
             },
             "properties": {
                 "remoteVirtualNetwork": {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks', concat(take(parameters('bossObject'), parameters('count')), skip(parameters('bossObject'), parameters('count')))[copyIndex()].name)]"
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', concat(take(parameters('bossObject'), parameters('count')), skip(parameters('bossObject'), add(parameters('count'), 1)))[copyIndex()].name)]"
                 },
                 "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": false,

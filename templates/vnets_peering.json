@@ -112,8 +112,7 @@
             "apiVersion": "2016-09-01",
             "copy": {
                 "name": "peering",
-                "count": "[length(variables('vNets'))]",
-                "mode": "serial"
+                "count": "[length(variables('vNets'))]"
             },
             "dependsOn": [
                 "[parameters('classicVnet')]"
@@ -121,7 +120,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "https://paste.ee/d/GwYUA/0",
+                    "uri": "https://paste.ee/d/eD9mU/0",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
