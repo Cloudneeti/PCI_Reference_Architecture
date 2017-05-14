@@ -29,7 +29,7 @@ function Invoke-ArmDeployment {
 
         [switch]$existingAutomation
     )
-
+    $scriptRoot = 'D:\RProkhorov\YandexDisk\Git\PCI_Reference_Architecture'
     # Need to coerce location to acceptable format
     $locationcoerced = $location.ToLower() -replace ' ', ''
 
@@ -55,25 +55,58 @@ function Invoke-ArmDeployment {
     }
     try { 
         Do {
-            $StorageAcct = $resourceGroupName + $deploymentPrefix + (-join ((97..122) + (48..57) | Get-Random -Count 3 | ForEach-Object {[char]$_}))
+            $StorageAcct = $resourceGroupName + $deploymentPrefix + (-join ((97..122) + (48..57) | Get-Random -Count 3 | ForEach-Object {[char]$_})) -replace "[^a-z0-9]"
             $availability = Get-AzureRmStorageAccountNameAvailability $StorageAcct
-        } while ( !$availability.NameAvailable )
+        } 
+        while ( !$availability.NameAvailable )
 
-        $components = "application","dmz","security","management","operations"
-        $components | New-AzureRmResourceGroup -Name (($resourceGroupName, $deploymentPrefix, $_) -join "-") -Location $location -Force
+        $components = @("application","dmz","security","management","operations","networking")
+        # New-AzureRmResourceGroup can't take parameter from pipeline
+        # $resourceGroupNames = $components | ForEach-Object {New-AzureRmResourceGroup -Name (($resourceGroupName, $deploymentPrefix, $_) -join "-") -Location $location -Force}
+        $resourceGroupNames = $components | ForEach-Object {New-AzureRmResourceGroup -Name (($resourceGroupName, $deploymentPrefix, $_) -join '-') -Location $location -Force}
 
-        Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting $($data[0])" -ForegroundColor Green
-        $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\parent_template.json" -TemplateParameterFile $data[1] `
-            -Name $data[0] -ResourceGroupName $resourceGroupName -ErrorAction Stop -Verbose
+        # !FIX ($data = get-deploymentData, but now it is empty)
+        # Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting $($data[0])" -ForegroundColor Green
+        Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
+        #$result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\vnets_peering.json" `#-TemplateParameterFile $data[1] `
+        #    -Name $data[0] -ResourceGroupName $resourceGroupName -ErrorAction Stop -Verbose
+        $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\vnets_peering.json" `
+            -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'networking') -join '-') -ErrorAction Stop -Verbose
+        # !FIX $data = get-deploymentData, but now it is empty.
+        # Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Deployment $($data[0]) done" -ForegroundColor Green
+        Write-Host "  Deployment $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') done" -ForegroundColor Green
 
-        Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Deployment $($data[0]) done" -ForegroundColor Green
+        Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
+        $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\DMZ\DMZ.json"`
+            -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'dmz') -join '-') -ErrorAction Stop -Verbose
+        Write-Host "  Deployment $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') done" -ForegroundColor Green
+
+        Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
+        $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\Security\Security.json"`
+            -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'Security') -join '-') -ErrorAction Stop -Verbose
+        Write-Host "  Deployment $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') done" -ForegroundColor Green
+
+        $KeyVaultName = $resourceGroupName + $deploymentPrefix + (-join ((97..122) + (48..57) | Get-Random -Count 20 | ForEach-Object {[char]$_}))
+        $parameters = @{
+            "KeyVaultName" = $KeyVaultName
+            "tenantid" = (get-AzureRmContext).Tenant.TenantId
+        }
+        Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
+        $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\PAAS\PAAS.json"  -TemplateParameterObject $parameters `
+            -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') -ErrorAction Stop -Verbose
+        Write-Host "  Deployment $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') done" -ForegroundColor Green
+
+        Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
+        $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\management\management.json"`
+            -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'management') -join '-') -ErrorAction Stop -Verbose
+        Write-Host "  Deployment $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') done" -ForegroundColor Green
     }
     catch {
         Write-Error $_
         if ($env:destroy) {
-            Remove-Item $data[1]
-            Remove-AzureRmResourceGroup $resourceGroupName -Force | Out-Null
-            # remove other groups
+            #Remove-Item $data[1]
+            # remove all RG
+            Invoke-DeleteResourceGroup -RGs $resourceGroupName            
         }
     }
 }
@@ -86,16 +119,6 @@ function Get-DeploymentData {
 
     $deploymentName, $tmp1
 }
-
-
-
-
-
-
-
-
-
-
 
         # $AAAcct = New-AzureRmAutomationAccount -ResourceGroupName "$locationcoerced-automation" -Location $location -Name $StorageAcct -ErrorAction Stop
 

@@ -3,25 +3,32 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "prefix": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": "vNET"
         },
         "classicVnet": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": "Classc-vNET"
         },
         "applicationSubnet": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": "10.0.0.0/16"
         },
         "dmzSubnet": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": "10.10.0.0/24"
         },
         "securitySubnet": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": "10.30.0.0/24"
         },
         "managementSubnet": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": "10.20.0.0/27"
         },
         "location": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": "West Europe"
         }
     },
     "variables": {
@@ -95,13 +102,13 @@
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
-                        "10.0.0.0/8"
+                        "10.50.0.0/24"
                     ]
                 },
                 "subnets": [
                     {
                         "name": "dcSubnet",
-                        "addressPrefix": "10.0.0.0/24"
+                        "addressPrefix": "10.50.0.0/24"
                     }
                 ]
             }
