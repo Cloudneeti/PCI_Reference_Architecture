@@ -1,0 +1,320 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "classicVnet": {
+            "defaultValue": "Classic-vNET",
+            "type": "String"
+        },
+        "vNets": {
+            "type": "array",
+            "defaultValue": [
+                {
+                    "name": "[concat(parameters('deploymentPrefix'), '-application')]",
+                    "addressSpacePrefix": "10.5.0.0/16",
+                    "subnets": [
+                        {
+                            "subnetName": "appSubnet1",
+                            "addressSpacePrefix": "10.5.0.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH",
+                                "HTTPS"
+                            ]
+                        },
+                        {
+                            "subnetName": "appSubnet2",
+                            "addressSpacePrefix": "10.5.1.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH",
+                                "HTTP"
+                            ]
+                        },
+                        {
+                            "subnetName": "appSubnet3",
+                            "addressSpacePrefix": "10.5.2.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH",
+                                "HTTP"
+                            ]
+                        },
+                        {
+                            "subnetName": "appSubnet4",
+                            "addressSpacePrefix": "10.5.3.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH",
+                                "HTTP"
+                            ]
+                        },
+                        {
+                            "subnetName": "appSubnet5",
+                            "addressSpacePrefix": "10.5.4.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH",
+                                "HTTP"
+                            ]
+                        },
+                        {
+                            "subnetName": "appSubnet6",
+                            "addressSpacePrefix": "10.5.5.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH",
+                                "HTTP"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "[concat(parameters('deploymentPrefix'), '-dmz')]",
+                    "addressSpacePrefix": "10.4.0.0/16",
+                    "subnets": [
+                        {
+                            "subnetName": "dmzSubnet",
+                            "addressSpacePrefix": "10.4.0.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "[concat(parameters('deploymentPrefix'), '-security')]",
+                    "addressSpacePrefix": "10.3.0.0/16",
+                    "subnets": [
+                        {
+                            "subnetName": "securitySubnet",
+                            "addressSpacePrefix": "10.3.0.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "[concat(parameters('deploymentPrefix'), '-management')]",
+                    "addressSpacePrefix": "10.2.0.0/16",
+                    "subnets": [
+                        {
+                            "subnetName": "managementSubnet",
+                            "addressSpacePrefix": "10.2.0.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH"
+                            ]
+                        },
+                        {
+                            "subnetName": "chefSubnet",
+                            "addressSpacePrefix": "10.2.1.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "location": {
+            "defaultValue": "South Central US",
+            "allowedValues": [
+                "Japan East",
+                "East US 2",
+                "West Europe",
+                "Southeast Asia",
+                "South Central US",
+                "UK South",
+                "West Central US",
+                "North Europe",
+                "Canada Central",
+                "Australia Southeast",
+                "Central India"
+            ],
+            "type": "String",
+            "metadata": {
+                "description": "The location for the deployment. Leave the default if running from the portal."
+            }
+        },
+        "deploymentPrefix": {
+            "defaultValue": "dev",
+            "allowedValues": [
+                "dev",
+                "prod"
+            ],
+            "type": "String",
+            "metadata": {
+                "description": "Resources created will be prefixed with this."
+            }
+        }
+    },
+    "variables": {
+        "iteratorURI": "https://paste.ee/d/mqTeK/0",
+        "nsgURI": "https://paste.ee/d/6PowZ/0",
+        "vnetURI": "https://paste.ee/d/RELWR/0",
+        "peeringURI": "https://paste.ee/d/BslG9/0"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.ClassicNetwork/virtualNetworks",
+            "name": "[parameters('classicVnet')]",
+            "apiVersion": "2015-06-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.50.0.0/24"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "dcSubnet",
+                        "addressPrefix": "10.50.0.0/24"
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat('deployNSG-', copyIndex())]",
+            "apiVersion": "2016-09-01",
+            "copy": {
+                "name": "deployNSGs",
+                "count": "[add(add(length(first(parameters('vNets')).subnets), length(last(parameters('vNets')).subnets)), add(length(parameters('vNets')[1].subnets), length(parameters('vNets')[2].subnets)))]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('nsgURI')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "bossObject": {
+                        "value": "[reference(concat('iterator-', length(parameters('vNets')))).outputs.collection.value[copyIndex()]]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "deploymentPrefix": {
+                        "value": "[parameters('deploymentPrefix')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "name": "iterator-0",
+            "properties": {
+                "mode": "Incremental",
+                "parameters": {},
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [],
+                    "outputs": {
+                        "collection": {
+                            "type": "array",
+                            "value": []
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "name": "[concat('iterator-', copyIndex(1))]",
+            "copy": {
+                "name": "iterator",
+                "count": "[length(parameters('vNets'))]",
+                "mode": "Serial"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('iteratorURI')]"
+                },
+                "parameters": {
+                    "source": {
+                        "value": "[parameters('vNets')[copyIndex()].subnets]"
+                    },
+                    "state": {
+                        "value": "[reference(concat('iterator-', copyIndex())).outputs.collection.value]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat('vnets-nested-', copyIndex())]",
+            "apiVersion": "2016-09-01",
+            "copy": {
+                "name": "deployvnets",
+                "count": "[length(parameters('vNets'))]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('vnetURI')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "bossObject": {
+                        "value": "[parameters('vNets')[copyIndex()]]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "classicVnet": {
+                        "value": "[parameters('classicVnet')]"
+                    },
+                    "deploymentPrefix": {
+                        "value": "[parameters('deploymentPrefix')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[parameters('classicVnet')]",
+                "deployNSGs"
+            ]
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat('peerings-nested-', copyIndex())]",
+            "apiVersion": "2016-09-01",
+            "copy": {
+                "name": "peering",
+                "count": "[length(parameters('vNets'))]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('peeringURI')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "bossObject": {
+                        "value": "[parameters('vNets')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "count": {
+                        "value": "[copyIndex()]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "deployvnets"
+            ]
+        }
+    ]
+}

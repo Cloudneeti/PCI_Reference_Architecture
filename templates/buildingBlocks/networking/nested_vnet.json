@@ -1,0 +1,70 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string"
+        },
+        "bossObject": {
+            "type": "secureObject"
+        },
+        "deploymentPrefix": {
+            "type": "string"
+        },
+        "classicVnet": {
+            "type": "string"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('bossObject').name]",
+            "apiVersion": "2016-03-30",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('bossObject').addressSpacePrefix]"
+                    ]
+                },
+                "copy": [
+                    {
+                        "name": "subnets",
+                        "count": "[length(parameters('bossObject').subnets)]",
+                        "input": {
+                            "name": "[parameters('bossObject').subnets[copyIndex('subnets')].subnetname]",
+                            "properties": {
+                                "addressPrefix": "[parameters('bossObject').subnets[copyIndex('subnets')].addressSpacePrefix]",
+                                "networkSecurityGroup": {
+                                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').subnets[copyIndex('subnets')].subnetName, '-nsg'))]"
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "resources": [
+                {
+                    "type": "virtualNetworkPeerings",
+                    "name": "[concat(parameters('bossObject').name, '-classicPeering')]",
+                    "apiVersion": "2016-06-01",
+                    "location": "[parameters('location')]",
+                    "properties": {
+                        "allowVirtualNetworkAccess": true,
+                        "allowForwardedTraffic": false,
+                        "allowGatewayTransit": false,
+                        "useRemoteGateways": false,
+                        "remoteVirtualNetwork": {
+                            "id": "[resourceId('Microsoft.ClassicNetwork/virtualNetworks', parameters('classicVnet'))]"
+                        }
+                    },
+                    "dependsOn": [
+                        "[concat(parameters('bossObject').name)]"
+                    ]
+                }
+            ]
+        }
+    ],
+    "outputs": {}
+}
