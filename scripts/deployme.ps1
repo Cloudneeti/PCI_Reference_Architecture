@@ -51,6 +51,7 @@ function Invoke-ArmDeployment {
         exit 1
     }
     try { 
+        $date = Get-Date -Format 'yyyy-MM-dd'
         Do {
             $StorageAcct = $resourceGroupName + $deploymentPrefix + ( -join ((97..122) + (48..57) | Get-Random -Count 3 | ForEach-Object {[char]$_})) -replace "[^a-z0-9]"
             $availability = Get-AzureRmStorageAccountNameAvailability $StorageAcct
@@ -61,12 +62,9 @@ function Invoke-ArmDeployment {
         $resourceGroupNames = $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupName, $deploymentPrefix, $_) -join '-') -Location $location -Force }
 
         # !FIX ($data = get-deploymentData, but now it is empty)
-        # Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting $($data[0])" -ForegroundColor Green
-        Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting Deployment" -ForegroundColor Green
-        #$result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\vnets_peering.json" `#-TemplateParameterFile $data[1] `
-        #    -Name $data[0] -ResourceGroupName $resourceGroupName -ErrorAction Stop -Verbose
-        # New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\networking\azuredeploy.json" `
-        #     -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'networking') -join '-') -ErrorAction Stop -Verbose -DeploymentDebugLogLevel All -Debug
+        Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting networking deployment" -ForegroundColor Green
+        New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\networking\azuredeploy.json" `
+            -Name "$date-networking" -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'networking') -join '-') -ErrorAction Stop -Verbose
 
         # Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
         # $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\DMZ\DMZ.json"`
@@ -85,14 +83,14 @@ function Invoke-ArmDeployment {
         # $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\PAAS\PAAS.json"  -TemplateParameterObject $parameters `
         #     -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') -ErrorAction Stop -Verbose
 
-        Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
+        Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting management deployment" -ForegroundColor Green
         $managementParameters = @{
             resourceGroupPrefix = $resourceGroupName
             deploymentPrefix = $deploymentPrefix
             location = $location
         }
         New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\management\azuredeploy.json" `
-             -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ErrorAction Stop -Verbose -DeploymentDebugLogLevel All -Debug `
+             -Name "$date-management" -ErrorAction Stop -Verbose `
              -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'management') -join '-') @managementParameters
     }
     catch {

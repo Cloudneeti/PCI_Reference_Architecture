@@ -11,7 +11,8 @@
                     "peerings": [
                         "[concat(parameters('deploymentPrefix'), '-dmz')]",
                         "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]"
+                        "[concat(parameters('deploymentPrefix'), '-management')]",
+                        "[concat(parameters('deploymentPrefix'), '-domain')]"
                     ],
                     "subnets": [
                         {
@@ -82,7 +83,8 @@
                     "peerings": [
                         "[concat(parameters('deploymentPrefix'), '-application')]",
                         "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]"
+                        "[concat(parameters('deploymentPrefix'), '-management')]",
+                        "[concat(parameters('deploymentPrefix'), '-domain')]"
                     ],
                     "subnets": [
                         {
@@ -102,7 +104,8 @@
                     "peerings": [
                         "[concat(parameters('deploymentPrefix'), '-application')]",
                         "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]"
+                        "[concat(parameters('deploymentPrefix'), '-security')]",
+                        "[concat(parameters('deploymentPrefix'), '-domain')]"
                     ],
                     "subnets": [
                         {
@@ -117,6 +120,26 @@
                         {
                             "subnetName": "chefSubnet",
                             "addressSpacePrefix": "10.2.1.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH"
+                            ],
+                            "CustomRules": []
+                        }
+                    ]
+                },
+                {
+                    "name": "[concat(parameters('deploymentPrefix'), '-domain')]",
+                    "addressSpacePrefix": "10.1.0.0/16",
+                    "peerings": [
+                        "[concat(parameters('deploymentPrefix'), '-application')]",
+                        "[concat(parameters('deploymentPrefix'), '-security')]",
+                        "[concat(parameters('deploymentPrefix'), '-management')]"
+                    ],
+                    "subnets": [
+                        {
+                            "subnetName": "domainSubnet",
+                            "addressSpacePrefix": "10.1.0.0/24",
                             "Firewall": [
                                 "RDP",
                                 "SSH"
@@ -159,7 +182,7 @@
             }
         },
         "subnetLength": {
-            "defaultValue": 8,
+            "defaultValue": 9,
             "type": "int"
         }
     },
