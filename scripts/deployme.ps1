@@ -65,8 +65,8 @@ function Invoke-ArmDeployment {
         Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting Deployment" -ForegroundColor Green
         #$result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\vnets_peering.json" `#-TemplateParameterFile $data[1] `
         #    -Name $data[0] -ResourceGroupName $resourceGroupName -ErrorAction Stop -Verbose
-        $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\networking\azuredeploy.json" `
-            -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'networking') -join '-') -ErrorAction Stop -Verbose
+        # New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\networking\azuredeploy.json" `
+        #     -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'networking') -join '-') -ErrorAction Stop -Verbose -DeploymentDebugLogLevel All -Debug
 
         # Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
         # $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\DMZ\DMZ.json"`
@@ -85,9 +85,15 @@ function Invoke-ArmDeployment {
         # $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\PAAS\PAAS.json"  -TemplateParameterObject $parameters `
         #     -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') -ErrorAction Stop -Verbose
 
-        # Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
-        # $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\management\management.json"`
-        #     -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'management') -join '-') -ErrorAction Stop -Verbose
+        Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
+        $managementParameters = @{
+            resourceGroupPrefix = $resourceGroupName
+            deploymentPrefix = $deploymentPrefix
+            location = $location
+        }
+        New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\management\azuredeploy.json" `
+             -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ErrorAction Stop -Verbose -DeploymentDebugLogLevel All -Debug `
+             -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'management') -join '-') @managementParameters
     }
     catch {
         Write-Error $_

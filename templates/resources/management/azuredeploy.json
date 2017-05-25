@@ -2,109 +2,80 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "vmPrefix": {
-            "type": "string",
-            "defaultValue": "management-vm-",
+        "bossObject": {
+            "type": "object",
             "metadata": {
-                "description": "Prefix for the VM name"
+                "description": "jumpBox definition object"
+            },
+            "defaultValue": {
+                "name": "jumpota",
+                "sku": "2016-Datacenter"
             }
         },
-        "adminUsername": {
-            "type": "string",
-            "defaultValue": "admuser",
-            "metadata": {
-                "description": "Admin username for VM"
-            }
-        },
-        "adminPassword": {
-            "type": "securestring",
-            "defaultValue": "ADMUSERadmuser!@21",
-            "metadata": {
-                "description": "Admin password for VM"
-            }
-        },
-        "numberOfInstances": {
-            "type": "int",
-            "defaultValue": 2,
-            "minValue": 1,
-            "maxValue": 5,
-            "metadata": {
-                "description": "Number of VMs to deploy"
-            }
-        },
-        "vmSize": {
-            "type": "string",
-            "defaultValue": "Standard_A1",
-            "metadata": {
-                "description": "Size of the VM we are deploying"
-            }
-        },
-        "OS": {
-            "type": "string",
-            "defaultValue": "Ubuntu",
+        "location": {
+            "defaultValue": "South Central US",
             "allowedValues": [
-                "Ubuntu",
-                "Windows"
+                "Japan East",
+                "East US 2",
+                "West Europe",
+                "Southeast Asia",
+                "South Central US",
+                "UK South",
+                "West Central US",
+                "North Europe",
+                "Canada Central",
+                "Australia Southeast",
+                "Central India"
             ],
+            "type": "string",
             "metadata": {
-                "description": "OS Platform for the VM"
+                "description": "The location for the deployment. Leave the default if running from the portal."
+            }
+        },
+        "deploymentPrefix": {
+            "defaultValue": "dev",
+            "allowedValues": [
+                "dev",
+                "prod"
+            ],
+            "type": "string",
+            "metadata": {
+                "description": "Resources created will be prefixed with this."
+            }
+        },
+        "resourceGroupPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Deployment name"
             }
         }
     },
     "variables": {
-        "virtualNetworkName": "myVNET",
-        "addressPrefix": "10.0.0.0/16",
-        "subnet1Name": "Subnet-1",
-        "subnet1Prefix": "10.0.0.0/24",
-        "subnet1Ref": "[resourceId('Microsoft.Network/virtualNetworks/subnets',variables('virtualNetworkName'),variables('subnet1Name'))]",
-        "Ubuntu": {
-            "publisher": "Canonical",
-            "offer": "UbuntuServer",
-            "sku": "14.04.0-LTS",
-            "version": "latest"
-        },
-        "Windows": {
-            "publisher": "MicrosoftWindowsServer",
-            "offer": "WindowsServer",
-            "sku": "2016-Datacenter",
-            "version": "latest"
-        },
-        "imageReference": "[variables(parameters('OS'))]"
+        "nicName": "jumpboxNic",
+        "publicIPAddressName": "jumpboxPublicIp",
+        "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-management')]",
+        "subnetRef": "[concat(variables('vnetID'),'/subnets/', 'managementSubnet')]"
     },
     "resources": [
         {
-            "type": "Microsoft.Network/virtualNetworks",
-            "name": "[variables('virtualNetworkName')]",
             "apiVersion": "2016-03-30",
-            "location": "[resourceGroup().location]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('publicIPAddressName')]",
+            "location": "[parameters('location')]",
             "properties": {
-                "addressSpace": {
-                    "addressPrefixes": [
-                        "[variables('addressPrefix')]"
-                    ]
-                },
-                "subnets": [
-                    {
-                        "name": "[variables('subnet1Name')]",
-                        "properties": {
-                            "addressPrefix": "[variables('subnet1Prefix')]"
-                        }
-                    }
-                ]
+                "publicIPAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[concat(parameters('bossObject').name, '-pipota')]"
+                }
             }
         },
         {
-            "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat('nic', copyindex(1))]",
             "apiVersion": "2016-03-30",
-            "location": "[resourceGroup().location]",
-            "copy": {
-                "name": "nicLoop",
-                "count": "[parameters('numberOfInstances')]"
-            },
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('nicName')]",
+            "location": "[parameters('location')]",
             "dependsOn": [
-                "[variables('virtualNetworkName')]",
-                "ipLoop"
+                "[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -113,10 +84,10 @@
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
                             "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',concat('ip',copyindex(1)))]"
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
                             },
                             "subnet": {
-                                "id": "[variables('subnet1Ref')]"
+                                "id": "[variables('subnetRef')]"
                             }
                         }
                     }
@@ -124,47 +95,29 @@
             }
         },
         {
-            "apiVersion": "2016-09-01",
-            "type": "Microsoft.Network/publicIPAddresses",
-            "name": "[concat('ip', copyindex(1))]",
-            "location": "[resourceGroup().location]",
-            "copy": {
-                "name": "ipLoop",
-                "count": "[parameters('numberOfInstances')]"
-            },
-            "dependsOn": [
-                "[variables('virtualNetworkName')]"
-            ],
-            "properties": {
-                "publicIPAllocationMethod": "Dynamic",
-                "dnsSettings": {
-                    "domainNameLabel": "[concat(parameters('vmPrefix'), uniqueString(resourceGroup().id, deployment().name), copyindex(1))]"
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachines",
-            "name": "[concat(parameters('vmPrefix'), copyindex(1))]",
             "apiVersion": "2016-04-30-preview",
-            "location": "[resourceGroup().location]",
-            "copy": {
-                "name": "virtualMachineLoop",
-                "count": "[parameters('numberOfInstances')]"
-            },
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[parameters('bossObject').name]",
+            "location": "[parameters('location')]",
             "dependsOn": [
-                "nicLoop"
+                "[resourceId('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
             ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "[parameters('vmSize')]"
+                    "vmSize": "Standard_A2"
                 },
                 "osProfile": {
-                    "computerName": "[concat(parameters('vmPrefix'), copyindex(1))]",
-                    "adminUsername": "[parameters('adminUsername')]",
-                    "adminPassword": "[parameters('adminPassword')]"
+                    "computerName": "[parameters('bossObject').name]",
+                    "adminUsername": "testo",
+                    "adminPassword": "!Q2w3e4r5t6y"
                 },
                 "storageProfile": {
-                    "imageReference": "[variables('imageReference')]",
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "[parameters('bossObject').sku]",
+                        "version": "latest"
+                    },
                     "osDisk": {
                         "createOption": "FromImage"
                     }
@@ -172,7 +125,7 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('nic', copyindex(1)))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
                         }
                     ]
                 }

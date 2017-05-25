@@ -10,9 +10,6 @@
         },
         "deploymentPrefix": {
             "type": "string"
-        },
-        "classicVnet": {
-            "type": "string"
         }
     },
     "variables": {},
@@ -43,27 +40,7 @@
                         }
                     }
                 ]
-            },
-            "resources": [
-                {
-                    "type": "virtualNetworkPeerings",
-                    "name": "[concat(parameters('bossObject').name, '-classicPeering')]",
-                    "apiVersion": "2016-06-01",
-                    "location": "[parameters('location')]",
-                    "properties": {
-                        "allowVirtualNetworkAccess": true,
-                        "allowForwardedTraffic": false,
-                        "allowGatewayTransit": false,
-                        "useRemoteGateways": false,
-                        "remoteVirtualNetwork": {
-                            "id": "[resourceId('Microsoft.ClassicNetwork/virtualNetworks', parameters('classicVnet'))]"
-                        }
-                    },
-                    "dependsOn": [
-                        "[concat(parameters('bossObject').name)]"
-                    ]
-                }
-            ]
+            }
         }
     ],
     "outputs": {}
