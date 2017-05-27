@@ -23,7 +23,36 @@
                                 "SSH",
                                 "HTTPS"
                             ],
-                            "CustomRules": []
+                            "CustomRules": [
+                                {
+                                    "name": "rdp-rule1",
+                                    "properties": {
+                                        "description": "Allow RDP",
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "33890",
+                                        "sourceAddressPrefix": "Internet",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 3001,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "web-rule1",
+                                    "properties": {
+                                        "description": "Allow WEB",
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "80",
+                                        "sourceAddressPrefix": "Internet",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 3100,
+                                        "direction": "Inbound"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "subnetName": "appSubnet2",
@@ -187,8 +216,8 @@
         }
     },
     "variables": {
-        "iteratorURI": "https://paste.ee/d/mqTeK/0",
-        "nsgURI": "https://paste.ee/d/6PowZ/0",
+        "iterator": "https://paste.ee/d/R05zo/0",
+        "nsgURI": "https://paste.ee/d/cTG8l/0",
         "vnetURI": "https://paste.ee/d/tW0IP/0",
         "peeringURI": "https://paste.ee/d/iipXI/0"
     },
@@ -226,18 +255,12 @@
             "name": "iterator-0",
             "properties": {
                 "mode": "Incremental",
-                "parameters": {},
-                "template": {
-                    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-                    "contentVersion": "1.0.0.0",
-                    "parameters": {},
-                    "variables": {},
-                    "resources": [],
-                    "outputs": {
-                        "collection": {
-                            "type": "array",
-                            "value": []
-                        }
+                "templateLink": {
+                    "uri": "[variables('iterator')]"
+                },
+                "parameters": {
+                    "source": {
+                        "value": []
                     }
                 }
             }
@@ -254,7 +277,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('iteratorURI')]"
+                    "uri": "[variables('iterator')]"
                 },
                 "parameters": {
                     "source": {

@@ -13,74 +13,131 @@
         }
     },
     "variables": {
-        "RDP": {
-            "protocol": "Tcp",
-            "sourcePortRange": "*",
-            "destinationPortRange": "3389",
-            "sourceAddressPrefix": "10.0.0.0/24",
-            "destinationAddressPrefix": "*",
-            "access": "Allow",
-            "priority": 1000,
-            "direction": "Inbound"
-        },
-        "SSH": {
-            "protocol": "Tcp",
-            "sourcePortRange": "*",
-            "destinationPortRange": "22",
-            "sourceAddressPrefix": "10.0.0.0/24",
-            "destinationAddressPrefix": "*",
-            "access": "Allow",
-            "priority": 1010,
-            "direction": "Inbound"
-        },
-        "FTP": {
-            "protocol": "Tcp",
-            "sourcePortRange": "*",
-            "destinationPortRange": "21",
-            "sourceAddressPrefix": "*",
-            "destinationAddressPrefix": "*",
-            "access": "Allow",
-            "priority": 1020,
-            "direction": "Inbound"
-        },
-        "HTTP": {
-            "protocol": "Tcp",
-            "sourcePortRange": "*",
-            "destinationPortRange": "80",
-            "sourceAddressPrefix": "*",
-            "destinationAddressPrefix": "*",
-            "access": "Allow",
-            "priority": 1030,
-            "direction": "Inbound"
-        },
-        "HTTPS": {
-            "protocol": "Tcp",
-            "sourcePortRange": "*",
-            "destinationPortRange": "443",
-            "sourceAddressPrefix": "*",
-            "destinationAddressPrefix": "*",
-            "access": "Allow",
-            "priority": 1040,
-            "direction": "Inbound"
-        }
+        "RDP": [
+            {
+                "name": "RDP-default",
+                "properties": {
+                    "protocol": "Tcp",
+                    "sourcePortRange": "*",
+                    "destinationPortRange": "3389",
+                    "sourceAddressPrefix": "10.0.0.0/24",
+                    "destinationAddressPrefix": "*",
+                    "access": "Allow",
+                    "priority": 1000,
+                    "direction": "Inbound"
+                }
+            }
+        ],
+        "SSH": [
+            {
+                "name": "SSH-default",
+                "properties": {
+                    "protocol": "Tcp",
+                    "sourcePortRange": "*",
+                    "destinationPortRange": "22",
+                    "sourceAddressPrefix": "10.0.0.0/24",
+                    "destinationAddressPrefix": "*",
+                    "access": "Allow",
+                    "priority": 1010,
+                    "direction": "Inbound"
+                }
+            }
+        ],
+        "FTP": [
+            {
+                "name": "FTP-default",
+                "properties": {
+                    "protocol": "Tcp",
+                    "sourcePortRange": "*",
+                    "destinationPortRange": "21",
+                    "sourceAddressPrefix": "*",
+                    "destinationAddressPrefix": "*",
+                    "access": "Allow",
+                    "priority": 1020,
+                    "direction": "Inbound"
+                }
+            }
+        ],
+        "HTTP": [
+            {
+                "name": "HTTP-default",
+                "properties": {
+                    "protocol": "Tcp",
+                    "sourcePortRange": "*",
+                    "destinationPortRange": "80",
+                    "sourceAddressPrefix": "*",
+                    "destinationAddressPrefix": "*",
+                    "access": "Allow",
+                    "priority": 1030,
+                    "direction": "Inbound"
+                }
+            }
+        ],
+        "HTTPS": [
+            {
+                "name": "HTTPS-default",
+                "properties": {
+                    "protocol": "Tcp",
+                    "sourcePortRange": "*",
+                    "destinationPortRange": "443",
+                    "sourceAddressPrefix": "*",
+                    "destinationAddressPrefix": "*",
+                    "access": "Allow",
+                    "priority": 1040,
+                    "direction": "Inbound"
+                }
+            }
+        ],
+        "iterator": "https://paste.ee/d/R05zo/0"
     },
     "resources": [
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "name": "[concat('iterator-', parameters('bossObject').subnetName, '-0')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('iterator')]"
+                },
+                "parameters": {
+                    "source": {
+                        "value": "[parameters('bossObject').CustomRules]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "name": "[concat('iterator-', parameters('bossObject').subnetName, '-', copyIndex(1))]",
+            "copy": {
+                "name": "iterator",
+                "count": "[length(parameters('bossObject').Firewall)]",
+                "mode": "Serial"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('iterator')]"
+                },
+                "parameters": {
+                    "source": {
+                        "value": "[variables(parameters('bossObject').Firewall[copyIndex()])]"
+                    },
+                    "state": {
+                        "value": "[reference(concat('iterator-', parameters('bossObject').subnetName, '-', copyIndex())).outputs.collection.value]"
+                    }
+                }
+            }
+        },
         {
             "type": "Microsoft.Network/networkSecurityGroups",
             "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').subnetName, '-nsg')]",
             "apiVersion": "2016-03-30",
             "location": "[parameters('location')]",
             "properties": {
-                "copy": [
-                    {
-                        "name": "securityRules",
-                        "count": "[length(parameters('bossObject').Firewall)]",
-                        "input": {
-                            "name": "[concat('rule', parameters('bossObject').Firewall[copyIndex('securityRules')])]",
-                            "properties": "[variables(parameters('bossObject').Firewall[copyIndex('securityRules')])]"
-                        }
-                    }
-                ]
+                "securityRules": "[reference(concat('iterator-', parameters('bossObject').subnetName, '-', length(parameters('bossObject').Firewall))).outputs.collection.value]"
             }
         }
     ]
