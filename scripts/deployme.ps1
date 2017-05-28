@@ -21,7 +21,7 @@ function Invoke-ArmDeployment {
         [ValidateSet("Japan East", "East US 2", "West Europe", "Southeast Asia", "South Central US", "UK South", "West Central US", "North Europe", "Canada Central", "Australia Southeast", "Central India")] # limited to Azure Automation regions
         [string]$location,
 
-        [Parameter(Mandatory = $false,
+        [Parameter(Mandatory = $true,
             ValueFromPipelineByPropertyName = $true,
             Position = 3)]
         [ValidateSet("dev", "prod")]
@@ -62,8 +62,8 @@ function Invoke-ArmDeployment {
         $resourceGroupNames = $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupName, $deploymentPrefix, $_) -join '-') -Location $location -Force }
 
         # !FIX ($data = get-deploymentData, but now it is empty)
-        Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting networking deployment" -ForegroundColor Green
-        New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\networking\azuredeploy.json" `
+         Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting networking deployment" -ForegroundColor Green
+         New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\networking\azuredeploy.json" `
             -Name "$date-networking" -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'networking') -join '-') -ErrorAction Stop -Verbose
 
         # Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
@@ -83,15 +83,27 @@ function Invoke-ArmDeployment {
         # $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\PAAS\PAAS.json"  -TemplateParameterObject $parameters `
         #     -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') -ErrorAction Stop -Verbose
 
-        Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting management deployment" -ForegroundColor Green
-        $managementParameters = @{
+        Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting domain deployment" -ForegroundColor Green
+        $domainParameters = @{
             resourceGroupPrefix = $resourceGroupName
             deploymentPrefix = $deploymentPrefix
             location = $location
+            domainName = 'test.local'
         }
-        New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\management\azuredeploy.json" `
-             -Name "$date-management" -ErrorAction Stop -Verbose `
-             -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'management') -join '-') @managementParameters
+        New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\active-directory-new-domain-ha-2-dc\azuredeploy.json" `
+             -Name "$date-domain" -ErrorAction Stop -Verbose `
+             -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') @domainParameters
+
+
+        #Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting management deployment" -ForegroundColor Green
+        #$managementParameters = @{
+        #    resourceGroupPrefix = $resourceGroupName
+        #    deploymentPrefix = $deploymentPrefix
+        #    location = $location
+        #}
+        #New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\management\azuredeploy.json" `
+        #     -Name "$date-management" -ErrorAction Stop -Verbose `
+        #     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'management') -join '-') @managementParameters
     }
     catch {
         Write-Error $_
