@@ -83,16 +83,44 @@ function Invoke-ArmDeployment {
         # $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\PAAS\PAAS.json"  -TemplateParameterObject $parameters `
         #     -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') -ErrorAction Stop -Verbose
 
-        Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting domain deployment" -ForegroundColor Green
-        $domainParameters = @{
+        ### DMZ
+        # Barracuda WAF BYOL
+        Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting DMZ deployment (Barracuda WAF BYOL)" -ForegroundColor Green
+        $dmzParameters = @{
             resourceGroupPrefix = $resourceGroupName
             deploymentPrefix = $deploymentPrefix
             location = $location
-            domainName = 'test.local'
+            BarracudaProduct = "barracuda-ng-firewall" # "waf", "barracuda-ng-firewall"
+            BarracudaLicense = "byol" # "byol", "hourly"
         }
-        New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\active-directory-new-domain-ha-2-dc\azuredeploy.json" `
-             -Name "$date-domain" -ErrorAction Stop -Verbose `
-             -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') @domainParameters
+        New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\dmz\azuredeploy.json" `
+             -Name "$date-dmz" -ErrorAction Stop -Verbose `
+             -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'dmz') -join '-') @dmzParameters
+        
+
+
+        #Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting domain deployment" -ForegroundColor Green
+        #$domainParameters = @{
+        #    resourceGroupPrefix = $resourceGroupName
+        #    deploymentPrefix = $deploymentPrefix
+        #    location = $location
+        #    domainName = 'test.local'
+        #}
+        #New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\active-directory-new-domain-ha-2-dc\azuredeploy.json" `
+        #     -Name "$date-domain" -ErrorAction Stop -Verbose `
+        #     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') @domainParameters
+        
+
+        #Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting DMZ deployment" -ForegroundColor Green
+        #$domainParameters = @{
+        #    resourceGroupPrefix = $resourceGroupName
+        #    deploymentPrefix = $deploymentPrefix
+        #    location = $location
+        #}
+        #New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\dmz\barr\template.json" `
+        #     -TemplateParameterFile "$scriptRoot\templates\resources\dmz\barr\parameters.json" `
+        #     -Name "$date-domain" -ErrorAction Stop -Verbose `
+        #     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'DMZ') -join '-') @domainParameters
 
 
         #Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting management deployment" -ForegroundColor Green
