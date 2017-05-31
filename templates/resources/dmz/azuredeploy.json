@@ -27,30 +27,11 @@
                 "description": "Type of license for use in Barracuda."
             }
         },
-        "BarracudaProduct": {
-            "defaultValue": "waf",
-            "allowedValues": [
-                "waf",
-                "barracuda-ng-firewall"
-            ],
-            "type": "string",
-            "metadata": {
-                "description": "Type of license for use in Barracuda."
-            }
-        },
         "resourceGroupPrefix": {
             "type": "string",
             "metadata": {
                 "description": "Deployment name"
             }
-        },
-        "virtualMachineName01": {
-            "type": "string",
-            "defaultValue": "Barracuda-waf-byol-01"
-        },
-        "virtualMachineName02": {
-            "type": "string",
-            "defaultValue": "Barracuda-waf-byol-02"
         },
         "virtualMachineSize": {
             "type": "string",
@@ -60,51 +41,32 @@
             "type": "string",
             "defaultValue": "badmin"
         },
-        "virtualNetworkName": {
-            "type": "string",
-            "defaultValue": "dev-dmz"
-        },
-        "networkInterfaceName01": {
-            "type": "string",
-            "defaultValue": "nic-barracuda-waf-01"
-        },
-        "networkInterfaceName02": {
-            "type": "string",
-            "defaultValue": "nic-barracuda-waf-02"
-        },
-        "networkSecurityGroupName": {
-            "type": "string",
-            "defaultValue": "dev-dmzSubnet-nsg"
-        },
         "adminPassword": {
-            "type": "securestring",
-            "defaultValue": "Admin1P@s$w0rd"
-        },
-        "subnetName": {
-            "type": "string",
-            "defaultValue": "dmzSubnet"
-        },
-        "publicIpAddressName": {
-            "type": "string",
-            "defaultValue": "PIP-Barracuda-waf-byol"
-        },
-        "bwafAvailSetName": {
-            "type": "string",
-            "defaultValue": "avset-waf"
-        },
-        "loadBalancerName": {
-            "type": "string",
-            "defaultValue": "lb-waf"
+            "type": "securestring"
         }
     },
     "variables": {
-        "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
-        "subnetRef": "[concat(variables('vnetID'),'/subnets/', parameters('subnetName'))]",
-        "loadBalancerID":"[resourceId('Microsoft.Network/loadBalancers', parameters('loadBalancerName'))]"
+        "virtualMachineName01": "Barracuda-waf",
+        "virtualMachineName02": "Barracuda-ngf",
+        "loadBalancerName": "lb-waf",
+        "bwafAvailSetName": "avset-waf",
+        "subnetName": "dmzSubnet",
+        "publicIpAddressName": "PIP-Barracuda-waf-byol",
+        "networkSecurityGroupName": "dev-dmzSubnet-nsg",
+        "networkInterfaceName02": "nic-barracuda-ngf",
+        "networkInterfaceName01": "nic-barracuda-waf",
+        "virtualNetworkName": "dev-dmz",
+        "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+        "subnetRef": "[concat(variables('vnetID'),'/subnets/', variables('subnetName'))]",
+        "nsgID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
+        "loadBalancerID":"[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
+        "lbProbeID": "[concat(variables('loadBalancerID'),'/probes/barracudaprobe')]",
+        "frontEndIPConfigID": "[concat(variables('loadBalancerID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
+        "lbPoolID": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
     },
     "resources": [
         {   "type":"Microsoft.Compute/availabilitySets",
-            "name":"[parameters('bwafAvailSetName')]",
+            "name":"[variables('bwafAvailSetName')]",
             "apiVersion": "2016-04-30-preview",
             "location":"[resourceGroup().location]",
             "comments":"This is the Availability Set for BWAF VM",
@@ -114,17 +76,17 @@
                 "managed": "true"
             }
         },
-        {   "name": "[parameters('virtualMachineName01')]",
+        {   "name": "[variables('virtualMachineName01')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[concat('Microsoft.Network/networkInterfaces/', parameters('networkInterfaceName01'))]",
-                "[concat('Microsoft.Compute/availabilitySets/', parameters('bwafAvailSetName'))]"
+                "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName01'))]",
+                "[concat('Microsoft.Compute/availabilitySets/', variables('bwafAvailSetName'))]"
             ],
             "properties": {
                 "osProfile": {
-                    "computerName": "[parameters('virtualMachineName01')]",
+                    "computerName": "[variables('virtualMachineName01')]",
                     "adminUsername": "[parameters('adminUsername')]",
                     "adminPassword": "[parameters('adminPassword')]"
                 },
@@ -134,7 +96,7 @@
                 "storageProfile": {
                     "imageReference": {
                         "publisher": "barracudanetworks",
-                        "offer": "[parameters('BarracudaProduct')]",
+                        "offer": "waf",
                         "sku": "[parameters('BarracudaLicense')]",
                         "version": "latest"
                     },
@@ -149,31 +111,31 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaceName01'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName01'))]"
                         }
                     ]
                 },
                 "availabilitySet":{
-                    "id":"[resourceId('Microsoft.Compute/availabilitySets',parameters('bwafAvailSetName'))]"
+                    "id":"[resourceId('Microsoft.Compute/availabilitySets',variables('bwafAvailSetName'))]"
                 }
             },
             "plan": {
                 "name": "[parameters('BarracudaLicense')]",
                 "publisher": "barracudanetworks",
-                "product": "[parameters('BarracudaProduct')]"
+                "product": "waf"
             }
         },
-        {   "name": "[parameters('virtualMachineName02')]",
+        {   "name": "[variables('virtualMachineName02')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[concat('Microsoft.Network/networkInterfaces/', parameters('networkInterfaceName02'))]",
-                "[concat('Microsoft.Compute/availabilitySets/', parameters('bwafAvailSetName'))]"
+                "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName02'))]",
+                "[concat('Microsoft.Compute/availabilitySets/', variables('bwafAvailSetName'))]"
             ],
             "properties": {
                 "osProfile": {
-                    "computerName": "[parameters('virtualMachineName02')]",
+                    "computerName": "[variables('virtualMachineName02')]",
                     "adminUsername": "[parameters('adminUsername')]",
                     "adminPassword": "[parameters('adminPassword')]"
                 },
@@ -183,7 +145,7 @@
                 "storageProfile": {
                     "imageReference": {
                         "publisher": "barracudanetworks",
-                        "offer": "[parameters('BarracudaProduct')]",
+                        "offer": "barracuda-ng-firewall",
                         "sku": "[parameters('BarracudaLicense')]",
                         "version": "latest"
                     },
@@ -198,26 +160,26 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaceName02'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName02'))]"
                         }
                     ]
                 },
                 "availabilitySet":{
-                    "id":"[resourceId('Microsoft.Compute/availabilitySets',parameters('bwafAvailSetName'))]"
+                    "id":"[resourceId('Microsoft.Compute/availabilitySets',variables('bwafAvailSetName'))]"
                 }
             },
             "plan": {
                 "name": "[parameters('BarracudaLicense')]",
                 "publisher": "barracudanetworks",
-                "product": "[parameters('BarracudaProduct')]"
+                "product": "barracuda-ng-firewall"
             }
         },
-        {   "name": "[parameters('networkInterfaceName01')]",
+        {   "name": "[variables('networkInterfaceName01')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
             "dependsOn":[
-                "[concat('Microsoft.Network/loadBalancers/', parameters('loadBalancerName'))]"
+                "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -237,16 +199,16 @@
                     }
                 ],
                 "networkSecurityGroup": {
-                    "id": "[resourceId('prv-test-10-dev-networking', 'Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupName'))]"
+                    "id": "[variables('nsgID')]"
                 }
             }
         },
-        {   "name": "[parameters('networkInterfaceName02')]",
+        {   "name": "[variables('networkInterfaceName02')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
             "dependsOn":[
-                "[concat('Microsoft.Network/loadBalancers/', parameters('loadBalancerName'))]"
+                "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -266,11 +228,11 @@
                     }
                 ],
                 "networkSecurityGroup": {
-                    "id": "[resourceId('prv-test-10-dev-networking', 'Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupName'))]"
+                    "id": "[variables('nsgID')]"
                 }
             }
         },
-        {   "name": "[parameters('publicIpAddressName')]",
+        {   "name": "[variables('publicIpAddressName')]",
             "type": "Microsoft.Network/publicIpAddresses",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
@@ -279,20 +241,19 @@
             }
         },
         {   "type":"Microsoft.Network/loadBalancers",
-            "name":"[parameters('loadBalancerName')]",
+            "name":"[variables('loadBalancerName')]",
             "apiVersion":"2017-04-01",
             "location":"[resourceGroup().location]",
             "comments":"This Load Balancer is used to access DMZ",
             "dependsOn":[
-                "[concat('Microsoft.Network/publicIpAddresses/', parameters('publicIpAddressName'))]"
+                "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'))]"
             ],
             "properties":{
                 "frontendIPConfigurations":[
-                {
-                    "name":"loadBalancerFrontEnd",
+                {   "name":"loadBalancerFrontEnd",
                     "properties":{
                         "publicIPAddress":{
-                            "id":"[resourceId('Microsoft.Network/publicIPAddresses/', parameters('publicIpAddressName'))]"
+                            "id":"[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIpAddressName'))]"
                         }
                     }
                 }
@@ -300,6 +261,39 @@
                 "backendAddressPools":[
                 {
                     "Name": "loadBalancerBackEnd"
+                }
+                ],
+                "loadBalancingRules": [
+                {
+                    "name": "LBRule8000",
+                    "properties": {
+                    "frontendIPConfiguration": {
+                        "id": "[variables('frontEndIPConfigID')]"
+                    },
+                    "backendAddressPool": {
+                        "id": "[variables('lbPoolID')]"
+                    },
+                    "protocol": "tcp",
+                    "frontendPort": 8000,
+                    "backendPort": 8000,
+                    "enableFloatingIP": false,
+                    "idleTimeoutInMinutes": 5,
+                    "probe": {
+                        "id": "[variables('lbProbeID')]"
+                    }
+                    }
+                }
+                ],
+                "probes": [
+                {
+                    "name": "barracudaprobe",
+                    "properties": {
+                        "Protocol": "Http",
+                        "Port": 8000,
+                        "IntervalInSeconds": 5,
+                        "NumberOfProbes": 2,
+                        "RequestPath": "/"
+                    }
                 }
                 ]
             }

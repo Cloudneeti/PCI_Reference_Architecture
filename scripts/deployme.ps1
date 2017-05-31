@@ -90,8 +90,9 @@ function Invoke-ArmDeployment {
             resourceGroupPrefix = $resourceGroupName
             deploymentPrefix = $deploymentPrefix
             location = $location
-            BarracudaProduct = "barracuda-ng-firewall" # "waf", "barracuda-ng-firewall"
-            BarracudaLicense = "byol" # "byol", "hourly"
+            BarracudaLicense = "hourly" # "byol", "hourly"
+            virtualMachineSize = "Standard_D1"
+            adminPassword = ConvertTo-SecureString -String 'Admin1P@s$w0rd' -AsPlainText -Force
         }
         New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\dmz\azuredeploy.json" `
              -Name "$date-dmz" -ErrorAction Stop -Verbose `
