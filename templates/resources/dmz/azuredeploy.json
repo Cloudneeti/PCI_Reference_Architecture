@@ -16,6 +16,12 @@
                 "description": "Resources created will be prefixed with this."
             }
         },
+        "resourceGroupPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Deployment name"
+            }
+        },
         "BarracudaLicense": {
             "defaultValue": "byol",
             "allowedValues": [
@@ -26,30 +32,14 @@
             "metadata": {
                 "description": "Type of license for use in Barracuda."
             }
-        },
-        "resourceGroupPrefix": {
-            "type": "string",
-            "metadata": {
-                "description": "Deployment name"
-            }
-        },
-        "virtualMachineSize": {
-            "type": "string",
-            "defaultValue": "Standard_D1"
-        },
-        "adminUsername": {
-            "type": "string",
-            "defaultValue": "badmin"
-        },
-        "adminPassword": {
-            "type": "securestring"
         }
     },
     "variables": {
-        "virtualMachineName01": "Barracuda-waf",
-        "virtualMachineName02": "Barracuda-ngf",
+        "vmNameWAF": "Barracuda-waf",
+        "vmNameNGF": "Barracuda-ngf",
         "loadBalancerName": "lb-waf",
-        "bwafAvailSetName": "avset-waf",
+        "bWAFAvailSetName": "avset-waf",
+        "bNGFAvailSetName": "avset-NGF",
         "subnetName": "dmzSubnet",
         "publicIpAddressName": "PIP-Barracuda-waf-byol",
         "networkSecurityGroupName": "dev-dmzSubnet-nsg",
@@ -62,11 +52,13 @@
         "loadBalancerID": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
         "lbProbeID": "[concat(variables('loadBalancerID'),'/probes/barracudaprobe')]",
         "frontEndIPConfigID": "[concat(variables('loadBalancerID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
-        "lbPoolID": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
+        "lbPoolID": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]",
+        "virtualMachineSize": "Standard_D1",
+        "adminUsername": "badmin",
+        "adminPassword": "Admin1P@s$w0rd"
     },
     "resources": [
-        {
-            "type": "Microsoft.Compute/availabilitySets",
+        {   "type": "Microsoft.Compute/availabilitySets",
             "name": "[variables('bwafAvailSetName')]",
             "apiVersion": "2016-04-30-preview",
             "location": "[resourceGroup().location]",
@@ -77,8 +69,18 @@
                 "managed": "true"
             }
         },
-        {
-            "name": "[variables('virtualMachineName01')]",
+        {   "type": "Microsoft.Compute/availabilitySets",
+            "name": "[variables('bNGFAvailSetName')]",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[resourceGroup().location]",
+            "comments": "This is the Availability Set for BWAF VM",
+            "properties": {
+                "platformFaultDomainCount": "2",
+                "platformUpdateDomainCount": "5",
+                "managed": "true"
+            }
+        },
+        {   "name": "[variables('vmNameWAF')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
@@ -88,12 +90,12 @@
             ],
             "properties": {
                 "osProfile": {
-                    "computerName": "[variables('virtualMachineName01')]",
-                    "adminUsername": "[parameters('adminUsername')]",
-                    "adminPassword": "[parameters('adminPassword')]"
+                    "computerName": "[variables('vmNameWAF')]",
+                    "adminUsername": "[variables('adminUsername')]",
+                    "adminPassword": "[variables('adminPassword')]"
                 },
                 "hardwareProfile": {
-                    "vmSize": "[parameters('virtualMachineSize')]"
+                    "vmSize": "[variables('virtualMachineSize')]"
                 },
                 "storageProfile": {
                     "imageReference": {
@@ -127,23 +129,22 @@
                 "product": "waf"
             }
         },
-        {
-            "name": "[variables('virtualMachineName02')]",
+        {   "name": "[variables('vmNameNGF')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
             "dependsOn": [
                 "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName02'))]",
-                "[concat('Microsoft.Compute/availabilitySets/', variables('bwafAvailSetName'))]"
+                "[concat('Microsoft.Compute/availabilitySets/', variables('bNGFAvailSetName'))]"
             ],
             "properties": {
                 "osProfile": {
-                    "computerName": "[variables('virtualMachineName02')]",
-                    "adminUsername": "[parameters('adminUsername')]",
-                    "adminPassword": "[parameters('adminPassword')]"
+                    "computerName": "[variables('vmNameNGF')]",
+                    "adminUsername": "[variables('adminUsername')]",
+                    "adminPassword": "[variables('adminPassword')]"
                 },
                 "hardwareProfile": {
-                    "vmSize": "[parameters('virtualMachineSize')]"
+                    "vmSize": "[variables('virtualMachineSize')]"
                 },
                 "storageProfile": {
                     "imageReference": {
@@ -168,7 +169,7 @@
                     ]
                 },
                 "availabilitySet": {
-                    "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('bwafAvailSetName'))]"
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('bNGFAvailSetName'))]"
                 }
             },
             "plan": {
@@ -177,8 +178,7 @@
                 "product": "barracuda-ng-firewall"
             }
         },
-        {
-            "name": "[variables('networkInterfaceName01')]",
+        {   "name": "[variables('networkInterfaceName01')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
@@ -193,12 +193,7 @@
                             "subnet": {
                                 "id": "[variables('subnetRef')]"
                             },
-                            "privateIPAllocationMethod": "Dynamic",
-                            "loadBalancerBackendAddressPools": [
-                                {
-                                    "id": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
-                                }
-                            ]
+                            "privateIPAllocationMethod": "Dynamic"
                         }
                     }
                 ],
@@ -207,8 +202,7 @@
                 }
             }
         },
-        {
-            "name": "[variables('networkInterfaceName02')]",
+        {   "name": "[variables('networkInterfaceName02')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
@@ -237,8 +231,7 @@
                 }
             }
         },
-        {
-            "name": "[variables('publicIpAddressName')]",
+        {   "name": "[variables('publicIpAddressName')]",
             "type": "Microsoft.Network/publicIpAddresses",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
@@ -246,8 +239,7 @@
                 "publicIPAllocationMethod": "Static"
             }
         },
-        {
-            "type": "Microsoft.Network/loadBalancers",
+        {   "type": "Microsoft.Network/loadBalancers",
             "name": "[variables('loadBalancerName')]",
             "apiVersion": "2017-04-01",
             "location": "[resourceGroup().location]",
@@ -310,7 +302,7 @@
     "outputs": {
         "adminUsername": {
             "type": "string",
-            "value": "[parameters('adminUsername')]"
+            "value": "[variables('adminUsername')]"
         }
     }
 }
