@@ -59,24 +59,26 @@
         "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
         "subnetRef": "[concat(variables('vnetID'),'/subnets/', variables('subnetName'))]",
         "nsgID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
-        "loadBalancerID":"[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
+        "loadBalancerID": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
         "lbProbeID": "[concat(variables('loadBalancerID'),'/probes/barracudaprobe')]",
         "frontEndIPConfigID": "[concat(variables('loadBalancerID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
         "lbPoolID": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
     },
     "resources": [
-        {   "type":"Microsoft.Compute/availabilitySets",
-            "name":"[variables('bwafAvailSetName')]",
+        {
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[variables('bwafAvailSetName')]",
             "apiVersion": "2016-04-30-preview",
-            "location":"[resourceGroup().location]",
-            "comments":"This is the Availability Set for BWAF VM",
+            "location": "[resourceGroup().location]",
+            "comments": "This is the Availability Set for BWAF VM",
             "properties": {
                 "platformFaultDomainCount": "2",
                 "platformUpdateDomainCount": "5",
                 "managed": "true"
             }
         },
-        {   "name": "[variables('virtualMachineName01')]",
+        {
+            "name": "[variables('virtualMachineName01')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
@@ -115,8 +117,8 @@
                         }
                     ]
                 },
-                "availabilitySet":{
-                    "id":"[resourceId('Microsoft.Compute/availabilitySets',variables('bwafAvailSetName'))]"
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('bwafAvailSetName'))]"
                 }
             },
             "plan": {
@@ -125,7 +127,8 @@
                 "product": "waf"
             }
         },
-        {   "name": "[variables('virtualMachineName02')]",
+        {
+            "name": "[variables('virtualMachineName02')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
@@ -164,8 +167,8 @@
                         }
                     ]
                 },
-                "availabilitySet":{
-                    "id":"[resourceId('Microsoft.Compute/availabilitySets',variables('bwafAvailSetName'))]"
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('bwafAvailSetName'))]"
                 }
             },
             "plan": {
@@ -174,11 +177,12 @@
                 "product": "barracuda-ng-firewall"
             }
         },
-        {   "name": "[variables('networkInterfaceName01')]",
+        {
+            "name": "[variables('networkInterfaceName01')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
-            "dependsOn":[
+            "dependsOn": [
                 "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
             ],
             "properties": {
@@ -191,8 +195,8 @@
                             },
                             "privateIPAllocationMethod": "Dynamic",
                             "loadBalancerBackendAddressPools": [
-                            {
-                                "id": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
+                                {
+                                    "id": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
                                 }
                             ]
                         }
@@ -203,11 +207,12 @@
                 }
             }
         },
-        {   "name": "[variables('networkInterfaceName02')]",
+        {
+            "name": "[variables('networkInterfaceName02')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
-            "dependsOn":[
+            "dependsOn": [
                 "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
             ],
             "properties": {
@@ -220,8 +225,8 @@
                             },
                             "privateIPAllocationMethod": "Dynamic",
                             "loadBalancerBackendAddressPools": [
-                            {
-                                "id": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
+                                {
+                                    "id": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
                                 }
                             ]
                         }
@@ -232,7 +237,8 @@
                 }
             }
         },
-        {   "name": "[variables('publicIpAddressName')]",
+        {
+            "name": "[variables('publicIpAddressName')]",
             "type": "Microsoft.Network/publicIpAddresses",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
@@ -240,61 +246,63 @@
                 "publicIPAllocationMethod": "Static"
             }
         },
-        {   "type":"Microsoft.Network/loadBalancers",
-            "name":"[variables('loadBalancerName')]",
-            "apiVersion":"2017-04-01",
-            "location":"[resourceGroup().location]",
-            "comments":"This Load Balancer is used to access DMZ",
-            "dependsOn":[
+        {
+            "type": "Microsoft.Network/loadBalancers",
+            "name": "[variables('loadBalancerName')]",
+            "apiVersion": "2017-04-01",
+            "location": "[resourceGroup().location]",
+            "comments": "This Load Balancer is used to access DMZ",
+            "dependsOn": [
                 "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'))]"
             ],
-            "properties":{
-                "frontendIPConfigurations":[
-                {   "name":"loadBalancerFrontEnd",
-                    "properties":{
-                        "publicIPAddress":{
-                            "id":"[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIpAddressName'))]"
+            "properties": {
+                "frontendIPConfigurations": [
+                    {
+                        "name": "loadBalancerFrontEnd",
+                        "properties": {
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIpAddressName'))]"
+                            }
                         }
                     }
-                }
                 ],
-                "backendAddressPools":[
-                {
-                    "Name": "loadBalancerBackEnd"
-                }
+                "backendAddressPools": [
+                    {
+                        "Name": "loadBalancerBackEnd"
+                    }
                 ],
                 "loadBalancingRules": [
-                {
-                    "name": "LBRule8000",
-                    "properties": {
-                    "frontendIPConfiguration": {
-                        "id": "[variables('frontEndIPConfigID')]"
-                    },
-                    "backendAddressPool": {
-                        "id": "[variables('lbPoolID')]"
-                    },
-                    "protocol": "tcp",
-                    "frontendPort": 8000,
-                    "backendPort": 8000,
-                    "enableFloatingIP": false,
-                    "idleTimeoutInMinutes": 5,
-                    "probe": {
-                        "id": "[variables('lbProbeID')]"
+                    {
+                        "name": "LBRule8000",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[variables('frontEndIPConfigID')]"
+                            },
+                            "backendAddressPool": {
+                                "id": "[variables('lbPoolID')]"
+                            },
+                            "protocol": "tcp",
+                            "frontendPort": 8000,
+                            "backendPort": 8000,
+                            "enableFloatingIP": false,
+                            "idleTimeoutInMinutes": 5,
+                            "probe": {
+                                "id": "[variables('lbProbeID')]"
+                            }
+                        }
                     }
-                    }
-                }
                 ],
                 "probes": [
-                {
-                    "name": "barracudaprobe",
-                    "properties": {
-                        "Protocol": "Http",
-                        "Port": 8000,
-                        "IntervalInSeconds": 5,
-                        "NumberOfProbes": 2,
-                        "RequestPath": "/"
+                    {
+                        "name": "barracudaprobe",
+                        "properties": {
+                            "Protocol": "Http",
+                            "Port": 8000,
+                            "IntervalInSeconds": 5,
+                            "NumberOfProbes": 2,
+                            "RequestPath": "/"
+                        }
                     }
-                }
                 ]
             }
         }

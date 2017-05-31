@@ -2,72 +2,39 @@
     "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "KeyVaultName": {
+        "deploymentPrefix": {
             "type": "string"
-        },
-        "tenantId": {
-            "type": "string"
-        },
-        "workSpaceName": {
-            "type": "string",
-            "metadata": {
-                "description": "workSpaceName"
-            }
-        },
-        "automationName": {
-            "type": "string",
-            "metadata": {
-                "description": "workSpaceName"
-            }
-        },
-        "serviceTier": {
-            "type": "string",
-            "allowedValues": [
-                "Free",
-                "Standard",
-                "Premium"
-            ],
-            "metadata": {
-                "description": "Service Tier: Free, Standard, or Premium"
-            }
         },
         "location": {
-            "type": "string",
-            "allowedValues": [
-                "East US",
-                "West Europe",
-                "Southeast Asia",
-                "Australia Southeast"
-            ]
-        },
-        "resourceGroupName": {
-            "defaultValue": "",
             "type": "string"
         },
-        "subscriptionId": {
-            "defaultValue": "",
+        "resourceGroupPrefix": {
             "type": "string"
-        },
-        "solutionTypes": {
-            "defaultValue": [
-                "AntiMalware",
-                "AzureActivity",
-                "AzureAutomation",
-                "AzureNSGAnalytics",
-                "ChangeTracking",
-                "KeyVaultAnalytics",
-                "ServiceMap",
-                "Security",
-                "SQLAssessment",
-                "Updates"
-            ],
-            "type": "array"
         }
+    },
+    "variables": {
+        "solutionTypes": [
+            "AntiMalware",
+            "AzureActivity",
+            "AzureAutomation",
+            "AzureNSGAnalytics",
+            "ChangeTracking",
+            "KeyVaultAnalytics",
+            "ServiceMap",
+            "Security",
+            "SQLAssessment",
+            "Updates"
+        ],
+        "paasPrefix": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'))]",
+        "kvName": "[concat(variables('paasPrefix'), '-kv')]",
+        "bkpName": "[concat(variables('paasPrefix'), '-bkp')]",
+        "automationName": "[concat(variables('paasPrefix'), '-automation')]",
+        "omsName": "[concat(variables('paasPrefix'), '-oms')]"
     },
     "resources": [
         {
             "apiVersion": "2016-10-01",
-            "name": "[parameters('KeyVaultName')]",
+            "name": "[variables('kvName')]",
             "location": "[resourceGroup().location]",
             "type": "Microsoft.KeyVault/vaults",
             "properties": {
@@ -75,9 +42,9 @@
                 "enabledForTemplateDeployment": true,
                 "enabledForDiskEncryption": true,
                 "accessPolicies": [],
-                "tenantId": "[parameters('tenantId')]",
+                "tenantId": "[subscription().tenantId]",
                 "sku": {
-                    "name": "Standard",
+                    "name": "Premium",
                     "family": "A"
                 }
             }
@@ -85,16 +52,16 @@
         {
             "apiVersion": "2015-11-01-preview",
             "type": "Microsoft.OperationalInsights/workspaces",
-            "name": "[parameters('workSpaceName')]",
+            "name": "[variables('omsName')]",
             "location": "[parameters('location')]",
             "properties": {
                 "sku": {
-                    "Name": "[parameters('serviceTier')]"
+                    "Name": "Free"
                 }
             }
         },
         {
-            "name": "[parameters('automationName')]",
+            "name": "[variables('automationName')]",
             "type": "Microsoft.Automation/automationAccounts",
             "apiVersion": "2015-01-01-preview",
             "location": "[resourceGroup().location]",
@@ -102,46 +69,57 @@
             "tags": {},
             "properties": {
                 "sku": {
-                    "name": "[parameters('serviceTier')]"
+                    "name": "Basic"
                 }
             }
         },
         {
-            "id": "[concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourceGroupName'), '/providers/Microsoft.OperationsManagement/solutions/', parameters('solutionTypes')[copyIndex()], '(', parameters('workSpaceName'), ')')]",
+            "id": "[concat(resourceGroup().id, '/providers/Microsoft.OperationsManagement/solutions/', variables('solutionTypes')[copyIndex()], '(', variables('omsName'), ')')]",
             "type": "Microsoft.OperationsManagement/solutions",
-            "name": "[concat(parameters('solutionTypes')[copyIndex()], '(', parameters('workSpaceName'), ')')]",
+            "name": "[concat(variables('solutionTypes')[copyIndex()], '(', variables('omsName'), ')')]",
             "apiVersion": "2015-11-01-preview",
             "dependsOn": [
-                "[concat('Microsoft.OperationalInsights/workspaces', '/' , parameters('workSpaceName'))]"
+                "[concat('Microsoft.OperationalInsights/workspaces', '/' , variables('omsName'))]"
             ],
             "location": "[parameters('location')]",
             "copy": {
                 "name": "solutionsCopy",
-                "count": "[length(parameters('solutionTypes'))]"
+                "count": "[length(variables('solutionTypes'))]"
             },
             "plan": {
-                "name": "[concat(parameters('solutionTypes')[copyIndex()], '(', parameters('workSpaceName'), ')')]",
-                "product": "[concat('OMSGallery/', parameters('solutionTypes')[copyIndex()])]",
+                "name": "[concat(variables('solutionTypes')[copyIndex()], '(', variables('omsName'), ')')]",
+                "product": "[concat('OMSGallery/', variables('solutionTypes')[copyIndex()])]",
                 "promotionCode": "",
                 "publisher": "Microsoft"
             },
             "properties": {
-                "workspaceResourceId": "[concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourceGroupName'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workSpaceName'))]"
+                "workspaceResourceId": "[concat(resourceGroup().id, '/providers/Microsoft.OperationalInsights/workspaces/', variables('omsName'))]"
             }
         },
         {
-            "id": "[concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourceGroupName'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workSpaceName'), '/datasources/', parameters('subscriptionId'))]",
+            "id": "[concat(resourceGroup().id, '/providers/Microsoft.OperationalInsights/workspaces/', variables('omsName'), '/datasources/', subscription().subscriptionId)]",
             "type": "Microsoft.OperationalInsights/workspaces/datasources",
             "kind": "AzureActivityLog",
-            "name": "[concat(parameters('workSpaceName'), '/', parameters('subscriptionId'))]",
+            "name": "[concat(variables('omsName'), '/', subscription().subscriptionId)]",
             "apiVersion": "2015-11-01-preview",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[concat('Microsoft.OperationalInsights/workspaces', '/' , parameters('workSpaceName'))]"
+                "[concat('Microsoft.OperationalInsights/workspaces', '/' , variables('omsName'))]"
             ],
             "properties": {
-                "linkedResourceId": "[concat('/subscriptions/', parameters('subscriptionId'), '/providers/microsoft.insights/eventTypes/management')]"
+                "linkedResourceId": "[concat(subscription().Id, '/providers/microsoft.insights/eventTypes/management')]"
             }
+        },
+        {
+            "apiVersion": "2016-06-01",
+            "name": "[variables('bkpName')]",
+            "location": "[parameters('location')]",
+            "type": "Microsoft.RecoveryServices/vaults",
+            "sku": {
+                "name": "RS0",
+                "tier": "Standard"
+            },
+            "properties": {}
         }
     ]
 }

@@ -8,30 +8,12 @@
         "location": {
             "value": "East US 2"
         },
-        "storageRoot": {
-            "value": "placeholder"
-        },
-        "registrationData": {
-            "value": {
-                "url": "placeholder",
-                "key": "placeholder"
-            }
-        },
         "resourceGroupPrefix": {
             "value": "somevalue"
         },
-        "domainReference": {
+        "environmentReference": {
             "value": {
-                "name": "test.local",
-                "vmSize": "Standard_DS2_v2",
-                "sku": "2016-Datacenter"
-            }
-        },
-        "jumpboxReference": {
-            "value": {
-                "name": "Bastion",
-                "password": "!Q2w3e4r5t6y",
-                "sku": "2016-Datacenter"
+                "domainName": "test.local"
             }
         },
         "networkReference": {
