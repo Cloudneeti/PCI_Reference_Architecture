@@ -2,52 +2,23 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "bossObject": {
-            "type": "object",
-            "metadata": {
-                "description": "jumpBox definition object"
-            },
-            "defaultValue": {
-                "name": "jumpota",
-                "sku": "2016-Datacenter"
-            }
+        "deploymentPrefix": {
+            "type": "string"
         },
         "location": {
-            "defaultValue": "South Central US",
-            "allowedValues": [
-                "Japan East",
-                "East US 2",
-                "West Europe",
-                "Southeast Asia",
-                "South Central US",
-                "UK South",
-                "West Central US",
-                "North Europe",
-                "Canada Central",
-                "Australia Southeast",
-                "Central India"
-            ],
-            "type": "string",
-            "metadata": {
-                "description": "The location for the deployment. Leave the default if running from the portal."
-            }
-        },
-        "deploymentPrefix": {
-            "defaultValue": "dev",
-            "allowedValues": [
-                "dev",
-                "prod"
-            ],
-            "type": "string",
-            "metadata": {
-                "description": "Resources created will be prefixed with this."
-            }
+            "type": "string"
         },
         "resourceGroupPrefix": {
-            "type": "string",
-            "metadata": {
-                "description": "Deployment name"
-            }
+            "type": "string"
+        },
+        "environmentReference": {
+            "type": "object"
+        },
+        "networkReference": {
+            "type": "array"
+        },
+        "vmReference": {
+            "type": "array"
         }
     },
     "variables": {
@@ -65,7 +36,7 @@
             "properties": {
                 "publicIPAllocationMethod": "Dynamic",
                 "dnsSettings": {
-                    "domainNameLabel": "[concat(parameters('bossObject').name, '-pipota')]"
+                    "domainNameLabel": "[concat(parameters('environmentReference').jumpbox, '-pipota')]"
                 }
             }
         },
@@ -97,7 +68,7 @@
         {
             "apiVersion": "2016-04-30-preview",
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[parameters('bossObject').name]",
+            "name": "[parameters('environmentReference').jumpbox]",
             "location": "[parameters('location')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
@@ -107,7 +78,7 @@
                     "vmSize": "Standard_A2"
                 },
                 "osProfile": {
-                    "computerName": "[parameters('bossObject').name]",
+                    "computerName": "[parameters('environmentReference').jumpbox]",
                     "adminUsername": "testo",
                     "adminPassword": "!Q2w3e4r5t6y"
                 },
@@ -115,7 +86,7 @@
                     "imageReference": {
                         "publisher": "MicrosoftWindowsServer",
                         "offer": "WindowsServer",
-                        "sku": "[parameters('bossObject').sku]",
+                        "sku": "2016-Datacenter",
                         "version": "latest"
                     },
                     "osDisk": {

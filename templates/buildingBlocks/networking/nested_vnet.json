@@ -13,12 +13,13 @@
         }
     },
     "variables": {
-        "DNSServerAddress": ["10.1.0.4","10.1.0.5"]
+        "DNSServerAddress": ["10.1.0.4","10.1.0.5","8.8.8.8"],
+        "var": "[parameters('bossObject').name]"
     },
     "resources": [
         {
             "type": "Microsoft.Network/virtualNetworks",
-            "name": "[parameters('bossObject').name]",
+            "name": "[variables('var')]",
             "apiVersion": "2016-03-30",
             "location": "[parameters('location')]",
             "properties": {

@@ -2,223 +2,33 @@
     "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "vNets": {
-            "type": "array",
-            "defaultValue": [
-                {
-                    "name": "[concat(parameters('deploymentPrefix'), '-application')]",
-                    "addressSpacePrefix": "10.5.0.0/16",
-                    "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]",
-                        "[concat(parameters('deploymentPrefix'), '-domain')]"
-                    ],
-                    "subnets": [
-                        {
-                            "subnetName": "appSubnet1",
-                            "addressSpacePrefix": "10.5.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH",
-                                "HTTPS"
-                            ],
-                            "CustomRules": [
-                                {
-                                    "name": "rdp-rule1",
-                                    "properties": {
-                                        "description": "Allow RDP",
-                                        "protocol": "Tcp",
-                                        "sourcePortRange": "*",
-                                        "destinationPortRange": "33890",
-                                        "sourceAddressPrefix": "Internet",
-                                        "destinationAddressPrefix": "*",
-                                        "access": "Allow",
-                                        "priority": 3001,
-                                        "direction": "Inbound"
-                                    }
-                                },
-                                {
-                                    "name": "web-rule1",
-                                    "properties": {
-                                        "description": "Allow WEB",
-                                        "protocol": "Tcp",
-                                        "sourcePortRange": "*",
-                                        "destinationPortRange": "80",
-                                        "sourceAddressPrefix": "Internet",
-                                        "destinationAddressPrefix": "*",
-                                        "access": "Allow",
-                                        "priority": 3100,
-                                        "direction": "Inbound"
-                                    }
-                                }
-                            ]
-                        },
-                        {
-                            "subnetName": "appSubnet2",
-                            "addressSpacePrefix": "10.5.1.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH",
-                                "HTTP"
-                            ],
-                            "CustomRules": []
-                        },
-                        {
-                            "subnetName": "appSubnet3",
-                            "addressSpacePrefix": "10.5.2.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH",
-                                "HTTP"
-                            ],
-                            "CustomRules": []
-                        },
-                        {
-                            "subnetName": "appSubnet4",
-                            "addressSpacePrefix": "10.5.3.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH",
-                                "HTTP"
-                            ],
-                            "CustomRules": []
-                        }
-                    ]
-                },
-                {
-                    "name": "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                    "addressSpacePrefix": "10.4.0.0/16",
-                    "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]"
-                    ],
-                    "subnets": [
-                        {
-                            "subnetName": "dmzSubnet",
-                            "addressSpacePrefix": "10.4.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
-                        }
-                    ]
-                },
-                {
-                    "name": "[concat(parameters('deploymentPrefix'), '-security')]",
-                    "addressSpacePrefix": "10.3.0.0/16",
-                    "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]",
-                        "[concat(parameters('deploymentPrefix'), '-domain')]"
-                    ],
-                    "subnets": [
-                        {
-                            "subnetName": "securitySubnet",
-                            "addressSpacePrefix": "10.3.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
-                        }
-                    ]
-                },
-                {
-                    "name": "[concat(parameters('deploymentPrefix'), '-management')]",
-                    "addressSpacePrefix": "10.2.0.0/16",
-                    "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-domain')]"
-                    ],
-                    "subnets": [
-                        {
-                            "subnetName": "managementSubnet",
-                            "addressSpacePrefix": "10.2.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
-                        },
-                        {
-                            "subnetName": "chefSubnet",
-                            "addressSpacePrefix": "10.2.1.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
-                        }
-                    ]
-                },
-                {
-                    "name": "[concat(parameters('deploymentPrefix'), '-domain')]",
-                    "addressSpacePrefix": "10.1.0.0/16",
-                    "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]"
-                    ],
-                    "subnets": [
-                        {
-                            "subnetName": "domainSubnet",
-                            "addressSpacePrefix": "10.1.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
-                        }
-                    ]
-                }
-            ]
+        "deploymentPrefix": {
+            "type": "string"
         },
         "location": {
-            "defaultValue": "South Central US",
-            "allowedValues": [
-                "Japan East",
-                "East US 2",
-                "West Europe",
-                "Southeast Asia",
-                "South Central US",
-                "UK South",
-                "West Central US",
-                "North Europe",
-                "Canada Central",
-                "Australia Southeast",
-                "Central India"
-            ],
-            "type": "string",
-            "metadata": {
-                "description": "The location for the deployment. Leave the default if running from the portal."
-            }
+            "type": "string"
         },
-        "deploymentPrefix": {
-            "defaultValue": "dev",
-            "allowedValues": [
-                "dev",
-                "prod"
-            ],
-            "type": "string",
-            "metadata": {
-                "description": "Resources created will be prefixed with this."
-            }
+        "resourceGroupPrefix": {
+            "type": "string"
+        },
+        "environmentReference": {
+            "type": "object"
+        },
+        "networkReference": {
+            "type": "array"
+        },
+        "vmReference": {
+            "type": "array"
         },
         "subnetLength": {
-            "defaultValue": 9,
-            "type": "int"
+            "type": "int",
+            "defaultValue": 9
         }
     },
     "variables": {
         "iterator": "https://paste.ee/r/oZiv0/0",
         "nsgURI": "https://paste.ee/r/G51IG/0",
-        "vnetURI": "https://paste.ee/r/AgHF3/0",
+        "vnetURI": "https://paste.ee/d/QlAMf/0",
         "peeringURI": "https://paste.ee/r/DKTdD/0"
     },
     "resources": [
@@ -238,7 +48,7 @@
                 },
                 "parameters": {
                     "bossObject": {
-                        "value": "[reference(concat('iterator-', length(parameters('vNets')))).outputs.collection.value[copyIndex()]]"
+                        "value": "[reference(concat('iterator-', length(parameters('networkReference')))).outputs.collection.value[copyIndex()]]"
                     },
                     "location": {
                         "value": "[parameters('location')]"
@@ -271,7 +81,7 @@
             "name": "[concat('iterator-', copyIndex(1))]",
             "copy": {
                 "name": "iterator",
-                "count": "[length(parameters('vNets'))]",
+                "count": "[length(parameters('networkReference'))]",
                 "mode": "Serial"
             },
             "properties": {
@@ -281,7 +91,7 @@
                 },
                 "parameters": {
                     "source": {
-                        "value": "[parameters('vNets')[copyIndex()].subnets]"
+                        "value": "[parameters('networkReference')[copyIndex()].subnets]"
                     },
                     "state": {
                         "value": "[reference(concat('iterator-', copyIndex())).outputs.collection.value]"
@@ -295,7 +105,7 @@
             "apiVersion": "2016-09-01",
             "copy": {
                 "name": "deployvnets",
-                "count": "[length(parameters('vNets'))]"
+                "count": "[length(parameters('networkReference'))]"
             },
             "properties": {
                 "mode": "Incremental",
@@ -305,7 +115,7 @@
                 },
                 "parameters": {
                     "bossObject": {
-                        "value": "[parameters('vNets')[copyIndex()]]"
+                        "value": "[parameters('networkReference')[copyIndex()]]"
                     },
                     "location": {
                         "value": "[parameters('location')]"
@@ -325,7 +135,7 @@
             "apiVersion": "2016-09-01",
             "copy": {
                 "name": "peering",
-                "count": "[length(parameters('vNets'))]"
+                "count": "[length(parameters('networkReference'))]"
             },
             "properties": {
                 "mode": "Incremental",
@@ -335,7 +145,7 @@
                 },
                 "parameters": {
                     "bossObject": {
-                        "value": "[parameters('vNets')[copyIndex()]]"
+                        "value": "[parameters('networkReference')[copyIndex()]]"
                     },
                     "location": {
                         "value": "[parameters('location')]"

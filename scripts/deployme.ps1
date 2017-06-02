@@ -58,81 +58,58 @@ function Invoke-ArmDeployment {
         } 
         while ( !$availability.NameAvailable )
 
+
         $components = @("application", "dmz", "security", "management", "operations", "networking")
         $resourceGroupNames = $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupName, $deploymentPrefix, $_) -join '-') -Location $location -Force }
 
-        # !FIX ($data = get-deploymentData, but now it is empty)
-         Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting networking deployment" -ForegroundColor Green
-         New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\networking\azuredeploy.json" `
-            -Name "$date-networking" -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'networking') -join '-') -ErrorAction Stop -Verbose
-
-        # Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
-        # $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\DMZ\DMZ.json"`
-        #     -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'dmz') -join '-') -ErrorAction Stop -Verbose
-
-        # Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
-        # $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\Security\Security.json"`
-        #     -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'Security') -join '-') -ErrorAction Stop -Verbose
-
-        # $KeyVaultName = $resourceGroupName + $deploymentPrefix + ( -join ((97..122) + (48..57) | Get-Random -Count 20 | ForEach-Object {[char]$_}))
-        # $parameters = @{
-        #     "KeyVaultName" = $KeyVaultName
-        #     "tenantid"     = (get-AzureRmContext).Tenant.TenantId
-        # }
-        # Write-Host "  Starting $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Green
-        # $result = New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\PAAS\PAAS.json"  -TemplateParameterObject $parameters `
-        #     -Name $(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss') -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') -ErrorAction Stop -Verbose
-
-        ### DMZ
-        # Barracuda WAF BYOL
-        Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting DMZ deployment (Barracuda WAF BYOL)" -ForegroundColor Green
-        $dmzParameters = @{
-            resourceGroupPrefix = $resourceGroupName
-            deploymentPrefix = $deploymentPrefix
-            location = $location
-            BarracudaLicense = "hourly" # "byol", "hourly"
-            virtualMachineSize = "Standard_D1"
-            adminPassword = ConvertTo-SecureString -String 'Admin1P@s$w0rd' -AsPlainText -Force
+        if ($gg1) {
+            New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\paas\azuredeploy.json" `
+                -Name "$date-paas" -ErrorAction Stop -Verbose `
+                -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') `
+                -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
         }
-        New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\dmz\azuredeploy.json" `
-             -Name "$date-dmz" -ErrorAction Stop -Verbose `
-             -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'dmz') -join '-') @dmzParameters
-        
 
+        if ($gg2) {
+            New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\networking\azuredeploy.json" `
+                -Name "$date-networking" -ErrorAction Stop -Verbose `
+                -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'networking') -join '-') `
+                -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+        }
 
-        #Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting domain deployment" -ForegroundColor Green
-        #$domainParameters = @{
-        #    resourceGroupPrefix = $resourceGroupName
-        #    deploymentPrefix = $deploymentPrefix
-        #    location = $location
-        #    domainName = 'test.local'
-        #}
-        #New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\active-directory-new-domain-ha-2-dc\azuredeploy.json" `
-        #     -Name "$date-domain" -ErrorAction Stop -Verbose `
-        #     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') @domainParameters
-        
+        if ($gg3) {
+            New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\dmz\azuredeploy.json" `
+                -Name "$date-dmz" -ErrorAction Stop -Verbose `
+                -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'dmz') -join '-') `
+                -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+        }
 
-        #Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting DMZ deployment" -ForegroundColor Green
-        #$domainParameters = @{
-        #    resourceGroupPrefix = $resourceGroupName
-        #    deploymentPrefix = $deploymentPrefix
-        #    location = $location
-        #}
-        #New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\dmz\barr\template.json" `
-        #     -TemplateParameterFile "$scriptRoot\templates\resources\dmz\barr\parameters.json" `
-        #     -Name "$date-domain" -ErrorAction Stop -Verbose `
-        #     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'DMZ') -join '-') @domainParameters
+        if ($gg4) {
+            New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\security\azuredeploy.json" `
+                -Name "$date-security" -ErrorAction Stop -Verbose `
+                -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'security') -join '-') `
+                -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+        }
 
+        if ($gg5) {
+            New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\ad\azuredeploy.json" `
+                -Name "$date-ad" -ErrorAction Stop -Verbose `
+                -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') `
+                -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+        }
 
-        #Write-Host " $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Starting management deployment" -ForegroundColor Green
-        #$managementParameters = @{
-        #    resourceGroupPrefix = $resourceGroupName
-        #    deploymentPrefix = $deploymentPrefix
-        #    location = $location
-        #}
-        #New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\management\azuredeploy.json" `
-        #     -Name "$date-management" -ErrorAction Stop -Verbose `
-        #     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'management') -join '-') @managementParameters
+        if ($gg6) {
+            New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\management\azuredeploy.json" `
+                -Name "$date-management" -ErrorAction Stop -Verbose `
+                -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'management') -join '-') `
+                -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+        }
+
+        if ($gg7) {
+            New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\application\azuredeploy.json" `
+                -Name "$date-domain" -ErrorAction Stop -Verbose `
+                -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') `
+                -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+        }
     }
     catch {
         Write-Error $_

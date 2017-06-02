@@ -2,36 +2,23 @@
     "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "deploymentPrefix": {
+            "type": "string"
+        },
         "location": {
             "type": "string"
         },
-        "deploymentPrefix": {
-            "defaultValue": "dev",
-            "allowedValues": [
-                "dev",
-                "prod"
-            ],
-            "type": "string",
-            "metadata": {
-                "description": "Resources created will be prefixed with this."
-            }
-        },
         "resourceGroupPrefix": {
-            "type": "string",
-            "metadata": {
-                "description": "Deployment name"
-            }
+            "type": "string"
         },
-        "BarracudaLicense": {
-            "defaultValue": "byol",
-            "allowedValues": [
-                "byol",
-                "hourly"
-            ],
-            "type": "string",
-            "metadata": {
-                "description": "Type of license for use in Barracuda."
-            }
+        "environmentReference": {
+            "type": "object"
+        },
+        "networkReference": {
+            "type": "array"
+        },
+        "vmReference": {
+            "type": "array"
         }
     },
     "variables": {
@@ -101,7 +88,7 @@
                     "imageReference": {
                         "publisher": "barracudanetworks",
                         "offer": "waf",
-                        "sku": "[parameters('BarracudaLicense')]",
+                        "sku": "hourly",
                         "version": "latest"
                     },
                     "osDisk": {
@@ -124,7 +111,7 @@
                 }
             },
             "plan": {
-                "name": "[parameters('BarracudaLicense')]",
+                "name": "hourly",
                 "publisher": "barracudanetworks",
                 "product": "waf"
             }
@@ -150,7 +137,7 @@
                     "imageReference": {
                         "publisher": "barracudanetworks",
                         "offer": "barracuda-ng-firewall",
-                        "sku": "[parameters('BarracudaLicense')]",
+                        "sku": "hourly",
                         "version": "latest"
                     },
                     "osDisk": {
@@ -173,7 +160,7 @@
                 }
             },
             "plan": {
-                "name": "[parameters('BarracudaLicense')]",
+                "name": "hourly",
                 "publisher": "barracudanetworks",
                 "product": "barracuda-ng-firewall"
             }

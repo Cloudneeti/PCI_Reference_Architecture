@@ -13,7 +13,8 @@
         },
         "environmentReference": {
             "value": {
-                "domainName": "test.local"
+                "domainName": "test.local",
+                "jumpbox": "jumpota"
             }
         },
         "networkReference": {
