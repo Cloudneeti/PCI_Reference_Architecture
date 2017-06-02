@@ -56,7 +56,8 @@
       "type": "string",
       "metadata": {
         "description": "The FQDN of the AD Domain created "
-      }
+      },
+      "defaultValue": "test.local"
     },
     "pdcRDPPort": {
       "type": "int",
@@ -153,8 +154,11 @@
               "subnet": {
                 "id": "[variables('adSubnetRef')]"
               }
-            }
+            } 
           }
+        ],
+        "DnsSettings"[
+          "AppliedDnsServers": ["10.1.0.4","10.1.0.5"]
         ]
       }
     },
@@ -174,6 +178,9 @@
               }
             }
           }
+        ],
+        "DnsSettings"[
+          "AppliedDnsServers": ["10.1.0.4","10.1.0.5"]
         ]
       }
     },
@@ -268,78 +275,6 @@
         }
       ]
     },
-    { "name": "UpdateVNetDNS1",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2016-09-01",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', variables('adPDCVMName'),'/extensions/CreateADForest')]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[variables('vnetwithDNSTemplateUri')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "virtualNetworkName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
-          "virtualNetworkAddressRange": {
-            "value": "[variables('virtualNetworkAddressRange')]"
-          },
-          "subnetName": {
-            "value": "[variables('adSubnetName')]"
-          },
-          "subnetRange": {
-            "value": "[variables('adSubnet')]"
-          },
-          "DNSServerAddress": {
-            "value": [
-              "[variables('adPDCNicIPAddress')]"
-            ]
-          }
-        }
-      }
-    },
-    { "name": "UpdateBDCNIC",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2015-01-01",
-      "dependsOn": [
-        "[concat('Microsoft.Network/networkInterfaces/',variables('adBDCNicName'))]",
-        "Microsoft.Resources/deployments/UpdateVNetDNS1"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[variables('nicTemplateUri')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "nicName": {
-            "value": "[variables('adBDCNicName')]"
-          },
-          "ipConfigurations": {
-            "value": [
-              {
-                "name": "ipconfig1",
-                "properties": {
-                  "privateIPAllocationMethod": "Static",
-                  "privateIPAddress": "[variables('adBDCNicIPAddress')]",
-                  "subnet": {
-                    "id": "[variables('adSubnetRef')]"
-                  }
-                }
-              }
-            ]
-          },
-          "dnsServers": {
-            "value": [
-              "[variables('adPDCNicIPAddress')]"
-            ]
-          }
-        }
-      }
-    },
     { "name": "[variables('adBDCVMName')]",
       "type": "Microsoft.Compute/virtualMachines",
       "apiVersion": "2016-03-30",
@@ -423,8 +358,7 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2016-09-01",
       "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/',variables('adBDCVMName'),'/extensions/PrepareBDC')]",
-        "Microsoft.Resources/deployments/UpdateBDCNIC"
+        "[concat('Microsoft.Compute/virtualMachines/',variables('adBDCVMName'),'/extensions/PrepareBDC')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -453,40 +387,6 @@
           },
           "adBDCConfigurationModulesURL": {
             "value": "[variables('adBDCConfigurationModulesURL')]"
-          }
-        }
-      }
-    },
-    { "name": "UpdateVNetDNS2",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2016-09-01",
-      "dependsOn": [
-        "Microsoft.Resources/deployments/ConfiguringBackupADDomainController"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[variables('vnetwithDNSTemplateUri')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "virtualNetworkName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
-          "virtualNetworkAddressRange": {
-            "value": "[variables('virtualNetworkAddressRange')]"
-          },
-          "subnetName": {
-            "value": "[variables('adSubnetName')]"
-          },
-          "subnetRange": {
-            "value": "[variables('adSubnet')]"
-          },
-          "DNSServerAddress": {
-            "value": [
-              "[variables('adPDCNicIPAddress')]",
-              "[variables('adBDCNicIPAddress')]"
-            ]
           }
         }
       }
