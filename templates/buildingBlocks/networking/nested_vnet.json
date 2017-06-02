@@ -12,7 +12,9 @@
             "type": "string"
         }
     },
-    "variables": {},
+    "variables": {
+        "DNSServerAddress": ["10.1.0.4","10.1.0.5"]
+    },
     "resources": [
         {
             "type": "Microsoft.Network/virtualNetworks",
@@ -24,6 +26,9 @@
                     "addressPrefixes": [
                         "[parameters('bossObject').addressSpacePrefix]"
                     ]
+                },
+                "dhcpOptions": {
+                    "dnsServers": "[variables('DNSServerAddress')]"
                 },
                 "copy": [
                     {
