@@ -10,10 +10,10 @@
         },
         "deploymentPrefix": {
             "type": "string"
+        },
+        "dnsSettings": {
+            "type": "array"
         }
-    },
-    "variables": {
-        "DNSServerAddress": ["10.1.0.4","10.1.0.5","8.8.8.8","8.8.4.4"]
     },
     "resources": [
         {
@@ -28,7 +28,7 @@
                     ]
                 },
                 "dhcpOptions": {
-                    "dnsServers": "[variables('DNSServerAddress')]"
+                    "dnsServers": "[parameters('dnsSettings')]"
                 },
                 "copy": [
                     {

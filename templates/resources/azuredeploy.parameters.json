@@ -20,13 +20,81 @@
         "networkReference": {
             "value": [
                 {
+                    "name": "[concat(parameters('deploymentPrefix'), '-dmz')]",
+                    "addressSpacePrefix": "10.4.0.0/16",
+                    "peerings": [
+                        "[concat(parameters('deploymentPrefix'), '-application')]",
+                        "[concat(parameters('deploymentPrefix'), '-security')]",
+                        "[concat(parameters('deploymentPrefix'), '-management')]"
+                    ],
+                    "subnets": [
+                        {
+                            "subnetName": "dmzSubnet",
+                            "addressSpacePrefix": "10.4.0.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH"
+                            ],
+                            "CustomRules": []
+                        }
+                    ]
+                },
+                {
+                    "name": "[concat(parameters('deploymentPrefix'), '-management')]",
+                    "addressSpacePrefix": "10.2.0.0/16",
+                    "peerings": [
+                        "[concat(parameters('deploymentPrefix'), '-application')]",
+                        "[concat(parameters('deploymentPrefix'), '-dmz')]",
+                        "[concat(parameters('deploymentPrefix'), '-security')]"
+                    ],
+                    "subnets": [
+                        {
+                            "subnetName": "managementSubnet",
+                            "addressSpacePrefix": "10.2.0.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH"
+                            ],
+                            "CustomRules": []
+                        }
+                    ]
+                },
+                {
+                    "name": "[concat(parameters('deploymentPrefix'), '-security')]",
+                    "addressSpacePrefix": "10.3.0.0/16",
+                    "peerings": [
+                        "[concat(parameters('deploymentPrefix'), '-application')]",
+                        "[concat(parameters('deploymentPrefix'), '-dmz')]",
+                        "[concat(parameters('deploymentPrefix'), '-management')]"
+                    ],
+                    "subnets": [
+                        {
+                            "subnetName": "securitySubnet",
+                            "addressSpacePrefix": "10.3.0.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH"
+                            ],
+                            "CustomRules": []
+                        },
+                        {
+                            "subnetName": "domainSubnet",
+                            "addressSpacePrefix": "10.3.1.0/24",
+                            "Firewall": [
+                                "RDP",
+                                "SSH"
+                            ],
+                            "CustomRules": []
+                        }
+                    ]
+                },
+                {
                     "name": "[concat(parameters('deploymentPrefix'), '-application')]",
                     "addressSpacePrefix": "10.5.0.0/16",
                     "peerings": [
                         "[concat(parameters('deploymentPrefix'), '-dmz')]",
                         "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]",
-                        "[concat(parameters('deploymentPrefix'), '-domain')]"
+                        "[concat(parameters('deploymentPrefix'), '-management')]"
                     ],
                     "subnets": [
                         {
@@ -77,175 +145,13 @@
                                 "HTTP"
                             ],
                             "CustomRules": []
-                        },
-                        {
-                            "subnetName": "appSubnet3",
-                            "addressSpacePrefix": "10.5.2.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH",
-                                "HTTP"
-                            ],
-                            "CustomRules": []
-                        },
-                        {
-                            "subnetName": "appSubnet4",
-                            "addressSpacePrefix": "10.5.3.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH",
-                                "HTTP"
-                            ],
-                            "CustomRules": []
-                        }
-                    ]
-                },
-                {
-                    "name": "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                    "addressSpacePrefix": "10.4.0.0/16",
-                    "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]"
-                    ],
-                    "subnets": [
-                        {
-                            "subnetName": "dmzSubnet",
-                            "addressSpacePrefix": "10.4.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
-                        }
-                    ]
-                },
-                {
-                    "name": "[concat(parameters('deploymentPrefix'), '-security')]",
-                    "addressSpacePrefix": "10.3.0.0/16",
-                    "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]",
-                        "[concat(parameters('deploymentPrefix'), '-domain')]"
-                    ],
-                    "subnets": [
-                        {
-                            "subnetName": "securitySubnet",
-                            "addressSpacePrefix": "10.3.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
-                        }
-                    ]
-                },
-                {
-                    "name": "[concat(parameters('deploymentPrefix'), '-management')]",
-                    "addressSpacePrefix": "10.2.0.0/16",
-                    "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-domain')]"
-                    ],
-                    "subnets": [
-                        {
-                            "subnetName": "managementSubnet",
-                            "addressSpacePrefix": "10.2.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
-                        },
-                        {
-                            "subnetName": "chefSubnet",
-                            "addressSpacePrefix": "10.2.1.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
-                        }
-                    ]
-                },
-                {
-                    "name": "[concat(parameters('deploymentPrefix'), '-domain')]",
-                    "addressSpacePrefix": "10.1.0.0/16",
-                    "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]"
-                    ],
-                    "subnets": [
-                        {
-                            "subnetName": "domainSubnet",
-                            "addressSpacePrefix": "10.1.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
                         }
                     ]
                 }
             ]
         },
         "vmReference": {
-            "value": [
-                {
-                    "connectivity": "AppGw",
-                    "count": 2,
-                    "name": "App",
-                    "reference": "Datacenter",
-                    "password": "!Q2w3e4r5t6y",
-                    "size": "Standard_A1",
-                    "startIp": "192.168.150.5",
-                    "subnet": "App"
-                },
-                {
-                    "connectivity": "Ilb",
-                    "count": 1,
-                    "name": "Elastic",
-                    "reference": "Ubuntu",
-                    "password": "!Q2w3e4r5t6y",
-                    "size": "Standard_A1",
-                    "startIp": "192.168.200.1",
-                    "subnet": "Persistence"
-                },
-                {
-                    "connectivity": "AppGw",
-                    "count": 2,
-                    "name": "PackList",
-                    "reference": "Datacenter",
-                    "password": "!Q2w3e4r5t6y",
-                    "size": "Standard_DS1_v2",
-                    "startIp": "192.168.155.1",
-                    "subnet": "PackSocket"
-                },
-                {
-                    "connectivity": "Ilb",
-                    "count": 2,
-                    "name": "Poller",
-                    "reference": "Datacenter",
-                    "password": "!Q2w3e4r5t6y",
-                    "size": "Standard_A1",
-                    "startIp": "192.168.99.1",
-                    "subnet": "Poller"
-                },
-                {
-                    "connectivity": "AppGw",
-                    "count": 2,
-                    "name": "WS",
-                    "password": "!Q2w3e4r5t6y",
-                    "reference": "Datacenter",
-                    "size": "Standard_A1",
-                    "startIp": "192.168.155.3",
-                    "subnet": "PackSocket"
-                }
-            ]
+            "value": []
         }
     }
 }

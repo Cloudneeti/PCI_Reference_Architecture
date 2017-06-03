@@ -23,7 +23,9 @@
     },
     "variables": {
         "nicName": "jumpboxNic",
-        "staticIp": "10.2.0.4",
+        "addressSpace": "[parameters('networkReference')[1].subnets[0].addressSpacePrefix]",
+        "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
+        "staticIp": "[concat(variables('substring'), 4)]",
         "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-management')]",
         "subnetRef": "[concat(variables('vnetID'),'/subnets/', 'managementSubnet')]"
     },
@@ -83,7 +85,33 @@
                         }
                     ]
                 }
-            }
+            },
+            "resources": [
+                {
+                    "name": "[concat(parameters('environmentReference').jumpbox, '/dsc')]",
+                    "type": "Microsoft.Compute/virtualMachines/extensions",
+                    "location": "[parameters('location')]",
+                    "apiVersion": "2015-06-15",
+                    "dependsOn": [
+                        "[parameters('environmentReference').jumpbox]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.20",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "configuration": {
+                                "url": "https://github.com/AvyanConsultingCorp/PCI_Reference_Architecture/raw/master/scripts/ssms.zip",
+                                "script": "ssms.ps1",
+                                "function": "ssms"
+                            },
+                            "configurationArguments": {}
+                        },
+                        "protectedSettings": {}
+                    }
+                }
+            ]
         }
     ]
 }

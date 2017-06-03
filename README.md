@@ -34,6 +34,8 @@ Address spaces are defined by the object
 Variable amount of subnets # TODO arm way?
 Subnets have custom NSG rules from the predefined pool #TODO ADD custom rules to the predefined rules
 all subnets must have unique names
+vnets must be in this order: dmz, management, security, custom subnets
+infrastructure subnets cannot be renamed
 
 ### Compute
 
