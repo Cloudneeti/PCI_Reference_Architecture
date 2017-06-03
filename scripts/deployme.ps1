@@ -67,57 +67,53 @@ function Invoke-ArmDeployment {
         $components = @("application", "dmz", "security", "management", "operations", "networking")
         $resourceGroupNames = $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupName, $deploymentPrefix, $_) -join '-') -Location $location -Force }
         $parametersData = Get-Content "$scriptRoot\templates\resources\azuredeploy.parameters.json" | ConvertFrom-Json
-        $parametersHash = @{
-            "deploymentPrefix"     = $deploymentPrefix
-            "location"             = $location
-            "resourceGroupPrefix"  = $resourceGroupName
-            "environmentReference" = $parametersData.parameters.environmentReference.value
-            "networkReference"     = $parametersData.parameters.networkReference.value
-            "vmReference"          = $parametersData.parameters.vmReference.value
-        }
+        $parametersData.parameters.deploymentPrefix.value = $deploymentPrefix
+        $parametersData.parameters.location.value = $location
+        $parametersData.parameters.resourceGroupPrefix.value = $resourceGroupName
+        ( $parametersData | ConvertTo-Json -Depth 10 ) -replace "\\u0027","'" | Out-File "$scriptRoot\templates\resources\temp.json"
 
         switch ($steps) {
             "1" {
                 New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\paas\azuredeploy.json" `
                     -Name "$date-paas" -ErrorAction Stop -Verbose `
                     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') `
-                    -TemplateParameterObject $parametersHash
+                    -TemplateParameterFile "$scriptRoot\templates\resources\temp.json"
             }
             "2" {
                 New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\networking\azuredeploy.json" `
                     -Name "$date-networking" -ErrorAction Stop -Verbose `
                     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'networking') -join '-') `
-                    -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+                    -TemplateParameterFile "$scriptRoot\templates\resources\temp.json"
             }
             "3" {
                 New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\dmz\azuredeploy.json" `
                     -Name "$date-dmz" -ErrorAction Stop -Verbose `
                     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'dmz') -join '-') `
-                    -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+                    -TemplateParameterFile "$scriptRoot\templates\resources\temp.json"
             }
             "4" {
                 New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\security\azuredeploy.json" `
                     -Name "$date-security" -ErrorAction Stop -Verbose `
                     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'security') -join '-') `
-                    -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+                    -TemplateParameterFile "$scriptRoot\templates\resources\temp.json"
             }
             "5" {
                 New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\ad\azuredeploy.json" `
                     -Name "$date-ad" -ErrorAction Stop -Verbose `
                     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') `
-                    -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+                    -TemplateParameterFile "$scriptRoot\templates\resources\temp.json"
             }
             "6" {
                 New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\management\azuredeploy.json" `
                     -Name "$date-management" -ErrorAction Stop -Verbose `
                     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'management') -join '-') `
-                    -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+                    -TemplateParameterFile "$scriptRoot\templates\resources\temp.json"
             }
             "7" {
                 New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\application\azuredeploy.json" `
                     -Name "$date-domain" -ErrorAction Stop -Verbose `
                     -ResourceGroupName (($resourceGroupName, $deploymentPrefix, 'operations') -join '-') `
-                    -TemplateParameterFile "$scriptRoot\templates\resources\azuredeploy.parameters.json"
+                    -TemplateParameterFile "$scriptRoot\templates\resources\temp.json"
             }
         }
     }

@@ -23,7 +23,7 @@
     },
     "variables": {
         "nicName": "jumpboxNic",
-        "publicIPAddressName": "jumpboxPublicIp",
+        "staticIp": "10.2.0.4",
         "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-management')]",
         "subnetRef": "[concat(variables('vnetID'),'/subnets/', 'managementSubnet')]"
     },
@@ -39,6 +39,7 @@
                         "name": "ipconfig1",
                         "properties": {
                             "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[variables('staticIp')]",
                             "subnet": {
                                 "id": "[variables('subnetRef')]"
                             }
