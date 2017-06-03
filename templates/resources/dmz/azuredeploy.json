@@ -45,10 +45,11 @@
         "adminPassword": "Admin1P@s$w0rd"
     },
     "resources": [
-        {   "type": "Microsoft.Compute/availabilitySets",
+        {
+            "type": "Microsoft.Compute/availabilitySets",
             "name": "[variables('bwafAvailSetName')]",
             "apiVersion": "2016-04-30-preview",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "comments": "This is the Availability Set for BWAF VM",
             "properties": {
                 "platformFaultDomainCount": "2",
@@ -56,10 +57,11 @@
                 "managed": "true"
             }
         },
-        {   "type": "Microsoft.Compute/availabilitySets",
+        {
+            "type": "Microsoft.Compute/availabilitySets",
             "name": "[variables('bNGFAvailSetName')]",
             "apiVersion": "2016-04-30-preview",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "comments": "This is the Availability Set for BWAF VM",
             "properties": {
                 "platformFaultDomainCount": "2",
@@ -67,7 +69,8 @@
                 "managed": "true"
             }
         },
-        {   "name": "[variables('vmNameWAF')]",
+        {
+            "name": "[variables('vmNameWAF')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
@@ -116,7 +119,8 @@
                 "product": "waf"
             }
         },
-        {   "name": "[variables('vmNameNGF')]",
+        {
+            "name": "[variables('vmNameNGF')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
@@ -165,7 +169,8 @@
                 "product": "barracuda-ng-firewall"
             }
         },
-        {   "name": "[variables('networkInterfaceName01')]",
+        {
+            "name": "[variables('networkInterfaceName01')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
@@ -189,7 +194,8 @@
                 }
             }
         },
-        {   "name": "[variables('networkInterfaceName02')]",
+        {
+            "name": "[variables('networkInterfaceName02')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
@@ -218,7 +224,8 @@
                 }
             }
         },
-        {   "name": "[variables('publicIpAddressName')]",
+        {
+            "name": "[variables('publicIpAddressName')]",
             "type": "Microsoft.Network/publicIpAddresses",
             "apiVersion": "2016-09-01",
             "location": "[parameters('location')]",
@@ -226,10 +233,11 @@
                 "publicIPAllocationMethod": "Static"
             }
         },
-        {   "type": "Microsoft.Network/loadBalancers",
+        {
+            "type": "Microsoft.Network/loadBalancers",
             "name": "[variables('loadBalancerName')]",
             "apiVersion": "2017-04-01",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "comments": "This Load Balancer is used to access DMZ",
             "dependsOn": [
                 "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'))]"

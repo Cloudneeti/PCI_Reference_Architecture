@@ -129,20 +129,22 @@
     "domainName": "[parameters('environmentReference').domainName]"
   },
   "resources": [
-    { "name": "[variables('adAvailabilitySetName')]",
+    {
+      "name": "[variables('adAvailabilitySetName')]",
       "type": "Microsoft.Compute/availabilitySets",
       "apiVersion": "2016-04-30-preview",
-      "location": "[resourceGroup().location]",
+      "location": "[parameters('location')]",
       "properties": {
-                "platformFaultDomainCount": "2",
-                "platformUpdateDomainCount": "5",
-                "managed": "true"
-            }
+        "platformFaultDomainCount": "2",
+        "platformUpdateDomainCount": "5",
+        "managed": "true"
+      }
     },
-    { "name": "[variables('adPDCNicName')]",
+    {
+      "name": "[variables('adPDCNicName')]",
       "type": "Microsoft.Network/networkInterfaces",
       "apiVersion": "2016-10-01",
-      "location": "[resourceGroup().location]",
+      "location": "[parameters('location')]",
       "properties": {
         "ipConfigurations": [
           {
@@ -158,10 +160,11 @@
         ]
       }
     },
-    { "name": "[variables('adBDCNicName')]",
+    {
+      "name": "[variables('adBDCNicName')]",
       "type": "Microsoft.Network/networkInterfaces",
       "apiVersion": "2016-10-01",
-      "location": "[resourceGroup().location]",
+      "location": "[parameters('location')]",
       "properties": {
         "ipConfigurations": [
           {
@@ -177,10 +180,11 @@
         ]
       }
     },
-    { "name": "[variables('adPDCVMName')]",
+    {
+      "name": "[variables('adPDCVMName')]",
       "type": "Microsoft.Compute/virtualMachines",
       "apiVersion": "2016-04-30-preview",
-      "location": "[resourceGroup().location]",
+      "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces',variables('adPDCNicName'))]",
         "[resourceId('Microsoft.Compute/availabilitySets', variables('adAvailabilitySetName'))]"
@@ -230,7 +234,7 @@
           "name": "CreateADForest",
           "type": "extensions",
           "apiVersion": "2016-03-30",
-          "location": "[resourceGroup().location]",
+          "location": "[parameters('location')]",
           "dependsOn": [
             "[resourceId('Microsoft.Compute/virtualMachines', variables('adPDCVMName'))]"
           ],
@@ -259,10 +263,11 @@
         }
       ]
     },
-    { "name": "[variables('adBDCVMName')]",
+    {
+      "name": "[variables('adBDCVMName')]",
       "type": "Microsoft.Compute/virtualMachines",
       "apiVersion": "2016-04-30-preview",
-      "location": "[resourceGroup().location]",
+      "location": "[parameters('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces',variables('adBDCNicName'))]",
         "[resourceId('Microsoft.Compute/availabilitySets', variables('adAvailabilitySetName'))]"
@@ -288,7 +293,7 @@
           },
           "osDisk": {
             "caching": "ReadWrite",
-            "createOption": "FromImage"            
+            "createOption": "FromImage"
           },
           "dataDisks": [
             {
@@ -308,10 +313,11 @@
         }
       }
     },
-    { "type": "Microsoft.Compute/virtualMachines/extensions",
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
       "name": "[concat(variables('adBDCVMName'),'/PrepareBDC')]",
       "apiVersion": "2016-03-30",
-      "location": "[resourceGroup().location]",
+      "location": "[parameters('location')]",
       "dependsOn": [
         "[concat('Microsoft.Compute/virtualMachines/', variables('adBDCVMName'))]"
       ],
@@ -329,7 +335,8 @@
         }
       }
     },
-    { "name": "ConfiguringBackupADDomainController",
+    {
+      "name": "ConfiguringBackupADDomainController",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2016-09-01",
       "dependsOn": [

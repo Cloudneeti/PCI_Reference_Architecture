@@ -1,7 +1,26 @@
 # PCI_Reference_Architecture
 PCI (Payment Card Industry) code repository to manage deployment templates. 
 
+### How to run
 
+1. Dot source the script
+```
+. .\scripts\deployme.ps1
+```
+2. Run it
+```
+Invoke-ArmDeployment -subId %sub_id% -resourceGroupName %name% -location 'South Central US' -deploymentPrefix dev -steps @("1","2")
+```
+Steps parameter is an array with the values 1 to 7 allowed.
+Each step correspond to deploying specific step in our workflow
+
+1. Paas
+2. Networking
+3. Dmz
+4. Security
+5. Management
+6. Domain
+7. Payload
 
 ### Notes
 Azure Functions to proxy requests to Private Github repo

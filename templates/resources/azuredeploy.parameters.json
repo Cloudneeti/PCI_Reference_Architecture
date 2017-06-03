@@ -6,10 +6,10 @@
             "value": "dev"
         },
         "location": {
-            "value": "East US 2"
+            "value": "South Central US"
         },
         "resourceGroupPrefix": {
-            "value": "prv-test-42"
+            "value": "bbb"
         },
         "environmentReference": {
             "value": {
