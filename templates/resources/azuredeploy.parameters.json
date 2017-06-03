@@ -9,7 +9,7 @@
             "value": "East US 2"
         },
         "resourceGroupPrefix": {
-            "value": "somevalue"
+            "value": "prv-test-42"
         },
         "environmentReference": {
             "value": {

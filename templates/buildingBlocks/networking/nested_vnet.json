@@ -13,8 +13,7 @@
         }
     },
     "variables": {
-        "DNSServerAddress": ["10.1.0.4","10.1.0.5","8.8.8.8"],
-        "var": "[parameters('bossObject').name]"
+        "DNSServerAddress": ["10.1.0.4","10.1.0.5","8.8.8.8"]
     },
     "resources": [
         {
