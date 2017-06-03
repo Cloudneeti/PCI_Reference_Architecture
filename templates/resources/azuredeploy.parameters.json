@@ -14,7 +14,9 @@
         "environmentReference": {
             "value": {
                 "domainName": "test.local",
-                "jumpbox": "jumpota"
+                "jumpbox": "jumpota",
+                "serviceAccessPwd": "!Q2w3e4r5t6y",
+                "serviceAccess": "testo"
             }
         },
         "networkReference": {
