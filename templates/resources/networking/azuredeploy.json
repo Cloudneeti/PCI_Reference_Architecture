@@ -11,15 +11,7 @@
         "resourceGroupPrefix": {
             "type": "string"
         },
-        "environmentReference": {
-            "type": "object"
-        },
-        "networkReference": {
-            "type": "array"
-        },
-        "vmReference": {
-            "type": "array"
-        },
+
         "subnetLength": {
             "type": "int",
             "defaultValue": 6
@@ -27,7 +19,7 @@
     },
     "variables": {
         "iterator": "https://paste.ee/r/oZiv0/0",
-        "nsgURI": "https://paste.ee/r/G51IG/0",
+        "nsgURI": "https://paste.ee/r/xdU5T/0",
         "vnetURI": "https://paste.ee/d/ZD1v3/0",
         "peeringURI": "https://paste.ee/r/DKTdD/0",
         "networkReference": [
@@ -196,6 +188,9 @@
                     },
                     "deploymentPrefix": {
                         "value": "[parameters('deploymentPrefix')]"
+                    },
+                    "resourceGroupPrefix":{
+                        "value": "[parameters('resourceGroupPrefix')]"
                     }
                 }
             }

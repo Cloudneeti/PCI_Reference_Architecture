@@ -10,6 +10,9 @@
         },
         "deploymentPrefix": {
             "type": "string"
+        },
+        "resourceGroupPrefix": {
+            "type": "string"
         }
     },
     "variables": {
@@ -88,7 +91,9 @@
                 }
             }
         ],
-        "iterator": "https://paste.ee/d/R05zo/0"
+        "iterator": "https://paste.ee/d/R05zo/0",
+        "paasPrefix": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'))]",
+        "omsName": "[concat(variables('paasPrefix'), '-oms')]"
     },
     "resources": [
         {
@@ -138,7 +143,45 @@
             "location": "[parameters('location')]",
             "properties": {
                 "securityRules": "[reference(concat('iterator-', parameters('bossObject').subnetName, '-', length(parameters('bossObject').Firewall))).outputs.collection.value]"
-            }
+            },
+            "resources": [
+                {
+                    "type": "providers/diagnosticSettings",
+                    "name": "Microsoft.Insights/service",
+                    "dependsOn": [
+                        "[concat('Microsoft.Network/networkSecurityGroups/',concat(parameters('deploymentPrefix'), '-', parameters('bossObject').subnetName, '-nsg'))]"
+                    ],
+                    "apiVersion": "2017-05-01-preview",
+                    "properties": {
+                        "WorkspaceId": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
+                        "logs": [
+                            {
+                                "category": "NetworkSecurityGroupEvent",
+                                "enabled": true,
+                                "retentionPolicy": {
+                                    "days": 7,
+                                    "enabled": true
+                                }
+                            },
+                            {
+                                "category": "NetworkSecurityGroupRuleCounter",
+                                "enabled": true,
+                                "retentionPolicy": {
+                                    "days": 7,
+                                    "enabled": true
+                                }
+                            }
+                        ],
+                        "metrics": []
+                    }
+                }
+            ]
         }
-    ]
+    ],
+    "outputs": {
+        "omsID" : {
+            "type" : "string",
+            "value": "[resourceId('microsoft.operationalinsights/workspaces',variables('omsName'))]"
+        }       
+    }
 }
