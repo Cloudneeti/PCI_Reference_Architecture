@@ -179,9 +179,9 @@
         }
     ],
     "outputs": {
-        "omsID" : {
-            "type" : "string",
+        "omsID": {
+            "type": "string",
             "value": "[resourceId('microsoft.operationalinsights/workspaces',variables('omsName'))]"
-        }       
+        }
     }
 }
