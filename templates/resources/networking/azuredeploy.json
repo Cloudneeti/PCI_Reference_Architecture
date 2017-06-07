@@ -14,11 +14,20 @@
         "subnetLength": {
             "type": "int",
             "defaultValue": 6
+        },
+        "environmentReference": {
+            "type": "object"
+        },
+        "networkReference": {
+            "type": "array"
+        },
+        "vmReference": {
+            "type": "array"
         }
     },
     "variables": {
         "iterator": "https://paste.ee/r/oZiv0/0",
-        "nsgURI": "https://paste.ee/r/xdU5T/0",
+        "nsgURI": "https://paste.ee/r/V5LfG/0",
         "vnetURI": "https://paste.ee/d/ZD1v3/0",
         "peeringURI": "https://paste.ee/r/DKTdD/0",
         "networkReference": [
