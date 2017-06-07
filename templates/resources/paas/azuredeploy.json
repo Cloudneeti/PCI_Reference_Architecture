@@ -46,6 +46,9 @@
             "name": "[variables('kvName')]",
             "location": "[parameters('location')]",
             "type": "Microsoft.KeyVault/vaults",
+            "dependsOn": [
+                "[concat('Microsoft.OperationalInsights/workspaces', '/' , variables('omsName'))]"
+            ],
             "properties": {
                 "enabledForDeployment": false,
                 "enabledForTemplateDeployment": true,
@@ -56,7 +59,31 @@
                     "name": "Premium",
                     "family": "A"
                 }
-            }
+            },
+            "resources": [
+                {
+                    "type": "providers/diagnosticSettings",
+                    "name": "Microsoft.Insights/service",
+                    "dependsOn": [
+                        "[concat('Microsoft.KeyVault/vaults/',variables('kvName'))]"
+                    ],
+                    "apiVersion": "2017-05-01-preview",
+                    "properties": {
+                        "WorkspaceId": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
+                        "logs": [
+                            {
+                                "category": "AuditEvent",
+                                "enabled": true,
+                                "retentionPolicy": {
+                                    "days": 7,
+                                    "enabled": true
+                                }
+                            }
+                        ],
+                        "metrics": []
+                    }
+                }
+            ]
         },
         {
             "apiVersion": "2015-11-01-preview",
@@ -76,11 +103,54 @@
             "location": "[parameters('location')]",
             "dependsOn": [],
             "tags": {},
+            "dependsOn": [
+                "[concat('Microsoft.OperationalInsights/workspaces', '/' , variables('omsName'))]"
+            ],
             "properties": {
                 "sku": {
                     "name": "Basic"
                 }
-            }
+            },
+            "resources": [
+                {
+                    "type": "providers/diagnosticSettings",
+                    "name": "Microsoft.Insights/service",
+                    "dependsOn": [
+                        "[concat('Microsoft.Automation/automationAccounts/',variables('automationName'))]"
+                    ],
+                    "apiVersion": "2017-05-01-preview",
+                    "properties": {
+                        "WorkspaceId": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
+                        "logs": [
+                            {
+                                "category": "JobLogs",
+                                "enabled": true,
+                                "retentionPolicy": {
+                                    "days": 7,
+                                    "enabled": true
+                                }
+                            },
+                            {
+                                "category": "JobStreams",
+                                "enabled": true,
+                                "retentionPolicy": {
+                                    "days": 7,
+                                    "enabled": true
+                                }
+                            },
+                            {
+                                "category": "JobLogs",
+                                "enabled": true,
+                                "retentionPolicy": {
+                                    "days": 7,
+                                    "enabled": true
+                                }
+                            }
+                        ],
+                        "metrics": []
+                    }
+                }
+            ]
         },
         {
             "id": "[concat(resourceGroup().id, '/providers/Microsoft.OperationsManagement/solutions/', variables('solutionTypes')[copyIndex()], '(', variables('omsName'), ')')]",
