@@ -7,6 +7,9 @@
         },
         "bossObject": {
             "type": "secureObject"
+        },
+        "deploymentPrefix": {
+            "type": "string"
         }
     },
     "variables": {},
@@ -14,7 +17,7 @@
         {
             "apiVersion": "2017-04-01",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "name": "[concat(parameters('bossObject').name, '/Peering-', copyIndex())]",
+            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '/Peering-', copyIndex())]",
             "location": "[parameters('location')]",
             "copy": {
                 "name": "peerings",
@@ -22,7 +25,7 @@
             },
             "properties": {
                 "remoteVirtualNetwork": {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('bossObject').peerings[copyIndex()])]"
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').peerings[copyIndex()]))]"
                 },
                 "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": false,

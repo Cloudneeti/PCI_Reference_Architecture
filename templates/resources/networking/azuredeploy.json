@@ -11,10 +11,6 @@
         "resourceGroupPrefix": {
             "type": "string"
         },
-        "subnetLength": {
-            "type": "int",
-            "defaultValue": 6
-        },
         "environmentReference": {
             "type": "object"
         },
@@ -26,142 +22,9 @@
         }
     },
     "variables": {
-        "iterator": "https://paste.ee/r/oZiv0/0",
-        "nsgURI": "https://paste.ee/r/V5LfG/0",
-        "vnetURI": "https://paste.ee/d/ZD1v3/0",
-        "peeringURI": "https://paste.ee/r/DKTdD/0",
-        "networkReference": [
-            {
-                "name": "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                "addressSpacePrefix": "10.4.0.0/16",
-                "peerings": [
-                    "[concat(parameters('deploymentPrefix'), '-application')]",
-                    "[concat(parameters('deploymentPrefix'), '-security')]",
-                    "[concat(parameters('deploymentPrefix'), '-management')]"
-                ],
-                "subnets": [
-                    {
-                        "subnetName": "dmzSubnet",
-                        "addressSpacePrefix": "10.4.0.0/24",
-                        "Firewall": [
-                            "RDP",
-                            "SSH"
-                        ],
-                        "CustomRules": []
-                    }
-                ]
-            },
-            {
-                "name": "[concat(parameters('deploymentPrefix'), '-management')]",
-                "addressSpacePrefix": "10.2.0.0/16",
-                "peerings": [
-                    "[concat(parameters('deploymentPrefix'), '-application')]",
-                    "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                    "[concat(parameters('deploymentPrefix'), '-security')]"
-                ],
-                "subnets": [
-                    {
-                        "subnetName": "managementSubnet",
-                        "addressSpacePrefix": "10.2.0.0/24",
-                        "Firewall": [
-                            "RDP",
-                            "SSH"
-                        ],
-                        "CustomRules": []
-                    }
-                ]
-            },
-            {
-                "name": "[concat(parameters('deploymentPrefix'), '-security')]",
-                "addressSpacePrefix": "10.3.0.0/16",
-                "peerings": [
-                    "[concat(parameters('deploymentPrefix'), '-application')]",
-                    "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                    "[concat(parameters('deploymentPrefix'), '-management')]"
-                ],
-                "subnets": [
-                    {
-                        "subnetName": "securitySubnet",
-                        "addressSpacePrefix": "10.3.0.0/24",
-                        "Firewall": [
-                            "RDP",
-                            "SSH"
-                        ],
-                        "CustomRules": []
-                    },
-                    {
-                        "subnetName": "domainSubnet",
-                        "addressSpacePrefix": "10.3.1.0/24",
-                        "Firewall": [
-                            "RDP",
-                            "SSH"
-                        ],
-                        "CustomRules": []
-                    }
-                ]
-            },
-            {
-                "name": "[concat(parameters('deploymentPrefix'), '-application')]",
-                "addressSpacePrefix": "10.5.0.0/16",
-                "peerings": [
-                    "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                    "[concat(parameters('deploymentPrefix'), '-security')]",
-                    "[concat(parameters('deploymentPrefix'), '-management')]"
-                ],
-                "subnets": [
-                    {
-                        "subnetName": "appSubnet1",
-                        "addressSpacePrefix": "10.5.0.0/24",
-                        "Firewall": [
-                            "RDP",
-                            "SSH",
-                            "HTTPS"
-                        ],
-                        "CustomRules": [
-                            {
-                                "name": "rdp-rule1",
-                                "properties": {
-                                    "description": "Allow RDP",
-                                    "protocol": "Tcp",
-                                    "sourcePortRange": "*",
-                                    "destinationPortRange": "33890",
-                                    "sourceAddressPrefix": "Internet",
-                                    "destinationAddressPrefix": "*",
-                                    "access": "Allow",
-                                    "priority": 3001,
-                                    "direction": "Inbound"
-                                }
-                            },
-                            {
-                                "name": "web-rule1",
-                                "properties": {
-                                    "description": "Allow WEB",
-                                    "protocol": "Tcp",
-                                    "sourcePortRange": "*",
-                                    "destinationPortRange": "80",
-                                    "sourceAddressPrefix": "Internet",
-                                    "destinationAddressPrefix": "*",
-                                    "access": "Allow",
-                                    "priority": 3100,
-                                    "direction": "Inbound"
-                                }
-                            }
-                        ]
-                    },
-                    {
-                        "subnetName": "appSubnet2",
-                        "addressSpacePrefix": "10.5.1.0/24",
-                        "Firewall": [
-                            "RDP",
-                            "SSH",
-                            "HTTP"
-                        ],
-                        "CustomRules": []
-                    }
-                ]
-            }
-        ],
-        "addressSpace": "[variables('networkReference')[2].subnets[1].addressSpacePrefix]",
+        "vnetURI": "https://paste.ee/d/uxXKJ/0",
+        "peeringURI": "https://paste.ee/d/ssQ7r/0",
+        "addressSpace": "[parameters('networkReference')[2].subnets[1].addressSpacePrefix]",
         "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
         "adPDCNicIPAddress": "[concat(variables('substring'), 4)]",
         "adBDCNicIPAddress": "[concat(variables('substring'), 5)]",
@@ -175,81 +38,11 @@
     "resources": [
         {
             "type": "Microsoft.Resources/deployments",
-            "name": "[concat('deployNSG-', copyIndex())]",
-            "apiVersion": "2016-09-01",
-            "copy": {
-                "name": "deployNSGs",
-                "count": "[parameters('subnetLength')]"
-            },
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('nsgURI')]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "bossObject": {
-                        "value": "[reference(concat('iterator-', length(variables('networkReference')))).outputs.collection.value[copyIndex()]]"
-                    },
-                    "location": {
-                        "value": "[parameters('location')]"
-                    },
-                    "deploymentPrefix": {
-                        "value": "[parameters('deploymentPrefix')]"
-                    },
-                    "resourceGroupPrefix": {
-                        "value": "[parameters('resourceGroupPrefix')]"
-                    }
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2016-09-01",
-            "name": "iterator-0",
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('iterator')]"
-                },
-                "parameters": {
-                    "source": {
-                        "value": []
-                    }
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2016-09-01",
-            "name": "[concat('iterator-', copyIndex(1))]",
-            "copy": {
-                "name": "iterator",
-                "count": "[length(variables('networkReference'))]",
-                "mode": "Serial"
-            },
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('iterator')]"
-                },
-                "parameters": {
-                    "source": {
-                        "value": "[variables('networkReference')[copyIndex()].subnets]"
-                    },
-                    "state": {
-                        "value": "[reference(concat('iterator-', copyIndex())).outputs.collection.value]"
-                    }
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Resources/deployments",
             "name": "[concat('vnets-nested-', copyIndex())]",
             "apiVersion": "2016-09-01",
             "copy": {
                 "name": "deployvnets",
-                "count": "[length(variables('networkReference'))]"
+                "count": "[length(parameters('networkReference'))]"
             },
             "properties": {
                 "mode": "Incremental",
@@ -259,7 +52,7 @@
                 },
                 "parameters": {
                     "bossObject": {
-                        "value": "[variables('networkReference')[copyIndex()]]"
+                        "value": "[parameters('networkReference')[copyIndex()]]"
                     },
                     "location": {
                         "value": "[parameters('location')]"
@@ -269,12 +62,12 @@
                     },
                     "dnsSettings": {
                         "value": "[variables('dnsSettings')]"
+                    },
+                    "resourceGroupPrefix": {
+                        "value": "[parameters('resourceGroupPrefix')]"
                     }
                 }
-            },
-            "dependsOn": [
-                "deployNSGs"
-            ]
+            }
         },
         {
             "type": "Microsoft.Resources/deployments",
@@ -282,7 +75,7 @@
             "apiVersion": "2016-09-01",
             "copy": {
                 "name": "peering",
-                "count": "[length(variables('networkReference'))]"
+                "count": "[length(parameters('networkReference'))]"
             },
             "properties": {
                 "mode": "Incremental",
@@ -292,11 +85,14 @@
                 },
                 "parameters": {
                     "bossObject": {
-                        "value": "[variables('networkReference')[copyIndex()]]"
+                        "value": "[parameters('networkReference')[copyIndex()]]"
                     },
                     "location": {
                         "value": "[parameters('location')]"
-                    }
+                    },
+                    "deploymentPrefix": {
+                        "value": "[parameters('deploymentPrefix')]"
+                    },
                 }
             },
             "dependsOn": [

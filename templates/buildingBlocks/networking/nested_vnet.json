@@ -13,14 +13,23 @@
         },
         "dnsSettings": {
             "type": "array"
+        },
+        "resourceGroupPrefix": {
+            "type": "string"
         }
+    },
+    "variables": {
+        "nsgURI": "https://paste.ee/r/V5LfG/0"
     },
     "resources": [
         {
             "type": "Microsoft.Network/virtualNetworks",
-            "name": "[parameters('bossObject').name]",
+            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name)]",
             "apiVersion": "2016-03-30",
             "location": "[parameters('location')]",
+            "dependsOn": [
+                "deployNSGs"
+            ],
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -46,7 +55,36 @@
                     }
                 ]
             }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat('deployNSG-', parameters('bossObject').name, copyIndex())]",
+            "apiVersion": "2016-09-01",
+            "copy": {
+                "name": "deployNSGs",
+                "count": "[length(parameters('bossObject').subnets)]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('nsgURI')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "bossObject": {
+                        "value": "[parameters('bossObject').subnets[copyIndex()]]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    },
+                    "deploymentPrefix": {
+                        "value": "[parameters('deploymentPrefix')]"
+                    },
+                    "resourceGroupPrefix": {
+                        "value": "[parameters('resourceGroupPrefix')]"
+                    }
+                }
+            }
         }
-    ],
-    "outputs": {}
+    ]
 }

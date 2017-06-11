@@ -22,12 +22,12 @@
         "networkReference": {
             "value": [
                 {
-                    "name": "[concat(parameters('deploymentPrefix'), '-dmz')]",
+                    "name": "dmz",
                     "addressSpacePrefix": "10.4.0.0/16",
                     "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]"
+                        "application",
+                        "security",
+                        "management"
                     ],
                     "subnets": [
                         {
@@ -42,12 +42,12 @@
                     ]
                 },
                 {
-                    "name": "[concat(parameters('deploymentPrefix'), '-management')]",
+                    "name": "management",
                     "addressSpacePrefix": "10.2.0.0/16",
                     "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]"
+                        "application",
+                        "dmz",
+                        "security"
                     ],
                     "subnets": [
                         {
@@ -62,12 +62,12 @@
                     ]
                 },
                 {
-                    "name": "[concat(parameters('deploymentPrefix'), '-security')]",
+                    "name": "security",
                     "addressSpacePrefix": "10.3.0.0/16",
                     "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-application')]",
-                        "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]"
+                        "application",
+                        "dmz",
+                        "management"
                     ],
                     "subnets": [
                         {
@@ -91,12 +91,12 @@
                     ]
                 },
                 {
-                    "name": "[concat(parameters('deploymentPrefix'), '-application')]",
+                    "name": "application",
                     "addressSpacePrefix": "10.5.0.0/16",
                     "peerings": [
-                        "[concat(parameters('deploymentPrefix'), '-dmz')]",
-                        "[concat(parameters('deploymentPrefix'), '-security')]",
-                        "[concat(parameters('deploymentPrefix'), '-management')]"
+                        "dmz",
+                        "security",
+                        "management"
                     ],
                     "subnets": [
                         {
