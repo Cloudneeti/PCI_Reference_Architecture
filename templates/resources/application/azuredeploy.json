@@ -1,66 +1,35 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "vmPrefix": {
-            "type": "string",
-            "defaultValue": "app-vm-",
-            "metadata": {
-                "description": "Prefix for the VM name"
-            }
+        "deploymentPrefix": {
+            "type": "string"
         },
-        "adminUsername": {
-            "type": "string",
-            "defaultValue": "admuser",
-            "metadata": {
-                "description": "Admin username for VM"
-            }
+        "location": {
+            "type": "string"
         },
-        "adminPassword": {
-            "type": "securestring",
-            "defaultValue": "ADMUSERadmuser!@21",
-            "metadata": {
-                "description": "Admin password for VM"
-            }
+        "resourceGroupPrefix": {
+            "type": "string"
         },
-        "numberOfInstances": {
-            "type": "int",
-            "defaultValue": 2,
-            "minValue": 1,
-            "maxValue": 5,
-            "metadata": {
-                "description": "Number of VMs to deploy"
-            }
+        "environmentReference": {
+            "type": "object"
         },
-        "vmSize": {
-            "type": "string",
-            "defaultValue": "Standard_A1",
-            "metadata": {
-                "description": "Size of the VM we are deploying"
-            }
+        "networkReference": {
+            "type": "array"
         },
-        "OS": {
-            "type": "string",
-            "defaultValue": "Ubuntu",
-            "allowedValues": [
-                "Ubuntu",
-                "Windows"
-            ],
-            "metadata": {
-                "description": "OS Platform for the VM"
-            }
+        "vmReference": {
+            "type": "array"
         }
     },
     "variables": {
-        "virtualNetworkName": "myVNET",
-        "addressPrefix": "10.0.0.0/16",
-        "subnet1Name": "Subnet-1",
-        "subnet1Prefix": "10.0.0.0/24",
-        "subnet1Ref": "[resourceId('Microsoft.Network/virtualNetworks/subnets',variables('virtualNetworkName'),variables('subnet1Name'))]",
+        "natStartPort": 50000,
+        "natEndPort": 50119,
+        "natBackendPortUbuntu": 22,
+        "natBackendPortWindows": 3389,
         "Ubuntu": {
             "publisher": "Canonical",
             "offer": "UbuntuServer",
-            "sku": "14.04.0-LTS",
+            "sku": "16.04.0-LTS",
             "version": "latest"
         },
         "Windows": {
@@ -69,112 +38,113 @@
             "sku": "2016-Datacenter",
             "version": "latest"
         },
-        "imageReference": "[variables(parameters('OS'))]"
+        "computeApiVersion": "2017-03-30",
+        "networkApiVersion": "2017-04-01"
     },
     "resources": [
         {
-            "type": "Microsoft.Network/virtualNetworks",
-            "name": "[variables('virtualNetworkName')]",
-            "apiVersion": "2016-03-30",
+            "condition": "[equals(parameters('vmReference')[copyIndex()].balancer, 'ilb')]",
+            "type": "Microsoft.Network/loadBalancers",
+            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].name, '-ilb')]",
             "location": "[parameters('location')]",
-            "properties": {
-                "addressSpace": {
-                    "addressPrefixes": [
-                        "[variables('addressPrefix')]"
-                    ]
-                },
-                "subnets": [
-                    {
-                        "name": "[variables('subnet1Name')]",
-                        "properties": {
-                            "addressPrefix": "[variables('subnet1Prefix')]"
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat('nic', copyindex(1))]",
-            "apiVersion": "2016-03-30",
-            "location": "[parameters('location')]",
+            "apiVersion": "[variables('networkApiVersion')]",
             "copy": {
-                "name": "nicLoop",
-                "count": "[parameters('numberOfInstances')]"
+                "name": "lbcopy",
+                "count": "[length(parameters('vmReference'))]"
             },
-            "dependsOn": [
-                "[variables('virtualNetworkName')]",
-                "ipLoop"
-            ],
             "properties": {
-                "ipConfigurations": [
+                "frontendIPConfigurations": [
                     {
-                        "name": "ipconfig1",
+                        "name": "LoadBalancerFrontEnd",
                         "properties": {
-                            "privateIPAllocationMethod": "Dynamic",
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',concat('ip',copyindex(1)))]"
-                            },
                             "subnet": {
-                                "id": "[variables('subnet1Ref')]"
+                                "id": "[concat(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].vnet)), '/subnets/', parameters('vmReference')[copyIndex()].subnet)]"
                             }
                         }
                     }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "[concat(parameters('vmReference')[copyIndex()].name, '-bePoolName')]"
+                    }
+                ],
+                "inboundNatPools": [
+                    {
+                        "name": "[concat(parameters('vmReference')[copyIndex()].name, '-natPoolName')]",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].name, '-ilb')), '/frontendIPConfigurations/loadBalancerFrontEnd')]"
+                            },
+                            "protocol": "tcp",
+                            "frontendPortRangeStart": "[variables('natStartPort')]",
+                            "frontendPortRangeEnd": "[variables('natEndPort')]",
+                            "backendPort": "[parameters('vmReference')[copyIndex()].port]"
+                        }
+                    }
                 ]
             }
         },
         {
-            "apiVersion": "2016-09-01",
-            "type": "Microsoft.Network/publicIPAddresses",
-            "name": "[concat('ip', copyindex(1))]",
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].name, '-vmss')]",
             "location": "[parameters('location')]",
+            "apiVersion": "[variables('computeApiVersion')]",
             "copy": {
-                "name": "ipLoop",
-                "count": "[parameters('numberOfInstances')]"
+                "name": "vmsscopy",
+                "count": "[length(parameters('vmReference'))]"
             },
-            "dependsOn": [
-                "[variables('virtualNetworkName')]"
-            ],
-            "properties": {
-                "publicIPAllocationMethod": "Dynamic",
-                "dnsSettings": {
-                    "domainNameLabel": "[concat(parameters('vmPrefix'), uniqueString(resourceGroup().id, deployment().name), copyindex(1))]"
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachines",
-            "name": "[concat(parameters('vmPrefix'), copyindex(1))]",
-            "apiVersion": "2016-04-30-preview",
-            "location": "[parameters('location')]",
-            "copy": {
-                "name": "virtualMachineLoop",
-                "count": "[parameters('numberOfInstances')]"
+            "sku": {
+                "name": "[parameters('vmReference')[copyIndex()].size]",
+                "tier": "Standard",
+                "capacity": "[parameters('vmReference')[copyIndex()].count]"
             },
-            "dependsOn": [
-                "nicLoop"
-            ],
             "properties": {
-                "hardwareProfile": {
-                    "vmSize": "[parameters('vmSize')]"
+                "overprovision": "true",
+                "upgradePolicy": {
+                    "mode": "Manual"
                 },
-                "osProfile": {
-                    "computerName": "[concat(parameters('vmPrefix'), copyindex(1))]",
-                    "adminUsername": "[parameters('adminUsername')]",
-                    "adminPassword": "[parameters('adminPassword')]"
-                },
-                "storageProfile": {
-                    "imageReference": "[variables('imageReference')]",
-                    "osDisk": {
-                        "createOption": "FromImage"
+                "virtualMachineProfile": {
+                    "storageProfile": {
+                        "osDisk": {
+                            "createOption": "FromImage"
+                        },
+                        "imageReference": "[variables(parameters('vmReference')[copyIndex()].os)]"
+                    },
+                    "osProfile": {
+                        "computerNamePrefix": "[parameters('vmReference')[copyIndex()].name]",
+                        "adminUsername": "[parameters('vmReference')[copyIndex()].name]",
+                        "adminPassword": "[parameters('vmReference')[copyIndex()].password]"
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "vmssnicname",
+                                "properties": {
+                                    "primary": true,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "[concat(parameters('vmReference')[copyIndex()].name, '-ipconfiguration')]",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[concat(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].vnet)), '/subnets/', parameters('vmReference')[copyIndex()].subnet)]"
+                                                },
+                                                "loadBalancerBackendAddressPools": [
+                                                    {
+                                                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].name, '-ilb'), concat('/backendAddressPools/', parameters('vmReference')[copyIndex()].name, '-bePoolName'))]"
+                                                    }
+                                                ],
+                                                "loadBalancerInboundNatPools": [
+                                                    {
+                                                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].name, '-ilb'), concat('/inboundNatPools/', parameters('vmReference')[copyIndex()].name, '-natPoolName'))]"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
                     }
-                },
-                "networkProfile": {
-                    "networkInterfaces": [
-                        {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('nic', copyindex(1)))]"
-                        }
-                    ]
                 }
             }
         }

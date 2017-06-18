@@ -99,8 +99,8 @@ function Invoke-ArmDeployment {
             }
             7 {
                 New-AzureRmResourceGroupDeployment -TemplateFile "$scriptRoot\templates\resources\application\azuredeploy.json" `
-                    -Name "$($deploymentData[0])-domain" -ErrorAction Stop -Verbose `
-                    -ResourceGroupName (($resourceGroupPrefix, $deploymentPrefix, 'operations') -join '-') `
+                    -Name "$($deploymentData[0])-application" -ErrorAction Stop -Verbose `
+                    -ResourceGroupName (($resourceGroupPrefix, $deploymentPrefix, 'application') -join '-') `
                     -TemplateParameterFile $($deploymentData[1])
             }
         }

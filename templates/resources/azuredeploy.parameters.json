@@ -153,7 +153,30 @@
             ]
         },
         "vmReference": {
-            "value": []
+            "value": [
+                {
+                    "balancer": "ilb",
+                    "count": 3,
+                    "name": "webbito",
+                    "os": "Ubuntu",
+                    "password": "!Q2w3e4r5t6y",
+                    "port": 443,
+                    "size": "Standard_A1",
+                    "subnet": "appsubnet1",
+                    "vnet": "application"
+                },
+                {
+                    "balancer": "ilb",
+                    "count": 3,
+                    "name": "webbitota",
+                    "os": "Ubuntu",
+                    "password": "!Q2w3e4r5t6y",
+                    "port": 80,
+                    "size": "Standard_A1",
+                    "subnet": "appsubnet1",
+                    "vnet": "application"
+                }
+            ]
         }
     }
 }
