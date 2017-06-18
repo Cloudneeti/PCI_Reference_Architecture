@@ -78,7 +78,7 @@
                             "protocol": "tcp",
                             "frontendPortRangeStart": "[variables('natStartPort')]",
                             "frontendPortRangeEnd": "[variables('natEndPort')]",
-                            "backendPort": "[parameters('vmReference')[copyIndex()].port]"
+                            "backendPort": "[variables(concat('natBackendPort', parameters('vmReference')[copyIndex()].os))]"
                         }
                     }
                 ]
