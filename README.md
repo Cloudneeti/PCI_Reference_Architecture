@@ -8,7 +8,7 @@ PCI (Payment Card Industry) code repository to manage deployment templates.
 ```
 2. Run it
 ```
-Invoke-ArmDeployment -subId %sub_id% -resourceGroupName %name% -location 'South Central US' -deploymentPrefix dev -steps @("1","2")
+Invoke-ArmDeployment -subId %sub_id% -resourceGroupPrefix %name% -location 'South Central US' -deploymentPrefix dev -steps @(1,2)
 ```
 Steps parameter is an array with the values 1 to 7 allowed.
 Each step correspond to deploying specific step in our workflow

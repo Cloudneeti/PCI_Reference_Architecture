@@ -74,6 +74,46 @@
                             "backendPort": "[variables(concat('natBackendPort', parameters('bossObject').os))]"
                         }
                     }
+                ],
+                "copy": [
+                    {
+                        "name": "probes",
+                        "count": "[length(parameters('bossObject').ports)]",
+                        "input": {
+                            "name": "[concat('probe-', parameters('bossObject').ports[copyIndex('probes')])]",
+                            "properties": {
+                                "protocol": "tcp",
+                                "port": "[parameters('bossObject').ports[copyIndex('probes')]]",
+                                "intervalInSeconds": 15,
+                                "numberOfProbes": 5
+                            }
+                        }
+                    }
+                ],
+                "copy": [
+                    {
+                        "name": "loadBalancingRules",
+                        "count": "[length(parameters('bossObject').ports)]",
+                        "input": {
+                            "name": "[concat('lbr-', parameters('bossObject').ports[copyIndex('loadBalancingRules')])]",
+                            "properties": {
+                                "backendAddressPool": {
+                                    "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb'), concat('/backendAddressPools/', parameters('bossObject').name, '-bePoolName'))]"
+                                },
+                                "backendPort": 80,
+                                "enableFloatingIP": false,
+                                "frontendIPConfiguration": {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb')), '/frontendIPConfigurations/loadBalancerFrontEnd')]"
+                                },
+                                "frontendPort": 80,
+                                "probe": {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb')), concat('/probes/', 'probe-', parameters('bossObject').ports[copyIndex('loadBalancingRules')]))]"
+                                },
+                                "protocol": "Tcp",
+                                "loadDistribution": "SourceIP"
+                            }
+                        }
+                    }
                 ]
             }
         },
