@@ -1,0 +1,146 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "deploymentPrefix": {
+            "type": "string"
+        },
+        "location": {
+            "type": "string"
+        },
+        "resourceGroupPrefix": {
+            "type": "string"
+        },
+        "networkReference": {
+            "type": "array"
+        },
+        "bossObject": {
+            "type": "object"
+        }
+    },
+    "variables": {
+        "natStartPort": 50000,
+        "natEndPort": 50119,
+        "natBackendPortUbuntu": 22,
+        "natBackendPortWindows": 3389,
+        "Ubuntu": {
+            "publisher": "Canonical",
+            "offer": "UbuntuServer",
+            "sku": "16.04.0-LTS",
+            "version": "latest"
+        },
+        "Windows": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2016-Datacenter",
+            "version": "latest"
+        },
+        "computeApiVersion": "2017-03-30",
+        "networkApiVersion": "2017-04-01"
+    },
+    "resources": [
+        {
+            "condition": "[equals(parameters('bossObject').balancer, 'ilb')]",
+            "type": "Microsoft.Network/loadBalancers",
+            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb')]",
+            "location": "[parameters('location')]",
+            "apiVersion": "[variables('networkApiVersion')]",
+            "properties": {
+                "frontendIPConfigurations": [
+                    {
+                        "name": "LoadBalancerFrontEnd",
+                        "properties": {
+                            "subnet": {
+                                "id": "[concat(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').vnet)), '/subnets/', parameters('bossObject').subnet)]"
+                            }
+                        }
+                    }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "[concat(parameters('bossObject').name, '-bePoolName')]"
+                    }
+                ],
+                "inboundNatPools": [
+                    {
+                        "name": "[concat(parameters('bossObject').name, '-natPoolName')]",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb')), '/frontendIPConfigurations/loadBalancerFrontEnd')]"
+                            },
+                            "protocol": "tcp",
+                            "frontendPortRangeStart": "[variables('natStartPort')]",
+                            "frontendPortRangeEnd": "[variables('natEndPort')]",
+                            "backendPort": "[variables(concat('natBackendPort', parameters('bossObject').os))]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-vmss')]",
+            "location": "[parameters('location')]",
+            "apiVersion": "[variables('computeApiVersion')]",
+            "copy": {
+                "name": "vmsscopy",
+                "count": "[length(parameters('bossObject'))]"
+            },
+            "sku": {
+                "name": "[parameters('bossObject').size]",
+                "tier": "Standard",
+                "capacity": "[parameters('bossObject').count]"
+            },
+            "properties": {
+                "overprovision": "true",
+                "upgradePolicy": {
+                    "mode": "Manual"
+                },
+                "virtualMachineProfile": {
+                    "storageProfile": {
+                        "osDisk": {
+                            "createOption": "FromImage"
+                        },
+                        "imageReference": "[variables(parameters('bossObject').os)]"
+                    },
+                    "osProfile": {
+                        "computerNamePrefix": "[parameters('bossObject').name]",
+                        "adminUsername": "[parameters('bossObject').name]",
+                        "adminPassword": "[parameters('bossObject').password]"
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "vmssnicname",
+                                "properties": {
+                                    "primary": true,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "[concat(parameters('bossObject').name, '-ipconfiguration')]",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[concat(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').vnet)), '/subnets/', parameters('bossObject').subnet)]"
+                                                },
+                                                "loadBalancerBackendAddressPools": [
+                                                    {
+                                                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb'), concat('/backendAddressPools/', parameters('bossObject').name, '-bePoolName'))]"
+                                                    }
+                                                ],
+                                                "loadBalancerInboundNatPools": [
+                                                    {
+                                                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb'), concat('/inboundNatPools/', parameters('bossObject').name, '-natPoolName'))]"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}

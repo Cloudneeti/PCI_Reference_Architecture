@@ -91,7 +91,6 @@
                 }
             }
         ],
-        "iterator": "https://paste.ee/d/R05zo/0",
         "paasPrefix": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'))]",
         "omsName": "[concat(variables('paasPrefix'), '-oms')]"
     },
@@ -103,7 +102,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('iterator')]"
+                    "uri": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/common/nested_iterator.json"
                 },
                 "parameters": {
                     "source": {
@@ -124,7 +123,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('iterator')]"
+                    "uri": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/common/nested_iterator.json"
                 },
                 "parameters": {
                     "source": {

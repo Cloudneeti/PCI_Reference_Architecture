@@ -21,129 +21,32 @@
             "type": "array"
         }
     },
-    "variables": {
-        "natStartPort": 50000,
-        "natEndPort": 50119,
-        "natBackendPortUbuntu": 22,
-        "natBackendPortWindows": 3389,
-        "Ubuntu": {
-            "publisher": "Canonical",
-            "offer": "UbuntuServer",
-            "sku": "16.04.0-LTS",
-            "version": "latest"
-        },
-        "Windows": {
-            "publisher": "MicrosoftWindowsServer",
-            "offer": "WindowsServer",
-            "sku": "2016-Datacenter",
-            "version": "latest"
-        },
-        "computeApiVersion": "2017-03-30",
-        "networkApiVersion": "2017-04-01"
-    },
     "resources": [
         {
-            "condition": "[equals(parameters('vmReference')[copyIndex()].balancer, 'ilb')]",
-            "type": "Microsoft.Network/loadBalancers",
-            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].name, '-ilb')]",
-            "location": "[parameters('location')]",
-            "apiVersion": "[variables('networkApiVersion')]",
-            "copy": {
-                "name": "lbcopy",
-                "count": "[length(parameters('vmReference'))]"
+            "name": "[concat(parameters('deploymentPrefix'), 'vmss-', copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "tags": {
+                "displayName": "NestedDeployment1"
             },
             "properties": {
-                "frontendIPConfigurations": [
-                    {
-                        "name": "LoadBalancerFrontEnd",
-                        "properties": {
-                            "subnet": {
-                                "id": "[concat(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].vnet)), '/subnets/', parameters('vmReference')[copyIndex()].subnet)]"
-                            }
-                        }
-                    }
-                ],
-                "backendAddressPools": [
-                    {
-                        "name": "[concat(parameters('vmReference')[copyIndex()].name, '-bePoolName')]"
-                    }
-                ],
-                "inboundNatPools": [
-                    {
-                        "name": "[concat(parameters('vmReference')[copyIndex()].name, '-natPoolName')]",
-                        "properties": {
-                            "frontendIPConfiguration": {
-                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].name, '-ilb')), '/frontendIPConfigurations/loadBalancerFrontEnd')]"
-                            },
-                            "protocol": "tcp",
-                            "frontendPortRangeStart": "[variables('natStartPort')]",
-                            "frontendPortRangeEnd": "[variables('natEndPort')]",
-                            "backendPort": "[variables(concat('natBackendPort', parameters('vmReference')[copyIndex()].os))]"
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachineScaleSets",
-            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].name, '-vmss')]",
-            "location": "[parameters('location')]",
-            "apiVersion": "[variables('computeApiVersion')]",
-            "copy": {
-                "name": "vmsscopy",
-                "count": "[length(parameters('vmReference'))]"
-            },
-            "sku": {
-                "name": "[parameters('vmReference')[copyIndex()].size]",
-                "tier": "Standard",
-                "capacity": "[parameters('vmReference')[copyIndex()].count]"
-            },
-            "properties": {
-                "overprovision": "true",
-                "upgradePolicy": {
-                    "mode": "Manual"
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/application/nested_vmss.json",
+                    "contentVersion": "1.0.0.0"
                 },
-                "virtualMachineProfile": {
-                    "storageProfile": {
-                        "osDisk": {
-                            "createOption": "FromImage"
-                        },
-                        "imageReference": "[variables(parameters('vmReference')[copyIndex()].os)]"
+                "parameters": {
+                    "bossObject": {
+                        "value": "[parameters('vmReference')[copyIndex()]]"
                     },
-                    "osProfile": {
-                        "computerNamePrefix": "[parameters('vmReference')[copyIndex()].name]",
-                        "adminUsername": "[parameters('vmReference')[copyIndex()].name]",
-                        "adminPassword": "[parameters('vmReference')[copyIndex()].password]"
+                    "location": {
+                        "value": "[parameters('location')]"
                     },
-                    "networkProfile": {
-                        "networkInterfaceConfigurations": [
-                            {
-                                "name": "vmssnicname",
-                                "properties": {
-                                    "primary": true,
-                                    "ipConfigurations": [
-                                        {
-                                            "name": "[concat(parameters('vmReference')[copyIndex()].name, '-ipconfiguration')]",
-                                            "properties": {
-                                                "subnet": {
-                                                    "id": "[concat(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].vnet)), '/subnets/', parameters('vmReference')[copyIndex()].subnet)]"
-                                                },
-                                                "loadBalancerBackendAddressPools": [
-                                                    {
-                                                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].name, '-ilb'), concat('/backendAddressPools/', parameters('vmReference')[copyIndex()].name, '-bePoolName'))]"
-                                                    }
-                                                ],
-                                                "loadBalancerInboundNatPools": [
-                                                    {
-                                                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-', parameters('vmReference')[copyIndex()].name, '-ilb'), concat('/inboundNatPools/', parameters('vmReference')[copyIndex()].name, '-natPoolName'))]"
-                                                    }
-                                                ]
-                                            }
-                                        }
-                                    ]
-                                }
-                            }
-                        ]
+                    "deploymentPrefix": {
+                        "value": "[parameters('deploymentPrefix')]"
+                    },
+                    "resourceGroupPrefix": {
+                        "value": "[parameters('resourceGroupPrefix')]"
                     }
                 }
             }

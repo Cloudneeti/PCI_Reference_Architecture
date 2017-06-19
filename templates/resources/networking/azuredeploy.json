@@ -22,8 +22,6 @@
         }
     },
     "variables": {
-        "vnetURI": "https://paste.ee/d/uxXKJ/0",
-        "peeringURI": "https://paste.ee/d/ssQ7r/0",
         "addressSpace": "[parameters('networkReference')[2].subnets[1].addressSpacePrefix]",
         "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
         "adPDCNicIPAddress": "[concat(variables('substring'), 4)]",
@@ -47,7 +45,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('vnetURI')]",
+                    "uri": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/networking/nested_vnet.json",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -80,7 +78,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('peeringURI')]",
+                    "uri": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/networking/nested_peerings.json",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -92,7 +90,7 @@
                     },
                     "deploymentPrefix": {
                         "value": "[parameters('deploymentPrefix')]"
-                    },
+                    }
                 }
             },
             "dependsOn": [
