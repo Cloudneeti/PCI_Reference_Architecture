@@ -26,8 +26,9 @@
             "name": "[concat(parameters('deploymentPrefix'), 'vmss-', copyIndex())]",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2015-01-01",
-            "tags": {
-                "displayName": "NestedDeployment1"
+            "copy": {
+                "name": "vmssCopy",
+                "count": "[length(parameters('vmReference'))]"
             },
             "properties": {
                 "mode": "Incremental",
@@ -47,6 +48,9 @@
                     },
                     "resourceGroupPrefix": {
                         "value": "[parameters('resourceGroupPrefix')]"
+                    },
+                    "networkReference": {
+                        "value": "[parameters('networkReference')]"
                     }
                 }
             }

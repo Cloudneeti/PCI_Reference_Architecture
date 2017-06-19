@@ -82,10 +82,6 @@
             "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-vmss')]",
             "location": "[parameters('location')]",
             "apiVersion": "[variables('computeApiVersion')]",
-            "copy": {
-                "name": "vmsscopy",
-                "count": "[length(parameters('bossObject'))]"
-            },
             "sku": {
                 "name": "[parameters('bossObject').size]",
                 "tier": "Standard",
