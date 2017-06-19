@@ -21,6 +21,10 @@
             "type": "array"
         }
     },
+    "variables": {
+        "gg": "https://paste.ee/d/7P8gt/0",
+        "realdeal": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/application/nested_vmss.json"
+    },
     "resources": [
         {
             "name": "[concat(parameters('deploymentPrefix'), 'vmss-', copyIndex())]",
@@ -33,7 +37,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/application/nested_vmss.json",
+                    "uri": "[variables('gg')]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {

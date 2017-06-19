@@ -3,12 +3,13 @@ PCI (Payment Card Industry) code repository to manage deployment templates.
 
 ### How to run  
 1. Dot source the script
-```
+```powershell
 . .\scripts\deployme.ps1
 ```
 2. Run it
-```powershell
 
+
+```powershell
 $subscriptionID = 'XXXXX-XXX....XXXX' #preferred Subs for Avyan are Cloudly Dev or AvyanMPN6k, as this template requires third party VM installations.
 $resourceGroupPrefix = 'pciiaas' #should not start with a number or contain '-' in the prefix
 $location = 'South Central US'
@@ -16,6 +17,8 @@ $steps = @("1","2","3")
 
 Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupPrefix -location $location -deploymentPrefix dev -steps $steps
 ```
+
+
 Steps parameter is an array with the values 1 to 7 allowed.
 Each step correspond to deploying specific step in our workflow
 
