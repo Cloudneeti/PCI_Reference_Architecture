@@ -7,8 +7,6 @@ PCI (Payment Card Industry) code repository to manage deployment templates.
 . .\scripts\deployme.ps1
 ```
 2. Run it
-
-
 ```powershell
 $subscriptionID = 'XXXXX-XXX....XXXX' #preferred Subs for Avyan are Cloudly Dev or AvyanMPN6k, as this template requires third party VM installations.
 $resourceGroupPrefix = 'pciiaas' #should not start with a number or contain '-' in the prefix
@@ -17,7 +15,10 @@ $steps = @(1,2,3)
 
 Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupPrefix -location $location -deploymentPrefix dev -steps $steps
 ```
-
+To remove all the resource groups you can use the `Remove-ArmDeployment` function
+```powershell
+Remove-ArmDeployment $resourceGroupPrefix dev $subscriptionID
+```
 
 Steps parameter is an array with the values 1 to 7 allowed.
 Each step correspond to deploying specific step in our workflow
@@ -33,6 +34,22 @@ Each step correspond to deploying specific step in our workflow
 ### Notes  
 Azure Functions to proxy requests to Private Github repo
 http://blog.tyang.org/2017/05/19/deploying-arm-templates-with-artifacts-located-in-a-private-github-repository/
+
+
+https://github.com/Azure/azure-powershell/issues/3954
+To make parallel deployments work do this:
+```powershell
+$ctx = Import-AzureRmContext -Path "$scriptRoot\auth.json"
+$session = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance
+$cacheFile = [System.IO.Path]::Combine($session.ProfileDirectory, $session.TokenCacheFile)
+if (Test-Path $cacheFile) {
+  $session.DataStore.CopyFile($cacheFile, ($cacheFile + ".bak"))
+}
+$session.DataStore.WriteFile( $cacheFile, [System.Security.Cryptography.ProtectedData]::Protect($ctx.Context.TokenCache.CacheData, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser))
+$session.TokenCache = New-Object -TypeName Microsoft.Azure.Commands.Common.Authentication.ProtectedFileTokenCache -ArgumentList $cacheFile
+[Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile.DefaultContext.TokenCache = $session.TokenCache
+```
+Currently, tracking which steps can run in parallel is the responsibility of the end user. So progress of deployments is not tracked.
 
 
 ### Networking  

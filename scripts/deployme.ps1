@@ -1,4 +1,6 @@
 $scriptRoot = Split-Path ( Split-Path $MyInvocation.MyCommand.Path )
+$ProfilePath = "$scriptRoot\auth.json"
+$components = @("application", "dmz", "security", "management", "operations", "networking")
 function Invoke-ArmDeployment {
     [CmdletBinding()]
     Param
@@ -33,24 +35,22 @@ function Invoke-ArmDeployment {
         $null = Set-AzureRmContext -SubscriptionId $subId
     }
     Catch [System.Management.Automation.PSInvalidOperationException] {
-        $ProfilePath = "$home\AzureCredProfile"
         if (Test-Path $ProfilePath -PathType Leaf) {
             Import-AzureRmContext -path $ProfilePath
         }
         else {
             $null = Add-AzureRmAccount -SubscriptionId $subId
             $null = Set-AzureRmContext -SubscriptionId $subId
-            $null = Save-AzureRmProfile -Path $ProfilePath
         }
     }
+    $null = Save-AzureRmContext -Path $ProfilePath -Force
     if ($error[0].Exception.Message -in "Run Login-AzureRmAccount to login.", "Provided subscription $subId does not exist") {
         Write-Error "Login routine failed! Verify your subId"
         exit 1
     }
     try {
         $locationcoerced = $location.ToLower() -replace ' ', ''
-        $components = @("application", "dmz", "security", "management", "operations", "networking")
-        $rgn = $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupPrefix, $deploymentPrefix, $_) -join '-') -Location $location -Force }
+        $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupPrefix, $deploymentPrefix, $_) -join '-') -Location $location -Force }
         
         $deploymentData = Get-DeploymentData
         $deployments = @{
@@ -64,22 +64,41 @@ function Invoke-ArmDeployment {
         }
         
         foreach ($step in $steps) {
-            New-AzureRmResourceGroupDeployment `
-                -ResourceGroupName (($resourceGroupPrefix, $deploymentPrefix, ($deployments.$step).rg) -join '-') `
-                -TemplateFile "$scriptRoot\templates\resources\$(($deployments.$step).name)\azuredeploy.json" `
-                -TemplateParameterFile $deploymentData[1] `
-                -Name (($deploymentData[0], ($deployments.$step).name) -join '-') `
-                -ErrorAction Stop -Verbose
+            $importSession = {
+                param(
+                    $rgName,
+                    $pathTemplate,
+                    $pathParameters,
+                    $deploymentName,
+                    $scriptRoot,
+                    $subId
+                )
+                try {
+                    Import-AzureRmContext -Path "$scriptRoot\auth.json" -ErrorAction Stop
+                    Set-AzureRmContext -SubscriptionId $subId
+                }
+                catch {
+                    Write-Error $_
+                    exit 1337
+                }
+
+                New-AzureRmResourceGroupDeployment `
+                    -ResourceGroupName $rgName `
+                    -TemplateFile $pathTemplate `
+                    -TemplateParameterFile $pathParameters `
+                    -Name $deploymentName `
+                    -ErrorAction Stop -Verbose
+            }.GetNewClosure()
+
+            Start-job -Name ("$step-create") -ScriptBlock $importSession -Debug `
+                -ArgumentList (($resourceGroupPrefix, $deploymentPrefix, ($deployments.$step).rg) -join '-'), "$scriptRoot\templates\resources\$(($deployments.$step).name)\azuredeploy.json", $deploymentData[1], (($deploymentData[0], ($deployments.$step).name) -join '-'), $scriptRoot, $subId
         }
     }
     catch {
         Write-Error $_
         if ($env:destroy) {
             Remove-Item $deploymentData[1]
-            # remove all RG
-            = $rgn | foreach {
-                Delete-AzureRmResourceGroup -Name $_.ResourceGroupName
-            }
+            Remove-ArmDeployment $resourceGroupPrefix $deploymentPrefix $subId
         }
     }
 }
@@ -92,4 +111,29 @@ function Get-DeploymentData {
     $parametersData.parameters.resourceGroupPrefix.value = $resourceGroupPrefix
     ( $parametersData | ConvertTo-Json -Depth 10 ) -replace "\\u0027", "'" | Out-File $tmp
     $deploymentName, $tmp
+}
+
+function Remove-ArmDeployment ($rg, $dp, $subId) {
+    $components | ForEach-Object {
+        $importSession = {
+            param(
+                $rgName,
+                $scriptRoot,
+                $subId
+            )
+            try {
+                Import-AzureRmContext -Path "$scriptRoot\auth.json" -ErrorAction Stop
+                Set-AzureRmContext -SubscriptionId $subId
+            }
+            catch {
+                Write-Error $_
+                exit 1337
+            }
+
+            Remove-AzureRmResourceGroup -Name $rgName -Force
+        }.GetNewClosure()
+            
+        Start-job -Name ("$rg-$dp-$_-delete") -ScriptBlock $importSession -Debug `
+            -ArgumentList (($rg, $dp, $_) -join '-'), $global:scriptRoot, $subId
+    }
 }
