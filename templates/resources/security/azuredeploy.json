@@ -29,45 +29,21 @@
         "dbName": "dsm",
         "dbAdminName": "testuser",
         "dbAdminPassword": "Test_pass1",
-        "vmTDM": "[concat(parameters('deploymentPrefix'), '-trendmicro-vm')]",
+        "vmTDM": "[concat(parameters('deploymentPrefix'), '-trendmicro')]",
         "nicTDM": "[concat(parameters('deploymentPrefix'), '-trendmicro-nic')]",
-        "vmQualys": "[concat(parameters('deploymentPrefix'), '-qualys-vm')]",
+        "vmQualys": "[concat(parameters('deploymentPrefix'), '-qualys')]",
         "nicQualys": "[concat(parameters('deploymentPrefix'), '-qualys-nic')]",
-        "vmLogic": "[concat(parameters('deploymentPrefix'), '-alertlogic-vm')]",
+        "vmLogic": "[concat(parameters('deploymentPrefix'), '-alertlogic')]",
         "nicLogic": "[concat(parameters('deploymentPrefix'), '-alertlogic-nic')]",
+        "vmNetti": "[concat(parameters('deploymentPrefix'), '-cloudnetti')]",
+        "nicNetti": "[concat(parameters('deploymentPrefix'), '-cloudnetti-nic')]",
         "baseUrl": "https://gallery.azure.com/artifact/20151001/trendmicro.deep-security-manager-stdeep-security-manager.1.0.6/Artifacts",
         "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-security')]",
         "subnet1Ref": "[concat(variables('vnetID'), '/subnets/securitySubnet')]",
         "newsqlServerName": "[tolower(concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'sqltdm'))]",
         "deployment-api-version": "2015-11-01",
         "network-api-version": "2015-06-15",
-        "compute-api-version": "2016-04-30-preview",
-        "publisher": "trendmicro",
-        "licenseMode": "10",
-        "offerChoosed": "[variables('offerStandard_D2_v2')]",
-        "offerStandard_D2_v2": {
-            "vmSize": "Standard_D2_v2",
-            "vmSku": "dxxn25d2v2",
-            "product": "deep-security-vm"
-        },
-        "offerStandard_D3_v2": {
-            "vmSize": "Standard_D3_v2",
-            "vmSku": "dxxn50d3v2",
-            "product": "deep-security-vm"
-        },
-        "offerStandard_D4_v2": {
-            "vmSize": "Standard_D4_v2",
-            "vmSku": "dxxn100d4v2",
-            "product": "deep-security-vm"
-        },
-        "offerStandard_D5_v2": {
-            "vmSize": "Standard_D5_v2",
-            "vmSku": "dxxn200d5v2",
-            "product": "deep-security-vm"
-        },
-        "linuxConfigurationChoosen": {
-            "disablePasswordAuthentication": "false"
-        }
+        "compute-api-version": "2016-04-30-preview"
     },
     "resources": [
         {
@@ -100,8 +76,7 @@
                         "value": "[variables('dbName')]"
                     }
                 }
-            },
-            "dependsOn": []
+            }
         },
         {
             "type": "Microsoft.Network/networkInterfaces",
@@ -128,25 +103,27 @@
             "apiVersion": "[variables('compute-api-version')]",
             "location": "[parameters('location')]",
             "plan": {
-                "publisher": "[variables('publisher')]",
-                "product": "[variables('offerChoosed').product]",
-                "name": "[variables('offerChoosed').vmSku]"
+                "publisher": "trendmicro",
+                "product": "deep-security-vm",
+                "name": "dxxn25d2v2"
             },
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "[variables('offerChoosed').vmSize]"
+                    "vmSize": "Standard_DS2_v2"
                 },
                 "osProfile": {
                     "computerName": "[variables('vmTDM')]",
                     "adminUsername": "testo",
                     "adminPassword": "!Q2w3e4r5t6y",
-                    "linuxConfiguration": "[variables('linuxConfigurationChoosen')]"
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": false
+                    }
                 },
                 "storageProfile": {
                     "imageReference": {
-                        "publisher": "[variables('publisher')]",
-                        "offer": "[variables('offerChoosed').product]",
-                        "sku": "[variables('offerChoosed').vmSku]",
+                        "publisher": "trendmicro",
+                        "offer": "deep-security-vm",
+                        "sku": "dxxn25d2v2",
                         "version": "latest"
                     },
                     "osDisk": {
@@ -188,14 +165,14 @@
                     "adminPassword": "[variables('dsmAdminPassword')]",
                     "databaseUserName": "[variables('dbAdminName')]",
                     "databaseUserPassword": "[variables('dbAdminPassword')]",
-                    "licenseMode": "[variables('licenseMode')]",
+                    "licenseMode": "10",
                     "databaseServer": "[reference('buildSQLServer').outputs.sqlServerFQDN.value]",
                     "location": "[parameters('location')]",
                     "managerPort": "[variables('managerPort')]",
                     "heartbeatPort": "[variables('heartbeatPort')]",
                     "vmFQDN": "[variables('vmTDM')]",
                     "databaseOption": "new",
-                    "vmSize": "[variables('offerChoosed').vmSize]"
+                    "vmSize": "Standard_DS2_v2"
                 }
             },
             "dependsOn": [
@@ -236,7 +213,7 @@
             },
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "[variables('offerChoosed').vmSize]"
+                    "vmSize": "Standard_DS2_v2"
                 },
                 "networkProfile": {
                     "networkInterfaces": [
@@ -300,7 +277,7 @@
             },
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "[variables('offerChoosed').vmSize]"
+                    "vmSize": "Standard_DS2_v2"
                 },
                 "osProfile": {
                     "computerName": "[variables('vmlogic')]",
@@ -326,6 +303,84 @@
                             "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('niclogic'))]"
                         }
                     ]
+                }
+            }
+        },
+        {
+            "apiVersion": "[variables('network-api-Version')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('nicnetti')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnet1Ref')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('vmnetti')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "[variables('compute-api-version')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[variables('nicNetti')]"
+            ],
+            "plan": {
+                "name": "enterprise",
+                "publisher": "cloudneeti",
+                "product": "cloudneeti_enterpise"
+            },
+            "properties": {
+                "osProfile": {
+                    "computerName": "[variables('vmnetti')]",
+                    "adminUsername": "testo",
+                    "adminPassword": "!Q2w3e4r5t6y",
+                    "windowsConfiguration": {
+                        "provisionVmAgent": "true"
+                    }
+                },
+                "hardwareProfile": {
+                    "vmSize": "Standard_DS2_v2"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "cloudneeti",
+                        "offer": "cloudneeti_enterpise",
+                        "sku": "enterprise",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "name": "[concat(parameters('deploymentPrefix'),'-cloudnetti-os-disk')]"
+                    },
+                    "dataDisks": [
+                        {
+                            "createOption": "FromImage",
+                            "lun": 0,
+                            "name": "[concat(parameters('deploymentPrefix'),'-cloudnetti-data-disk')]"
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicNetti'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
+                    }
                 }
             }
         }

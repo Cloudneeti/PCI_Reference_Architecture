@@ -54,7 +54,7 @@ function Invoke-ArmDeployment {
     $null = Save-AzureRmContext -Path $ProfilePath -Force
     if ($error[0].Exception.Message -in "Run Login-AzureRmAccount to login.", "Provided subscription $subId does not exist") {
         Write-Error "Login routine failed! Verify your subId"
-        exit 1
+        return
     }
     try {
         $locationcoerced = $location.ToLower() -replace ' ', ''

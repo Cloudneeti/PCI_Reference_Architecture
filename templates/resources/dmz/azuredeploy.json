@@ -91,7 +91,7 @@
                     "imageReference": {
                         "publisher": "barracudanetworks",
                         "offer": "waf",
-                        "sku": "hourly",
+                        "sku": "byol",
                         "version": "latest"
                     },
                     "osDisk": {
@@ -114,7 +114,7 @@
                 }
             },
             "plan": {
-                "name": "hourly",
+                "name": "byol",
                 "publisher": "barracudanetworks",
                 "product": "waf"
             }
@@ -132,7 +132,8 @@
                 "osProfile": {
                     "computerName": "[variables('vmNameNGF')]",
                     "adminUsername": "[variables('adminUsername')]",
-                    "adminPassword": "[variables('adminPassword')]"
+                    "adminPassword": "[variables('adminPassword')]",
+                    "customData": "[base64(concat('#!/bin/bash\n\n', '/opt/phion/bin/editconf -f /opt/phion/config/configroot/boxnet.conf -d REFS -s gendev_eth0\n', '/opt/phion/bin/editconf -f /opt/phion/config/configroot/boxnet.conf -d RENAMED -s gendev_eth0\n', '/opt/phion/bin/cloud-setmip ', '10.4.0.4', ' ', '10.4.0.0/24', ' ', '10.4.0.4', ' >> /tmp/setmip.log'))]"
                 },
                 "hardwareProfile": {
                     "vmSize": "[variables('virtualMachineSize')]"
@@ -141,7 +142,7 @@
                     "imageReference": {
                         "publisher": "barracudanetworks",
                         "offer": "barracuda-ng-firewall",
-                        "sku": "hourly",
+                        "sku": "byol",
                         "version": "latest"
                     },
                     "osDisk": {
@@ -164,7 +165,7 @@
                 }
             },
             "plan": {
-                "name": "hourly",
+                "name": "byol",
                 "publisher": "barracudanetworks",
                 "product": "barracuda-ng-firewall"
             }
