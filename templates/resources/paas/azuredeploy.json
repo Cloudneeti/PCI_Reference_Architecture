@@ -42,6 +42,16 @@
     },
     "resources": [
         {
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "Storage",
+            "name": "[concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')]",
+            "apiVersion": "2016-12-01",
+            "location": "[parameters('location')]"
+        },
+        {
             "apiVersion": "2016-10-01",
             "name": "[variables('kvName')]",
             "location": "[parameters('location')]",

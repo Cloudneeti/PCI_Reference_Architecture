@@ -49,17 +49,23 @@ $session.DataStore.WriteFile( $cacheFile, [System.Security.Cryptography.Protecte
 $session.TokenCache = New-Object -TypeName Microsoft.Azure.Commands.Common.Authentication.ProtectedFileTokenCache -ArgumentList $cacheFile
 [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile.DefaultContext.TokenCache = $session.TokenCache
 ```
-Currently, tracking which steps can run in parallel is the responsibility of the end user. So progress of deployments is not tracked.
-
+Currently, tracking which steps can run in parallel is the responsibility of the end user. And the progress of deployments is not tracked.  
+Currently, you need to run steps 1 and 2 together, and all the other steps after that (if you choose so)
 
 ### Networking  
 Configuration is done using the JSON object  
-Names, AddressSpaces, Subnets, NSG Rules, and Peerings can be defined # TODO subnets count arm way
+Names, AddressSpaces, Subnets, NSG Rules, and Peerings can be defined
 
 Assumptions:  
 vnets must be in this order: dmz, management, security, application vnets
 infrastructure subnets cannot be renamed, all subnets must have unique names, all subnets must be /24
 Custom NSG rules and predefined are both added to the appropriate NSGs
+
+TODO:
+"fwSubnetSplit": "[split( parameters( 'fwSubnetAddress' ), '/' )]",
+"fwSubnetAddrSplit": "[split( variables( 'fwSubnetSplit' )[0], '.' )]",
+"fwSubnetMask": "[variables( 'fwSubnetSplit' )[1]]",
+"fwSubnetDefaultGw": "[concat(variables('fwSubnetAddrSplit')[0],'.',variables('fwSubnetAddrSplit')[1],'.',variables('fwSubnetAddrSplit')[2],'.',add(int(variables('fwSubnetAddrSplit')[3]),1))]"
 
 ### Compute  
 Configuration is done using the JSON object  
@@ -74,7 +80,7 @@ every tier tied to ilb or appgw #TODO need to have port configurations for those
 
 ### Jumpbox  
 Configuration is done using the JSON object  
-Name can be configured # TODO add linux\windows switch probably?
+Name can be configured
 
 Assumptions:  
 Ip address is infered from the management subnet address range

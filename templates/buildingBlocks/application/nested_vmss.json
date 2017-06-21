@@ -88,9 +88,7 @@
                                 "numberOfProbes": 5
                             }
                         }
-                    }
-                ],
-                "copy": [
+                    },
                     {
                         "name": "loadBalancingRules",
                         "count": "[length(parameters('bossObject').ports)]",
@@ -115,6 +113,7 @@
                         }
                     }
                 ]
+                    
             }
         },
         {
@@ -173,6 +172,12 @@
                                 }
                             }
                         ]
+                    },
+                    "diagnosticsProfile": {
+                        "bootDiagnostics": {
+                            "enabled": true,
+                            "storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
+                        }
                     }
                 }
             }

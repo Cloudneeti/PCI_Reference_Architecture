@@ -132,7 +132,7 @@
               "diskSizeGB": "[variables('adDataDiskSize')]",
               "lun": 0,
               "createOption": "empty",
-            "name": "[concat(parameters('deploymentPrefix'), '-PDC-DATA')]"
+              "name": "[concat(parameters('deploymentPrefix'), '-PDC-DATA')]"
             }
           ]
         },
@@ -142,6 +142,12 @@
               "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('deploymentPrefix'), '-PDC-nic'))]"
             }
           ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
+          }
         }
       },
       "resources": [
@@ -222,6 +228,12 @@
               "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('deploymentPrefix'), '-BDC-nic'))]"
             }
           ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
+          }
         }
       }
     },

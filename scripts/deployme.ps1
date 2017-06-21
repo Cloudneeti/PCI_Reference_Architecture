@@ -1,11 +1,5 @@
-$scriptRoot = Split-Path ( Split-Path $MyInvocation.MyCommand.Path )
-$ProfilePath = "$scriptRoot\auth.json"
-$components = @("application", "dmz", "security", "management", "operations", "networking")
-
-
 function Invoke-ArmDeployment {
     #Requires -Modules @{ModuleName="AzureRM";ModuleVersion="4.1.0"}
-
     [CmdletBinding()]
     Param
     (
@@ -57,7 +51,6 @@ function Invoke-ArmDeployment {
         return
     }
     try {
-        $locationcoerced = $location.ToLower() -replace ' ', ''
         $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupPrefix, $deploymentPrefix, $_) -join '-') -Location $location -Force }
         
         $deploymentData = Get-DeploymentData
@@ -101,6 +94,11 @@ function Invoke-ArmDeployment {
             Start-job -Name ("$step-create") -ScriptBlock $importSession -Debug `
                 -ArgumentList (($resourceGroupPrefix, $deploymentPrefix, ($deployments.$step).rg) -join '-'), "$scriptRoot\templates\resources\$(($deployments.$step).name)\azuredeploy.json", $deploymentData[1], (($deploymentData[0], ($deployments.$step).name) -join '-'), $scriptRoot, $subId
         }
+
+        $token = Get-Token
+        $url = "https://management.azure.com/subscriptions/$subId/providers/microsoft.security/policies/default?api-version=2015-06-01-preview"
+        $result = Invoke-RestMethod -Uri $url -Method Put -Headers @{ Authorization = "Bearer $token"} -Body $request
+        $result
     }
     catch {
         Write-Error $_
@@ -145,3 +143,58 @@ function Remove-ArmDeployment ($rg, $dp, $subId) {
             -ArgumentList (($rg, $dp, $_) -join '-'), $global:scriptRoot, $subId
     }
 }
+
+function Get-Token {
+    $azureRmProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
+	$currentAzureContext = Get-AzureRmContext
+	$profileClient = New-Object Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient($azureRmProfile)
+	$token = $profileClient.AcquireAccessToken($currentAzureContext.Subscription.TenantId)
+	$token.AccessToken
+}
+
+$request = '{
+    "properties": {
+        "policyLevel": "Subscription",
+        "name": "default",
+        "unique": "Off",
+        "logCollection": "On",
+        "recommendations": {
+            "patch": "On",
+            "baseline": "On",
+            "antimalware": "On",
+            "diskEncryption": "On",
+            "acls": "On",
+            "nsgs": "On",
+            "waf": "On",
+            "sqlAuditing": "On",
+            "sqlTde": "On",
+            "ngfw": "On",
+            "vulnerabilityAssessment": "On",
+            "storageEncryption": "On",
+            "jitNetworkAccess": "On"
+        },
+        "logsConfiguration": {
+            "storages": {}
+        },
+        "omsWorkspaceConfiguration": {
+            "workspaces": {}
+        },
+        "securityContactConfiguration": {
+            "securityContactEmails": [
+
+            ],
+            "securityContactPhone": "",
+            "areNotificationsOn": false,
+            "sendToAdminOn": false
+        },
+        "pricingConfiguration": {
+            "selectedPricingTier": "Free",
+            "standardTierStartDate": "0001-01-01T00:00:00",
+            "premiumTierStartDate": "0001-01-01T00:00:00"
+        },
+        "lastStorageCreationTime": "1970-01-01T00:00:00Z"
+    }
+}'
+$scriptRoot = Split-Path ( Split-Path $MyInvocation.MyCommand.Path )
+$ProfilePath = "$scriptRoot\auth.json"
+$components = @("application", "dmz", "security", "management", "operations", "networking")
