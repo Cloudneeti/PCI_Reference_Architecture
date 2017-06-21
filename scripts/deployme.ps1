@@ -1,7 +1,11 @@
 $scriptRoot = Split-Path ( Split-Path $MyInvocation.MyCommand.Path )
 $ProfilePath = "$scriptRoot\auth.json"
 $components = @("application", "dmz", "security", "management", "operations", "networking")
+
+
 function Invoke-ArmDeployment {
+    #Requires -Modules @{ModuleName="AzureRM";ModuleVersion="4.1.0"}
+
     [CmdletBinding()]
     Param
     (
@@ -29,6 +33,10 @@ function Invoke-ArmDeployment {
             Position = 4)]
         [int[]]$steps
     )
+
+    # forcing AzureRM > 4.0
+    #Import-Module AzureRM -MinimumVersion '4.1.0'
+
     # Set proper subscription according to input and\or login to Azure and save token for further "deeds"
     Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Login to your Azure account if prompted" -ForegroundColor DarkYellow
     Try {

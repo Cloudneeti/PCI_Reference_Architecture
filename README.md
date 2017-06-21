@@ -17,7 +17,7 @@ Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupP
 ```
 To remove all the resource groups you can use the `Remove-ArmDeployment` function
 ```powershell
-Remove-ArmDeployment $resourceGroupPrefix dev $subscriptionID
+Remove-ArmDeployment -subId $subscriptionID -rg $resourceGroupPrefix -dp <dev |prod>
 ```
 
 Steps parameter is an array with the values 1 to 7 allowed.
