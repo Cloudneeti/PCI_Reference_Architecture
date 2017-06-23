@@ -78,6 +78,18 @@ os are custom from the predefined pool
 vm's are registered to the azure automation (maybe configurations are assigned, not sure at this point)  
 every tier tied to ilb or appgw #TODO need to have port configurations for those
 
+net user administrator /active:no
+
+a. OMS Log Analytics Extension      xxx
+b. Azure Disk Encryption            https: //docs.microsoft.com/en-us/azure/security/azure-security-disk-encryption
+c. VMDiagnosticsSettings            xxx
+d. Service Map                      https: //docs.microsoft.com/en-us/azure/operations-management-suite/operations-management-suite-service-map-configure#installation
+e. TrendMicro                       xxx
+f. Qualys Virtual Scanner           
+g. Threat manager extension         Script exists
+h. Network Watcher                  xxx
+AD                                  https: //raw.githubusercontent.com/Azure/azure-quickstart-templates/master/201-vm-domain-join-existing/azuredeploy.json
+
 ### Jumpbox  
 Configuration is done using the JSON object  
 Name can be configured

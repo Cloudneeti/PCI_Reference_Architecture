@@ -306,11 +306,5 @@
                 ]
             }
         }
-    ],
-    "outputs": {
-        "adminUsername": {
-            "type": "string",
-            "value": "[variables('adminUsername')]"
-        }
-    }
+    ]
 }

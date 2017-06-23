@@ -157,13 +157,17 @@
                 {
                     "balancer": "ilb",
                     "count": 1,
+                    "extensions": [
+                        "OMS",
+                        "NetworkWatcher"
+                    ],
                     "name": "webbito",
                     "os": "Ubuntu",
                     "password": "!Q2w3e4r5t6y",
                     "ports": [
                         443
                     ],
-                    "size": "Standard_A1",
+                    "size": "Standard_A0",
                     "subnet": "appsubnet1",
                     "vnet": "application"
                 },
