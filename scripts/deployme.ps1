@@ -95,10 +95,13 @@ function Invoke-ArmDeployment {
                 -ArgumentList (($resourceGroupPrefix, $deploymentPrefix, ($deployments.$step).rg) -join '-'), "$scriptRoot\templates\resources\$(($deployments.$step).name)\azuredeploy.json", $deploymentData[1], (($deploymentData[0], ($deployments.$step).name) -join '-'), $scriptRoot, $subId
         }
 
-        $token = Get-Token
-        $url = "https://management.azure.com/subscriptions/$subId/providers/microsoft.security/policies/default?api-version=2015-06-01-preview"
-        $result = Invoke-RestMethod -Uri $url -Method Put -Headers @{ Authorization = "Bearer $token"} -Body $request
-        $result
+        # $token = Get-Token
+        # $url = "https://management.azure.com/subscriptions/$subId/providers/microsoft.security/policies/default?api-version=2015-06-01-preview"
+        # $result = $result = Invoke-WebRequest -Uri $url -Method Put -Headers @{ Authorization = "Bearer $token"} -Body $request  -ContentType "application/json" -UseBasicParsing
+        # if ($result.StatusCode -ne 200) {
+        #     Write-Error "Security Center request failed"
+        #     $result.content
+        # }
     }
     catch {
         Write-Error $_

@@ -53,9 +53,9 @@
       "apiVersion": "2016-04-30-preview",
       "location": "[parameters('location')]",
       "properties": {
-        "platformFaultDomainCount": "2",
-        "platformUpdateDomainCount": "5",
-        "managed": "true"
+        "platformFaultDomainCount": 2,
+        "platformUpdateDomainCount": 5,
+        "managed": true
       }
     },
     {
@@ -131,7 +131,7 @@
               "caching": "None",
               "diskSizeGB": "[variables('adDataDiskSize')]",
               "lun": 0,
-              "createOption": "empty",
+              "createOption": "Empty",
               "name": "[concat(parameters('deploymentPrefix'), '-PDC-DATA')]"
             }
           ]
@@ -217,7 +217,7 @@
               "caching": "None",
               "diskSizeGB": "[variables('adDataDiskSize')]",
               "lun": 0,
-              "createOption": "empty",
+              "createOption": "Empty",
               "name": "[concat(parameters('deploymentPrefix'), '-BDC-DATA')]"
             }
           ]

@@ -52,9 +52,9 @@
             "location": "[parameters('location')]",
             "comments": "This is the Availability Set for BWAF VM",
             "properties": {
-                "platformFaultDomainCount": "2",
-                "platformUpdateDomainCount": "5",
-                "managed": "true"
+                "platformFaultDomainCount": 2,
+                "platformUpdateDomainCount": 5,
+                "managed": true
             }
         },
         {
@@ -64,9 +64,9 @@
             "location": "[parameters('location')]",
             "comments": "This is the Availability Set for BWAF VM",
             "properties": {
-                "platformFaultDomainCount": "2",
-                "platformUpdateDomainCount": "5",
-                "managed": "true"
+                "platformFaultDomainCount": 2,
+                "platformUpdateDomainCount": 5,
+                "managed": true
             }
         },
         {
@@ -95,12 +95,11 @@
                         "version": "latest"
                     },
                     "osDisk": {
-                        "createOption": "fromImage",
+                        "createOption": "FromImage",
                         "managedDisk": {
                             "storageAccountType": "Standard_LRS"
                         }
-                    },
-                    "dataDisks": []
+                    }
                 },
                 "networkProfile": {
                     "networkInterfaces": [
@@ -152,12 +151,11 @@
                         "version": "latest"
                     },
                     "osDisk": {
-                        "createOption": "fromImage",
+                        "createOption": "FromImage",
                         "managedDisk": {
                             "storageAccountType": "Standard_LRS"
                         }
-                    },
-                    "dataDisks": []
+                    }
                 },
                 "networkProfile": {
                     "networkInterfaces": [
@@ -281,7 +279,7 @@
                             "backendAddressPool": {
                                 "id": "[variables('lbPoolID')]"
                             },
-                            "protocol": "tcp",
+                            "protocol": "Tcp",
                             "frontendPort": 8000,
                             "backendPort": 8000,
                             "enableFloatingIP": false,

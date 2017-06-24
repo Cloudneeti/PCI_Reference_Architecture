@@ -57,13 +57,12 @@
             "location": "[parameters('location')]",
             "type": "Microsoft.KeyVault/vaults",
             "dependsOn": [
-                "[concat('Microsoft.OperationalInsights/workspaces', '/' , variables('omsName'))]"
+                "[concat('Microsoft.OperationalInsights/workspaces/', variables('omsName'))]"
             ],
             "properties": {
                 "enabledForDeployment": false,
                 "enabledForTemplateDeployment": true,
                 "enabledForDiskEncryption": true,
-                "accessPolicies": [],
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
                     "name": "Premium",
@@ -89,8 +88,7 @@
                                     "enabled": true
                                 }
                             }
-                        ],
-                        "metrics": []
+                        ]
                     }
                 }
             ]
@@ -111,10 +109,9 @@
             "type": "Microsoft.Automation/automationAccounts",
             "apiVersion": "2015-01-01-preview",
             "location": "[parameters('location')]",
-            "dependsOn": [],
             "tags": {},
             "dependsOn": [
-                "[concat('Microsoft.OperationalInsights/workspaces', '/' , variables('omsName'))]"
+                "[concat('Microsoft.OperationalInsights/workspace/' , variables('omsName'))]"
             ],
             "properties": {
                 "sku": {
@@ -156,8 +153,7 @@
                                     "enabled": true
                                 }
                             }
-                        ],
-                        "metrics": []
+                        ]
                     }
                 }
             ]
@@ -168,7 +164,7 @@
             "name": "[concat(variables('solutionTypes')[copyIndex()], '(', variables('omsName'), ')')]",
             "apiVersion": "2015-11-01-preview",
             "dependsOn": [
-                "[concat('Microsoft.OperationalInsights/workspaces', '/' , variables('omsName'))]"
+                "[concat('Microsoft.OperationalInsights/workspaces/' , variables('omsName'))]"
             ],
             "location": "eastus",
             "copy": {
@@ -193,7 +189,7 @@
             "apiVersion": "2015-11-01-preview",
             "location": "eastus",
             "dependsOn": [
-                "[concat('Microsoft.OperationalInsights/workspaces', '/' , variables('omsName'))]"
+                "[concat('Microsoft.OperationalInsights/workspaces/' , variables('omsName'))]"
             ],
             "properties": {
                 "linkedResourceId": "[concat(subscription().Id, '/providers/microsoft.insights/eventTypes/management')]"
