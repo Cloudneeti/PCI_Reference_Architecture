@@ -61,11 +61,11 @@ vnets must be in this order: dmz, management, security, application vnets
 infrastructure subnets cannot be renamed, all subnets must have unique names, all subnets must be /24
 Custom NSG rules and predefined are both added to the appropriate NSGs
 
-TODO:
-"fwSubnetSplit": "[split( parameters( 'fwSubnetAddress' ), '/' )]",
-"fwSubnetAddrSplit": "[split( variables( 'fwSubnetSplit' )[0], '.' )]",
-"fwSubnetMask": "[variables( 'fwSubnetSplit' )[1]]",
-"fwSubnetDefaultGw": "[concat(variables('fwSubnetAddrSplit')[0],'.',variables('fwSubnetAddrSplit')[1],'.',variables('fwSubnetAddrSplit')[2],'.',add(int(variables('fwSubnetAddrSplit')[3]),1))]"
+TODO:  
+"fwSubnetSplit": "[split( parameters( 'fwSubnetAddress' ), '/' )]",  
+"fwSubnetAddrSplit": "[split( variables( 'fwSubnetSplit' )[0], '.' )]",  
+"fwSubnetMask": "[variables( 'fwSubnetSplit' )[1]]",  
+"fwSubnetDefaultGw": "[concat(variables('fwSubnetAddrSplit')[0],'.',variables('fwSubnetAddrSplit')[1],'.',variables('fwSubnetAddrSplit')[2],'.',add(int(variables('fwSubnetAddrSplit')[3]),1))]"  
 
 ### Compute  
 Configuration is done using the JSON object  
@@ -80,15 +80,15 @@ every tier tied to ilb or appgw #TODO need to have port configurations for those
 
 net user administrator /active:no
 
-a. OMS Log Analytics Extension      xxx
-b. Azure Disk Encryption            https: //docs.microsoft.com/en-us/azure/security/azure-security-disk-encryption
-c. VMDiagnosticsSettings            xxx
-d. Service Map                      https: //docs.microsoft.com/en-us/azure/operations-management-suite/operations-management-suite-service-map-configure#installation
-e. TrendMicro                       xxx
+a. OMS Log Analytics Extension      xxx  
+b. Azure Disk Encryption            https: //docs.microsoft.com/en-us/azure/security/azure-security-disk-encryption  
+c. VMDiagnosticsSettings            xxx  
+d. Service Map                      https: //docs.microsoft.com/en-us/azure/operations-management-suite/operations-management-suite-service-map-configure#installation  
+e. TrendMicro                       xxx  
 f. Qualys Virtual Scanner           
-g. Threat manager extension         Script exists
-h. Network Watcher                  xxx
-AD                                  https: //raw.githubusercontent.com/Azure/azure-quickstart-templates/master/201-vm-domain-join-existing/azuredeploy.json
+g. Threat manager extension         Script exists  
+h. Network Watcher                  xxx  
+AD                                  https: //raw.githubusercontent.com/Azure/azure-quickstart-templates/master/201-vm-domain-join-existing/azuredeploy.json  
 
 ### Jumpbox  
 Configuration is done using the JSON object  
