@@ -35,8 +35,8 @@
         "nicQualys": "[concat(parameters('deploymentPrefix'), '-qualys-nic')]",
         "vmLogic": "[concat(parameters('deploymentPrefix'), '-alertlogic')]",
         "nicLogic": "[concat(parameters('deploymentPrefix'), '-alertlogic-nic')]",
-        "vmNetti": "[concat(parameters('deploymentPrefix'), '-cloudnetti')]",
-        "nicNetti": "[concat(parameters('deploymentPrefix'), '-cloudnetti-nic')]",
+        "vmCloudNeeti": "[concat(parameters('deploymentPrefix'), '-cloudneeti')]",
+        "nicCloudNeeti": "[concat(parameters('deploymentPrefix'), '-cloudneeti-nic')]",
         "baseUrl": "https://gallery.azure.com/artifact/20151001/trendmicro.deep-security-manager-stdeep-security-manager.1.0.6/Artifacts",
         "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-security')]",
         "subnet1Ref": "[concat(variables('vnetID'), '/subnets/securitySubnet')]",
@@ -327,7 +327,7 @@
         {
             "apiVersion": "[variables('network-api-Version')]",
             "type": "Microsoft.Network/networkInterfaces",
-            "name": "[variables('nicnetti')]",
+            "name": "[variables('nicCloudNeeti')]",
             "location": "[parameters('location')]",
             "properties": {
                 "ipConfigurations": [
@@ -344,12 +344,12 @@
             }
         },
         {
-            "name": "[variables('vmnetti')]",
+            "name": "[variables('vmCloudNeeti')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "[variables('compute-api-version')]",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[variables('nicNetti')]"
+                "[variables('nicCloudNeeti')]"
             ],
             "plan": {
                 "name": "enterprise",
@@ -358,7 +358,7 @@
             },
             "properties": {
                 "osProfile": {
-                    "computerName": "[variables('vmnetti')]",
+                    "computerName": "[variables('vmCloudNeeti')]",
                     "adminUsername": "testo",
                     "adminPassword": "!Q2w3e4r5t6y",
                     "windowsConfiguration": {
@@ -377,20 +377,20 @@
                     },
                     "osDisk": {
                         "createOption": "FromImage",
-                        "name": "[concat(parameters('deploymentPrefix'),'-cloudnetti-os-disk')]"
+                        "name": "[concat(parameters('deploymentPrefix'),'-cloudneeti-os-disk')]"
                     },
                     "dataDisks": [
                         {
                             "createOption": "FromImage",
                             "lun": 0,
-                            "name": "[concat(parameters('deploymentPrefix'),'-cloudnetti-data-disk')]"
+                            "name": "[concat(parameters('deploymentPrefix'),'-cloudneeti-data-disk')]"
                         }
                     ]
                 },
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicNetti'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicCloudNeeti'))]"
                         }
                     ]
                 },
