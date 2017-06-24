@@ -11,7 +11,7 @@ PCI (Payment Card Industry) code repository to manage deployment templates.
 $subscriptionID = 'XXXXX-XXX....XXXX' #preferred Subs for Avyan are Cloudly Dev or AvyanMPN6k, as this template requires third party VM installations.
 $resourceGroupPrefix = 'pciiaas' #should not start with a number or contain '-' in the prefix
 $location = 'South Central US'
-$steps = @(1,2,3)
+$steps = @(1,2)
 
 Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupPrefix -location $location -deploymentPrefix dev -steps $steps
 ```
@@ -61,11 +61,14 @@ vnets must be in this order: dmz, management, security, application vnets
 infrastructure subnets cannot be renamed, all subnets must have unique names, all subnets must be /24
 Custom NSG rules and predefined are both added to the appropriate NSGs
 
-TODO:  
+TODO:
+```
 "fwSubnetSplit": "[split( parameters( 'fwSubnetAddress' ), '/' )]",  
 "fwSubnetAddrSplit": "[split( variables( 'fwSubnetSplit' )[0], '.' )]",  
 "fwSubnetMask": "[variables( 'fwSubnetSplit' )[1]]",  
-"fwSubnetDefaultGw": "[concat(variables('fwSubnetAddrSplit')[0],'.',variables('fwSubnetAddrSplit')[1],'.',variables('fwSubnetAddrSplit')[2],'.',add(int(variables('fwSubnetAddrSplit')[3]),1))]"  
+"fwSubnetDefaultGw": "[concat(variables('fwSubnetAddrSplit')[0],'.',variables('fwSubnetAddrSplit')[1],'.',variables('fwSubnetAddrSplit')[2],'.',add(int(variables('fwSubnetAddrSplit')[3]),1))]"
+```
+or convert to bytes and calculate and convert back.  
 
 ### Compute  
 Configuration is done using the JSON object  
@@ -76,19 +79,19 @@ Configurations are tier specific, you cannot be more granular than that
 extensions are custom from the predefined pool  
 os are custom from the predefined pool  
 vm's are registered to the azure automation (maybe configurations are assigned, not sure at this point)  
-every tier tied to ilb or appgw #TODO need to have port configurations for those
+every tier tied to ilb
+every tier can be deployed into specific vnet\subnet
 
-net user administrator /active:no
-
-a. OMS Log Analytics Extension      xxx  
-b. Azure Disk Encryption            https: //docs.microsoft.com/en-us/azure/security/azure-security-disk-encryption  
-c. VMDiagnosticsSettings            xxx  
-d. Service Map                      https: //docs.microsoft.com/en-us/azure/operations-management-suite/operations-management-suite-service-map-configure#installation  
-e. TrendMicro                       xxx  
-f. Qualys Virtual Scanner           
-g. Threat manager extension         Script exists  
-h. Network Watcher                  xxx  
-AD                                  https: //raw.githubusercontent.com/Azure/azure-quickstart-templates/master/201-vm-domain-join-existing/azuredeploy.json  
+a. OMS Log Analytics Extension    xxx  
+b. Azure Disk Encryption          https://docs.microsoft.com/en-us/azure/security/azure-security-disk-encryption  
+c. VMDiagnosticsSettings          xxx  
+d. Service Map                    https://docs.microsoft.com/en-us/azure/operations-management-suite/operations-management-suite-service-map-configure  
+e. TrendMicro                     xxx  
+f. Qualys Virtual Scanner         
+g. Threat manager extension       Script exists  
+h. Network Watcher                xxx  
+i. AD                             https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/201-vm-domain-join-existing/azuredeploy.json  
+j. disable local administrator    net user administrator /active:no
 
 ### Jumpbox  
 Configuration is done using the JSON object  
@@ -108,7 +111,7 @@ Ip address is infered from the domain subnet address range
 No configurations
 
 ### Security  
-No configurations
+TODO: Sizes for vm's
 
 ### Barracuda  
 No configurations

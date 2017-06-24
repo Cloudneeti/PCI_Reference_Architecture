@@ -3,8 +3,8 @@
 $subscriptionID = 'b4605119-4803-4924-a221-091570e36d01'
 $resourceGroupPrefix = 'rg-pci-iaas'
 $location = 'South Central US'
-$steps1_2 = @("1", "2", "3")
-$stepsOthers = @("4","5","6","7")
+$steps1_2 = @(1,2)
+$stepsOthers = @(3,4,5,6,7)
 
 . .\scripts\deployme.ps1
 
