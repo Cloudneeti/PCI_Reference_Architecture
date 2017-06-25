@@ -16,7 +16,8 @@
                 "domainName": "test.local",
                 "jumpbox": "jumpota",
                 "serviceAccessPwd": "!Q2w3e4r5t6y",
-                "serviceAccess": "testo"
+                "serviceAccess": "testo",
+                "buildingBlocksEndpoint": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/"
             }
         },
         "networkReference": {
@@ -105,7 +106,7 @@
                     "peerings": [
                         "application",
                         "management",
-                        "security"
+                        "dmz"
                     ],
                     "subnets": [
                         {

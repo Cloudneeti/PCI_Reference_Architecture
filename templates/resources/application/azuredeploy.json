@@ -33,7 +33,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/application/nested_vmss.json",
+                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_vmss.json')]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
