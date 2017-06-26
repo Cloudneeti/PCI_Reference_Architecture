@@ -110,8 +110,8 @@
                     ],
                     "subnets": [
                         {
-                            "subnetName": "securitySubnet",
-                            "addressSpacePrefix": "10.3.0.0/24",
+                            "subnetName": "domainSubnet",
+                            "addressSpacePrefix": "10.3.1.0/24",
                             "Firewall": [
                                 "RDP",
                                 "SSH"
@@ -119,12 +119,133 @@
                             "CustomRules": []
                         },
                         {
-                            "subnetName": "domainSubnet",
-                            "addressSpacePrefix": "10.3.1.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
+                            "subnetName": "cloudneetiSubnet",
+                            "addressSpacePrefix": "10.3.2.0/24",
+                            "Firewall": ["Dummy"],
+                            "CustomRules": []
+                        },
+                        {
+                            "subnetName": "trendmicroDsmSubnet",
+                            "addressSpacePrefix": "10.3.3.0/24",
+                            "Firewall": ["HTTPS"],
+                            "CustomRules": [
+                                {
+                                    "name": "customHTTPS-1",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "4119",
+                                        "sourceAddressPrefix": "*",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2010,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "customHTTPS-2",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "4120",
+                                        "sourceAddressPrefix": "*",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2020,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "customHTTPS-3",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "8443",
+                                        "sourceAddressPrefix": "*",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2030,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "customHTTP-1",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "8080",
+                                        "sourceAddressPrefix": "*",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2040,
+                                        "direction": "Inbound"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "subnetName": "alertlogicSubnet",
+                            "addressSpacePrefix": "10.3.4.0/24",
+                            "Firewall": ["HTTP"],
+                            "CustomRules": [
+                                {
+                                    "name": "customSSH-1",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "22",
+                                        "sourceAddressPrefix": "208.71.209.32/27",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2010,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "customSSH-2",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "22",
+                                        "sourceAddressPrefix": "204.110.218.96/27",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2020,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "customSSH-3",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "22",
+                                        "sourceAddressPrefix": "204.110.219.96/27",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2030,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "applienceClaim",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "8080",
+                                        "sourceAddressPrefix": "*",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2040,
+                                        "direction": "Inbound"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "subnetName": "qualysSubnet",
+                            "addressSpacePrefix": "10.3.5.0/24",
+                            "Firewall": ["Dummy"],
                             "CustomRules": []
                         }
                     ]
