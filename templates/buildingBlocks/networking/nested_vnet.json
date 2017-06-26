@@ -16,6 +16,9 @@
         },
         "resourceGroupPrefix": {
             "type": "string"
+        },
+        "environmentReference": {
+            "type": "object"
         }
     },
     "resources": [
@@ -64,7 +67,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/networking/nested_nsg.json",
+                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'networking/nested_nsg.json')]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -79,6 +82,9 @@
                     },
                     "resourceGroupPrefix": {
                         "value": "[parameters('resourceGroupPrefix')]"
+                    },
+                    "environmentReference": {
+                        "value": "[parameters('environmentReference')]"
                     }
                 }
             }

@@ -67,7 +67,8 @@
                 "sku": {
                     "name": "Premium",
                     "family": "A"
-                }
+                },
+                "accessPolicies": []
             },
             "resources": [
                 {
@@ -111,7 +112,7 @@
             "location": "[parameters('location')]",
             "tags": {},
             "dependsOn": [
-                "[concat('Microsoft.OperationalInsights/workspace/' , variables('omsName'))]"
+                "[concat('Microsoft.OperationalInsights/workspaces/' , variables('omsName'))]"
             ],
             "properties": {
                 "sku": {

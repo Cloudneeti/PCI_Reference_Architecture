@@ -52,7 +52,8 @@ function Invoke-ArmDeployment {
     }
     try {
         $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupPrefix, $deploymentPrefix, $_) -join '-') -Location $location -Force }
-        
+        $buildingBlocksEndpoint = Publish-BuildingBlocksTemplates
+
         $deploymentData = Get-DeploymentData
         $deployments = @{
             1 = @{"name" = "paas"; "rg" = "operations"};
@@ -118,6 +119,7 @@ function Get-DeploymentData {
     $parametersData.parameters.deploymentPrefix.value = $deploymentPrefix
     $parametersData.parameters.location.value = $location
     $parametersData.parameters.resourceGroupPrefix.value = $resourceGroupPrefix
+    $parametersData.parameters.environmentReference.value.buildingBlocksEndpoint = $buildingBlocksEndpoint
     ( $parametersData | ConvertTo-Json -Depth 10 ) -replace "\\u0027", "'" | Out-File $tmp
     $deploymentName, $tmp
 }
@@ -153,6 +155,33 @@ function Get-Token {
 	$profileClient = New-Object Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient($azureRmProfile)
 	$token = $profileClient.AcquireAccessToken($currentAzureContext.Subscription.TenantId)
 	$token.AccessToken
+}
+
+function Publish-BuildingBlocksTemplates {
+    $storageName = Get-Hash(($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
+    $StorageAccount = Get-AzureRmStorageAccount -ResourceGroupName (($resourceGroupPrefix, $deploymentPrefix, 'operations') -join '-') -Name $storageName -ErrorAction SilentlyContinue
+    if (!$StorageAccount) {
+        $StorageAccount = New-AzureRmStorageAccount -ResourceGroupName (($resourceGroupPrefix, $deploymentPrefix, 'operations') -join '-') -Name $storageName -Type Standard_LRS `
+            -Location $location -ErrorAction Stop
+    }
+    Get-ChildItem $scriptRoot\templates\buildingblocks -Directory | ForEach-Object {
+        $Directory = $_
+        $ContainerList = (Get-AzureStorageContainer -Context $StorageAccount.Context | Select-Object -ExpandProperty Name)
+        if ( $Directory -notin $ContainerList) {
+            $StorageAccount | New-AzureStorageContainer -Name $Directory.Name -Permission Container -ErrorAction Stop | Out-Null
+        }
+        Get-ChildItem $Directory.FullName -File -Filter *.json | ForEach-Object {
+            Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container $Directory.Name -File $_.FullName -Force -ErrorAction Stop | Out-Null
+            Write-Host "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)." -ForegroundColor DarkYellow
+        }
+    }
+    return $StorageAccount.PrimaryEndpoints.Blob
+}
+
+function Get-Hash($string) {
+    $tmp = [System.IO.Path]::GetTempFileName()
+    $string | Out-File $tmp
+    return (Get-FileHash $tmp -Algorithm MD5).Hash.Substring(0, 24).ToLower()
 }
 
 $request = '{
@@ -223,16 +252,6 @@ $components = @("application", "dmz", "security", "management", "operations", "n
 #     Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Importing configuration `"$_`"" -ForegroundColor Green
 #     $null = Import-AzureRmAutomationDscConfiguration -SourcePath "$scriptRoot\artifacts\$_" -Published -Force `
 #         -ResourceGroupName "$locationcoerced-automation" -AutomationAccountName $StorageAcct -ErrorAction Stop
-# }
-
-# $StorageAccount = New-AzureRmStorageAccount -ResourceGroupName "$locationcoerced-automation" -Name $StorageAcct -Type Standard_LRS `
-#     -Location $location -ErrorAction Stop # probably need to use one of the existing resource groups
-# $keys = Get-AzureRmAutomationRegistrationInfo -ResourceGroupName "$locationcoerced-automation" `
-#     -AutomationAccountName $StorageAcct -ErrorAction Stop
-# $data = Get-DeploymentData
-# $StorageAccount | New-AzureStorageContainer -Name payload -Permission Container | Out-Null
-# Get-ChildItem $scriptRoot\nestedTemplates -Filter *.json | ForEach-Object {
-#     $null = Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container payload -File $_.FullName -ErrorAction Stop
 # }
 
 # $modules | ForEach-Object {
