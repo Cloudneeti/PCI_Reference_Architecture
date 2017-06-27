@@ -16,7 +16,8 @@
                 "domainName": "test.local",
                 "jumpbox": "jumpota",
                 "serviceAccessPwd": "!Q2w3e4r5t6y",
-                "serviceAccess": "testo"
+                "serviceAccess": "testo",
+                "buildingBlocksEndpoint": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/"
             }
         },
         "networkReference": {
@@ -26,18 +27,57 @@
                     "addressSpacePrefix": "10.4.0.0/16",
                     "peerings": [
                         "application",
-                        "security",
-                        "management"
+                        "security"
                     ],
                     "subnets": [
                         {
                             "subnetName": "dmzSubnet",
                             "addressSpacePrefix": "10.4.0.0/24",
                             "Firewall": [
-                                "RDP",
-                                "SSH"
+                                "HTTP",
+                                "HTTPS"
                             ],
-                            "CustomRules": []
+                            "CustomRules": [
+                                {
+                                    "name": "emailAlerts-1",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "25",
+                                        "sourceAddressPrefix": "64.235.144.0/20",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2000,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "emailAlerts-2",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "25",
+                                        "sourceAddressPrefix": "198.207.200.0/22",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2010,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "emailAlerts-3",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "25",
+                                        "sourceAddressPrefix": "209.222.80.0/21",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2020,
+                                        "direction": "Inbound"
+                                    }
+                                }
+                            ]
                         }
                     ]
                 },
@@ -46,7 +86,6 @@
                     "addressSpacePrefix": "10.2.0.0/16",
                     "peerings": [
                         "application",
-                        "dmz",
                         "security"
                     ],
                     "subnets": [
@@ -66,19 +105,10 @@
                     "addressSpacePrefix": "10.3.0.0/16",
                     "peerings": [
                         "application",
-                        "dmz",
-                        "management"
+                        "management",
+                        "dmz"
                     ],
                     "subnets": [
-                        {
-                            "subnetName": "securitySubnet",
-                            "addressSpacePrefix": "10.3.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH"
-                            ],
-                            "CustomRules": []
-                        },
                         {
                             "subnetName": "domainSubnet",
                             "addressSpacePrefix": "10.3.1.0/24",
@@ -87,65 +117,167 @@
                                 "SSH"
                             ],
                             "CustomRules": []
-                        }
-                    ]
-                },
-                {
-                    "name": "application",
-                    "addressSpacePrefix": "10.5.0.0/16",
-                    "peerings": [
-                        "dmz",
-                        "security",
-                        "management"
-                    ],
-                    "subnets": [
+                        },
                         {
-                            "subnetName": "appSubnet1",
-                            "addressSpacePrefix": "10.5.0.0/24",
-                            "Firewall": [
-                                "RDP",
-                                "SSH",
-                                "HTTPS"
-                            ],
+                            "subnetName": "cloudneetiSubnet",
+                            "addressSpacePrefix": "10.3.2.0/24",
+                            "Firewall": ["Dummy"],
+                            "CustomRules": []
+                        },
+                        {
+                            "subnetName": "trendmicroDsmSubnet",
+                            "addressSpacePrefix": "10.3.3.0/24",
+                            "Firewall": ["HTTPS"],
                             "CustomRules": [
                                 {
-                                    "name": "rdp-rule1",
+                                    "name": "customHTTPS-1",
                                     "properties": {
-                                        "description": "Allow RDP",
                                         "protocol": "Tcp",
                                         "sourcePortRange": "*",
-                                        "destinationPortRange": "33890",
-                                        "sourceAddressPrefix": "Internet",
+                                        "destinationPortRange": "4119",
+                                        "sourceAddressPrefix": "*",
                                         "destinationAddressPrefix": "*",
                                         "access": "Allow",
-                                        "priority": 3001,
+                                        "priority": 2010,
                                         "direction": "Inbound"
                                     }
                                 },
                                 {
-                                    "name": "web-rule1",
+                                    "name": "customHTTPS-2",
                                     "properties": {
-                                        "description": "Allow WEB",
                                         "protocol": "Tcp",
                                         "sourcePortRange": "*",
-                                        "destinationPortRange": "80",
-                                        "sourceAddressPrefix": "Internet",
+                                        "destinationPortRange": "4120",
+                                        "sourceAddressPrefix": "*",
                                         "destinationAddressPrefix": "*",
                                         "access": "Allow",
-                                        "priority": 3100,
+                                        "priority": 2020,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "customHTTPS-3",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "8443",
+                                        "sourceAddressPrefix": "*",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2030,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "customHTTP-1",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "8080",
+                                        "sourceAddressPrefix": "*",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2040,
                                         "direction": "Inbound"
                                     }
                                 }
                             ]
                         },
                         {
-                            "subnetName": "appSubnet2",
-                            "addressSpacePrefix": "10.5.1.0/24",
+                            "subnetName": "alertlogicSubnet",
+                            "addressSpacePrefix": "10.3.4.0/24",
+                            "Firewall": ["HTTP"],
+                            "CustomRules": [
+                                {
+                                    "name": "customSSH-1",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "22",
+                                        "sourceAddressPrefix": "208.71.209.32/27",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2010,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "customSSH-2",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "22",
+                                        "sourceAddressPrefix": "204.110.218.96/27",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2020,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "customSSH-3",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "22",
+                                        "sourceAddressPrefix": "204.110.219.96/27",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2030,
+                                        "direction": "Inbound"
+                                    }
+                                },
+                                {
+                                    "name": "applienceClaim",
+                                    "properties": {
+                                        "protocol": "Tcp",
+                                        "sourcePortRange": "*",
+                                        "destinationPortRange": "8080",
+                                        "sourceAddressPrefix": "*",
+                                        "destinationAddressPrefix": "*",
+                                        "access": "Allow",
+                                        "priority": 2040,
+                                        "direction": "Inbound"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "subnetName": "qualysSubnet",
+                            "addressSpacePrefix": "10.3.5.0/24",
+                            "Firewall": ["Dummy"],
+                            "CustomRules": []
+                        }
+                    ]
+                },
+                {
+                    "name": "application",
+                    "addressSpacePrefix": "10.0.0.0/16",
+                    "peerings": [
+                        "management",
+                        "security",
+                        "dmz"
+                    ],
+                    "subnets": [
+                        {
+                            "subnetName": "webTier",
+                            "addressSpacePrefix": "10.0.1.0/24",
                             "Firewall": [
-                                "RDP",
-                                "SSH",
-                                "HTTP"
+                                "HTTP",
+                                "HTTPS"
                             ],
+                            "CustomRules": []
+                        },
+                        {
+                            "subnetName": "appTier",
+                            "addressSpacePrefix": "10.0.2.0/24",
+                            "Firewall": ["Dummy"],
+                            "CustomRules": []
+                        },
+                        {
+                            "subnetName": "dataTier",
+                            "addressSpacePrefix": "10.0.3.0/24",
+                            "Firewall": ["Dummy"],
                             "CustomRules": []
                         }
                     ]
@@ -168,7 +300,7 @@
                         443
                     ],
                     "size": "Standard_A0",
-                    "subnet": "appsubnet1",
+                    "subnet": "webTier",
                     "vnet": "application"
                 },
                 {
@@ -181,7 +313,7 @@
                         80
                     ],
                     "size": "Standard_A1",
-                    "subnet": "appsubnet1",
+                    "subnet": "webTier",
                     "vnet": "application"
                 }
             ]

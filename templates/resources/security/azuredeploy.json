@@ -39,7 +39,6 @@
         "nicCloudNeeti": "[concat(parameters('deploymentPrefix'), '-cloudneeti-nic')]",
         "baseUrl": "https://gallery.azure.com/artifact/20151001/trendmicro.deep-security-manager-stdeep-security-manager.1.0.6/Artifacts",
         "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-security')]",
-        "subnet1Ref": "[concat(variables('vnetID'), '/subnets/securitySubnet')]",
         "newsqlServerName": "[tolower(concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'sqltdm'))]",
         "deployment-api-version": "2015-11-01",
         "network-api-version": "2015-06-15",
@@ -90,7 +89,7 @@
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
-                                "id": "[variables('subnet1Ref')]"
+                                "id": "[concat(variables('vnetID'), '/subnets/trendmicroDsmSubnet')]"
                             }
                         }
                     }
@@ -197,7 +196,7 @@
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
-                                "id": "[variables('subnet1Ref')]"
+                                "id": "[concat(variables('vnetID'), '/subnets/qualysSubnet')]"
                             }
                         }
                     }
@@ -267,7 +266,7 @@
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
-                                "id": "[variables('subnet1Ref')]"
+                                "id": "[concat(variables('vnetID'), '/subnets/alertlogicSubnet')]"
                             }
                         }
                     }
@@ -336,7 +335,7 @@
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
-                                "id": "[variables('subnet1Ref')]"
+                                "id": "[concat(variables('vnetID'), '/subnets/cloudneetiSubnet')]"
                             }
                         }
                     }

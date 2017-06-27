@@ -13,9 +13,13 @@
         },
         "resourceGroupPrefix": {
             "type": "string"
+        },
+        "environmentReference": {
+            "type": "object"
         }
     },
     "variables": {
+        "Dummy": [],
         "RDP": [
             {
                 "name": "RDP-default",
@@ -102,7 +106,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/common/nested_iterator.json"
+                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'common/nested_iterator.json')]"
                 },
                 "parameters": {
                     "source": {
@@ -123,7 +127,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/common/nested_iterator.json"
+                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'common/nested_iterator.json')]"
                 },
                 "parameters": {
                     "source": {
