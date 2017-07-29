@@ -26,7 +26,22 @@
         "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
         "staticIp": "[concat(variables('substring'), 4)]",
         "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-management')]",
-        "subnetRef": "[concat(variables('vnetID'),'/subnets/', 'managementSubnet')]"
+        "subnetRef": "[concat(variables('vnetID'),'/subnets/', 'managementSubnet')]",
+        "nsgRule": [
+            {
+                "name": "RDP",
+                "properties": {
+                    "protocol": "Tcp",
+                    "sourcePortRange": "*",
+                    "destinationPortRange": "3389",
+                    "sourceAddressPrefix": "*",
+                    "destinationAddressPrefix": "[variables('staticIp')]",
+                    "access": "Allow",
+                    "priority": 2010,
+                    "direction": "Inbound"
+                }
+            }
+        ]
     },
     "resources": [
         {
@@ -118,6 +133,33 @@
                     }
                 }
             ]
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "name": "nsgRuleForJumpbox",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking')]",
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "type": "Microsoft.Network/networkSecurityGroups",
+                            "name": "[concat(parameters('deploymentPrefix'), '-managementSubnet-nsg')]",
+                            "apiVersion": "2016-03-30",
+                            "location": "[parameters('location')]",
+                            "properties": {
+                                "securityRules": "[variables('nsgRule')]"
+                            }
+                        }
+                    ]
+                },
+                "parameters": {}
+            }
         }
     ]
 }

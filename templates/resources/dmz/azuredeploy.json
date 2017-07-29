@@ -181,31 +181,6 @@
             }
         },
         {
-            "name": "[variables('networkInterfaceName01')]",
-            "type": "Microsoft.Network/networkInterfaces",
-            "apiVersion": "2016-09-01",
-            "location": "[parameters('location')]",
-            "dependsOn": [
-                "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
-            ],
-            "properties": {
-                "ipConfigurations": [
-                    {
-                        "name": "ipconfig1",
-                        "properties": {
-                            "subnet": {
-                                "id": "[variables('subnetRef')]"
-                            },
-                            "privateIPAllocationMethod": "Dynamic"
-                        }
-                    }
-                ],
-                "networkSecurityGroup": {
-                    "id": "[variables('nsgID')]"
-                }
-            }
-        },
-        {
             "name": "[variables('networkInterfaceName02')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2016-09-01",
@@ -216,7 +191,29 @@
             "properties": {
                 "ipConfigurations": [
                     {
-                        "name": "ipconfig2",
+                        "name": "ipconfig",
+                        "properties": {
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('networkInterfaceName01')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2016-09-01",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig",
                         "properties": {
                             "subnet": {
                                 "id": "[variables('subnetRef')]"
@@ -229,10 +226,7 @@
                             ]
                         }
                     }
-                ],
-                "networkSecurityGroup": {
-                    "id": "[variables('nsgID')]"
-                }
+                ]
             }
         },
         {

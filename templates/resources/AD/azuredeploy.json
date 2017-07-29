@@ -30,7 +30,7 @@
       "sku": "2016-Datacenter",
       "version": "latest"
     },
-    "addressSpace": "[parameters('networkReference')[2].subnets[1].addressSpacePrefix]",
+    "addressSpace": "[parameters('networkReference')[2].subnets[0].addressSpacePrefix]",
     "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
     "adPDCNicIPAddress": "[concat(variables('substring'), 4)]",
     "adBDCNicIPAddress": "[concat(variables('substring'), 5)]",

@@ -93,8 +93,7 @@
                             "subnetName": "managementSubnet",
                             "addressSpacePrefix": "10.2.0.0/24",
                             "Firewall": [
-                                "RDP",
-                                "SSH"
+                                "Dummy"
                             ],
                             "CustomRules": []
                         }
@@ -113,21 +112,24 @@
                             "subnetName": "domainSubnet",
                             "addressSpacePrefix": "10.3.1.0/24",
                             "Firewall": [
-                                "RDP",
-                                "SSH"
+                                "Dummy"
                             ],
                             "CustomRules": []
                         },
                         {
                             "subnetName": "cloudneetiSubnet",
                             "addressSpacePrefix": "10.3.2.0/24",
-                            "Firewall": ["Dummy"],
+                            "Firewall": [
+                                "Dummy"
+                            ],
                             "CustomRules": []
                         },
                         {
                             "subnetName": "trendmicroDsmSubnet",
                             "addressSpacePrefix": "10.3.3.0/24",
-                            "Firewall": ["HTTPS"],
+                            "Firewall": [
+                                "HTTPS"
+                            ],
                             "CustomRules": [
                                 {
                                     "name": "customHTTPS-1",
@@ -186,7 +188,9 @@
                         {
                             "subnetName": "alertlogicSubnet",
                             "addressSpacePrefix": "10.3.4.0/24",
-                            "Firewall": ["HTTP"],
+                            "Firewall": [
+                                "HTTP"
+                            ],
                             "CustomRules": [
                                 {
                                     "name": "customSSH-1",
@@ -245,7 +249,9 @@
                         {
                             "subnetName": "qualysSubnet",
                             "addressSpacePrefix": "10.3.5.0/24",
-                            "Firewall": ["Dummy"],
+                            "Firewall": [
+                                "Dummy"
+                            ],
                             "CustomRules": []
                         }
                     ]
@@ -271,13 +277,17 @@
                         {
                             "subnetName": "appTier",
                             "addressSpacePrefix": "10.0.2.0/24",
-                            "Firewall": ["Dummy"],
+                            "Firewall": [
+                                "Dummy"
+                            ],
                             "CustomRules": []
                         },
                         {
                             "subnetName": "dataTier",
                             "addressSpacePrefix": "10.0.3.0/24",
-                            "Firewall": ["Dummy"],
+                            "Firewall": [
+                                "Dummy"
+                            ],
                             "CustomRules": []
                         }
                     ]
