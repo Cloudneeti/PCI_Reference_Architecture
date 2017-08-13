@@ -22,15 +22,13 @@
         }
     },
     "variables": {
-        "addressSpace": "[parameters('networkReference')[2].subnets[1].addressSpacePrefix]",
+        "addressSpace": "[parameters('networkReference')[2].subnets[0].addressSpacePrefix]",
         "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
         "adPDCNicIPAddress": "[concat(variables('substring'), 4)]",
         "adBDCNicIPAddress": "[concat(variables('substring'), 5)]",
         "dnsSettings": [
             "[variables('adPDCNicIPAddress')]",
-            "[variables('adBDCNicIPAddress')]",
-            "8.8.8.8",
-            "77.88.8.8"
+            "[variables('adBDCNicIPAddress')]"
         ]
     },
     "resources": [

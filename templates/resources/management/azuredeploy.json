@@ -123,7 +123,7 @@
                         "autoUpgradeMinorVersion": true,
                         "settings": {
                             "configuration": {
-                                "url": "https://github.com/AvyanConsultingCorp/PCI_Reference_Architecture/raw/master/scripts/ssms.zip",
+                                "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ssms.zip')]",
                                 "script": "ssms.ps1",
                                 "function": "ssms"
                             },

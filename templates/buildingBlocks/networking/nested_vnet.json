@@ -21,6 +21,14 @@
             "type": "object"
         }
     },
+    "variables": {
+        "dnsForDomain": "[concat(parameters('dnsSettings'), variables('internetDNS'))]",
+        "internetDNS": [
+            "8.8.8.8",
+            "77.88.8.8"
+        ]
+
+    },
     "resources": [
         {
             "type": "Microsoft.Network/virtualNetworks",
@@ -37,7 +45,7 @@
                     ]
                 },
                 "dhcpOptions": {
-                    "dnsServers": "[parameters('dnsSettings')]"
+                    "dnsServers": "[if(equals(parameters('bossObject').name, 'security'), variables('dnsForDomain'), parameters('dnsSettings'))]"
                 },
                 "copy": [
                     {
