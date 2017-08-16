@@ -288,10 +288,10 @@
                     {
                         "name": "barracudaprobe",
                         "properties": {
-                            "Protocol": "Http",
-                            "Port": 8000,
+                            "protocol": "Http",
+                            "port": 8000,
                             "IntervalInSeconds": 5,
-                            "NumberOfProbes": 2,
+                            "numberOfProbes": 2,
                             "RequestPath": "/"
                         }
                     }
