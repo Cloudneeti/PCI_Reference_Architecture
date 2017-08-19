@@ -14,6 +14,9 @@
         "networkReference": {
             "type": "array"
         },
+        "environmentReference": {
+            "type": "object"
+        },
         "bossObject": {
             "type": "object"
         }
@@ -113,7 +116,6 @@
                         }
                     }
                 ]
-                    
             }
         },
         {
@@ -178,6 +180,27 @@
                             "enabled": true,
                             "storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
                         }
+                    },
+                    "extensionProfile": {
+                        "extensions": [
+                            {
+                                "name": "Microsoft.Powershell.DSC",
+                                "properties": {
+                                    "publisher": "Microsoft.Powershell",
+                                    "type": "DSC",
+                                    "typeHandlerVersion": "2.19",
+                                    "autoUpgradeMinorVersion": true,
+                                    "settings": {
+                                        "ModulesUrl": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/webdeploy.zip')]",
+                                        "ConfigurationFunction": "webdeploy.ps1\\configure-me",
+                                        "Properties": {
+                                            "placeholder": "[parameters('environmentReference').domainName]"
+                                        }
+                                    },
+                                    "protectedSettings": {}
+                                }
+                            }
+                        ]
                     }
                 }
             }

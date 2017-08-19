@@ -1,28 +1,10 @@
 Configuration configure-me {
     param (
         [Parameter(Mandatory = $false, Position = 0)]
-        [string[]]$tentacleRole,
-
-        [Parameter(Mandatory = $false, Position = 1)]
-        [string[]]$tentacleEnvironment,
-        
-        [Parameter(Mandatory = $false, Position = 2)]
-        [int]$tentaclePort,
-            
-        [Parameter(Mandatory = $false, Position = 3)]
-        [string]$tentacleAPiKey,
-
-        [Parameter(Mandatory = $false, Position = 4)]
-        [string]$tentacleUrl,
-
-        [Parameter(Mandatory = $false, Position = 5)]
-        [bool]$firewacle = $false,
-        
-        [Parameter(Mandatory = $false, Position = 6)]
-        [bool]$tentacle = $false    
+        [string]$placeholder 
     )
 
-    Import-DscResource -ModuleName xPSDesiredStateConfiguration, xWindowsUpdate, xSystemSecurity, xNetworking, xWebDeploy
+    Import-DscResource -ModuleName PSDesiredStateConfiguration, xPSDesiredStateConfiguration, xWindowsUpdate, xSystemSecurity, xNetworking, xWebDeploy
 
     $features = @( "Web-Server", "Web-WebServer", "Web-Common-Http", "Web-Default-Doc", "Web-Dir-Browsing", "Web-Http-Errors", "Web-Static-Content", "NET-Framework-Core",  
         "Web-Http-Redirect", "Web-Health", "Web-Http-Logging", "Web-Log-Libraries", "Web-Request-Monitor", "Web-Http-Tracing", "Web-Performance",
@@ -60,7 +42,6 @@ Configuration configure-me {
             GetScript  = { return @{ 'Result' = "Turn Off Server Manager at logon" } 
             }
         }
-        
         xFirewall FirewallRules {
             Name        = "crapervices"
             DisplayName = "crapervices"
@@ -72,19 +53,17 @@ Configuration configure-me {
             Protocol    = "TCP"
             Description = "Firewall Rules for crapervices"
         }
-
         File SetupFolder {
-            DestinationPath = "C:\setup\"
+            Type = 'Directory'
+            DestinationPath = "C:\setup"
             Ensure          = "Present"
         }
-
         xRemoteFile FileDownload {
             Uri             = "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoWebStore.zip"
             DestinationPath = "C:\setup\package.zip"
             MatchSource     = $true
             DependsOn       = "[File]SetupFolder"
         }
-
         xWebDeploy Deploy {
             SourcePath  = "C:\setup\package.zip"
             Destination = "mySecureWebsite"

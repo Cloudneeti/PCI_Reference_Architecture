@@ -22,14 +22,6 @@
     }
   },
   "variables": {
-    "_artifactsLocation": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/active-directory-new-domain-ha-2-dc",
-    "_artifactsLocationSasToken": "",
-    "imageReference": {
-      "publisher": "MicrosoftWindowsServer",
-      "offer": "WindowsServer",
-      "sku": "2016-Datacenter",
-      "version": "latest"
-    },
     "addressSpace": "[parameters('networkReference')[2].subnets[0].addressSpacePrefix]",
     "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
     "adPDCNicIPAddress": "[concat(variables('substring'), 4)]",
@@ -37,14 +29,13 @@
     "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-security')]",
     "adSubnetRef": "[concat(variables('vnetID'),'/subnets/domainSubnet')]",
     "adDataDiskSize": 1000,
-    "configureADBDCTemplateUri": "[concat(variables('_artifactsLocation'),'/nestedtemplates/configureADBDC.json', variables('_artifactsLocationSasToken'))]",
-    "adPDCModulesURL": "[concat(variables('_artifactsLocation'),'/DSC/CreateADPDC.zip', variables('_artifactsLocationSasToken'))]",
-    "adPDCConfigurationFunction": "CreateADPDC.ps1\\CreateADPDC",
-    "adBDCPreparationModulesURL": "[concat(variables('_artifactsLocation'),'/DSC/PrepareADBDC.zip', variables('_artifactsLocationSasToken'))]",
+    "configureADBDCTemplateUri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'activedirectory/configureADBDC.json')]",
+    "adPDCModulesURL": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/createdomain.zip')]",
+    "adPDCConfigurationFunction": "createdomain.ps1\\CreateADPDC",
+    "adBDCPreparationModulesURL": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/PrepareADBDC.zip')]",
     "adBDCPreparationFunction": "PrepareADBDC.ps1\\PrepareADBDC",
-    "adBDCConfigurationModulesURL": "[concat(variables('_artifactsLocation'),'/DSC/ConfigureADBDC.zip', variables('_artifactsLocationSasToken'))]",
-    "adBDCConfigurationFunction": "ConfigureADBDC.ps1\\ConfigureADBDC",
-    "domainName": "[parameters('environmentReference').domainName]"
+    "adBDCConfigurationModulesURL": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ConfigureADBDC.zip')]",
+    "adBDCConfigurationFunction": "ConfigureADBDC.ps1\\ConfigureADBDC"
   },
   "resources": [
     {
@@ -120,7 +111,12 @@
           "adminPassword": "[parameters('environmentReference').serviceAccessPwd]"
         },
         "storageProfile": {
-          "imageReference": "[variables('imageReference')]",
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2016-Datacenter",
+            "version": "latest"
+          },
           "osDisk": {
             "caching": "ReadWrite",
             "createOption": "FromImage",
@@ -168,7 +164,7 @@
               "ModulesUrl": "[variables('adPDCModulesURL')]",
               "ConfigurationFunction": "[variables('adPDCConfigurationFunction')]",
               "Properties": {
-                "DomainName": "[variables('domainName')]",
+                "DomainName": "[parameters('environmentReference').domainName]",
                 "AdminCreds": {
                   "UserName": "[parameters('environmentReference').serviceAccess]",
                   "Password": "PrivateSettingsRef:AdminPassword"
@@ -206,7 +202,12 @@
           "adminPassword": "[parameters('environmentReference').serviceAccessPwd]"
         },
         "storageProfile": {
-          "imageReference": "[variables('imageReference')]",
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2016-Datacenter",
+            "version": "latest"
+          },
           "osDisk": {
             "caching": "ReadWrite",
             "createOption": "FromImage",
@@ -287,7 +288,7 @@
             "value": "[parameters('environmentReference').serviceAccessPwd]"
           },
           "domainName": {
-            "value": "[variables('domainName')]"
+            "value": "[parameters('environmentReference').domainName]"
           },
           "adBDCConfigurationFunction": {
             "value": "[variables('adBDCConfigurationFunction')]"

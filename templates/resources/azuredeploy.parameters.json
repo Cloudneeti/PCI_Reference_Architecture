@@ -301,31 +301,20 @@
                     "count": 1,
                     "extensions": [
                         "OMS",
-                        "NetworkWatcher"
+                        "NetworkWatcher",
+                        "IIS"
                     ],
                     "name": "webbito",
-                    "os": "Ubuntu",
+                    "os": "Windows",
                     "password": "!Q2w3e4r5t6y",
                     "ports": [
                         443
                     ],
-                    "size": "Standard_A0",
-                    "subnet": "webTier",
-                    "vnet": "application"
-                },
-                {
-                    "balancer": "ilb",
-                    "count": 1,
-                    "name": "webbitota",
-                    "os": "Windows",
-                    "password": "!Q2w3e4r5t6y",
-                    "ports": [
-                        80
-                    ],
-                    "size": "Standard_A1",
+                    "size": "Standard_DS2_v2",
                     "subnet": "webTier",
                     "vnet": "application"
                 }
             ]
         }
     }
+}

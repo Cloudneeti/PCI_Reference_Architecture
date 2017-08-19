@@ -56,9 +56,7 @@
   },
   "variables": {
     "sqlAOPrepareModulesURL": "[concat(parameters('_artifactsLocation'),'packages/alwayson.zip',parameters('_artifactsLocationSasToken'))]",
-    "sqlAOPrepareConfigurationFunction": "\\PrepareAlwaysOnSqlServer",
     "createClusterModulesURL": "[concat(parameters('_artifactsLocation'),'packages/cluster.zip',parameters('_artifactsLocationSasToken'))]",
-    "createClusterConfigurationFunction": "CreateFailoverCluster.ps1\\CreateFailoverCluster",
     "clusterName": "[concat(parameters('namePrefix'),'-c')]"
   },
   "resources": [
@@ -116,8 +114,11 @@
         "forceUpdateTag": "yappi",
         "settings": {
           "wmfVersion": "5.0",
-          "modulesUrl": "[variables('createClusterModulesURL')]",
-          "configurationFunction": "[variables('createClusterConfigurationFunction')]",
+          "configuration": {
+            "url": "[variables('createClusterModulesURL')]",
+            "script": "CreateFailoverCluster.ps1",
+            "function": "CreateFailoverCluster"
+          },
           "properties": {
             "domainName": "[parameters('domainName')]",
             "clusterName": "[variables('clusterName')]",

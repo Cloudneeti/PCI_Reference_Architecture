@@ -28,7 +28,7 @@ function Invoke-ArmDeployment {
         [Parameter(Mandatory = $false,
             ValueFromPipelineByPropertyName = $true,
             Position = 5)]
-        [bool]$prerequisiteRefresh
+        [switch]$prerequisiteRefresh
     )
 
     # Set proper subscription according to input and\or login to Azure and save token for further "deeds"
