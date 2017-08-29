@@ -1,65 +1,54 @@
 {
-    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "deploymentPrefix": {
-            "type": "string"
-        },
-        "location": {
-            "type": "string"
-        },
-        "resourceGroupPrefix": {
-            "type": "string"
-        },
-        "environmentReference": {
-            "type": "object"
-        },
-        "networkReference": {
-            "type": "array"
-        },
-        "vmReference": {
-            "type": "array"
-        }
-    },
-    "variables": {
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"deploymentPrefix": {
+			"type": "string"
+		},
+		"location": {
+			"type": "string"
+		},
+		"resourceGroupPrefix": {
+			"type": "string"
+		},
+		"environmentReference": {
+			"type": "object"
+		},
+		"networkReference": {
+			"type": "array"
+		},
+		"vmReference": {
+			"type": "array"
+		}
+	},
+	"variables": {
 		"sqlDiskSize": 1000,
-		"sqlWitnessDiskSize": 128,
 		"sqlNamePrefix": "[concat(parameters('deploymentPrefix'),'-sql-')]",
-		"sqlAvailabilitySetName": "[concat(variables('sqlNamePrefix'),'as')]",
 		"sqlLBName": "[concat(variables('sqlNamePrefix'),'ilb')]",
-		"lbFE1": "[concat(variables('sqlNamePrefix'),'ilbfe1')]",
-		"lbBE": "[concat(variables('sqlNamePrefix'),'ilbbe')]",
-		"sqlLBID": "[resourceId('Microsoft.Network/loadBalancers',variables('sqlLBName'))]",
-		"sqlLBFEConfigID1": "[concat(variables('sqllbID'),'/frontendIPConfigurations/',variables('lbFE1'))]",
-		"sqlLBBEAddressPoolID": "[concat(variables('sqllbID'),'/backendAddressPools/',variables('lbBE'))]",
-		"sqlAOProbe1": "[concat(variables('sqlNamePrefix'),'ilbp1')]",
-		"sqlLBProbeID1": "[concat(variables('sqllbID'),'/probes/',variables('sqlAOProbe1'))]",
-		"deploySqlWitnessShare": "deploySqlWitnessShare",
-		"deploySqlWitnessShareId": "[concat('Microsoft.Resources/deployments/', variables('deploySqlWitnessShare'))]",
-		"deploySqlWitnessShareTemplateUrl": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_witness.json')]",
-		"sqlWitnessSharePath": "[concat(parameters('deploymentPrefix'),'-fsw')]",
-		"sqlWitnessVMName": "[concat(variables('sqlNamePrefix'),'w')]",
-		"deploySqlAlwaysOnTemplateUrl": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_alwayson.json')]",
-		"sqlAOEPName": "[concat(parameters('deploymentPrefix'),'-agep')]",
-		"sqlAOAGName1": "[concat(parameters('deploymentPrefix'),'-ag1')]",
-		"sqlAOListener1": "[concat(parameters('deploymentPrefix'),'-agl1')]",
+		"lbFrontEnd": "[concat(variables('sqlNamePrefix'),'lbFrontEnd')]",
+		"lbBackEnd": "[concat(variables('sqlNamePrefix'),'lbBackEnd')]",
+		"lbId": "[resourceId('Microsoft.Network/loadBalancers',variables('sqlLBName'))]",
+		"lbFrontEndConfigId": "[concat(variables('lbId'),'/frontendIPConfigurations/',variables('lbFrontEnd'))]",
+		"lbBackEndAddressPoolId": "[concat(variables('lbId'),'/backendAddressPools/',variables('lbBackEnd'))]",
+		"lbProbeId": "[concat(variables('lbId'),'/probes/sqlProbe')]",
+		"sqlAOListener": "[concat(parameters('deploymentPrefix'),'sql-agListener')]",
 		"network": "[last(parameters('networkReference'))]",
-        "subnetUri": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks/Subnets', concat(parameters('deploymentPrefix'), '-', variables('network').name), last(variables('network').subnets).subnetName)]",
+		"subnetUri": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks/Subnets', concat(parameters('deploymentPrefix'), '-', variables('network').name), last(variables('network').subnets).subnetName)]",
 		"addressSpace": "[last(variables('network').subnets).addressSpacePrefix]",
-        "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
-        "staticIp": "[concat(variables('substring'), 10)]"
+		"substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
+		"listenerIp": "[concat(variables('substring'), 10)]"
 	},
 	"resources": [
 		{
 			"type": "Microsoft.Compute/availabilitySets",
-			"name": "[variables('sqlAvailabilitySetName')]",
+			"name": "[concat(parameters('deploymentPrefix'),'-sql-as')]",
 			"apiVersion": "2016-04-30-preview",
 			"location": "[resourceGroup().location]",
 			"properties": {
-                "platformFaultDomainCount": 2,
-                "platformUpdateDomainCount": 5,
-                "managed": true
-            }
+				"platformFaultDomainCount": 2,
+				"platformUpdateDomainCount": 5,
+				"managed": true
+			}
 		},
 		{
 			"apiVersion": "2015-06-15",
@@ -70,10 +59,10 @@
 			"properties": {
 				"frontendIPConfigurations": [
 					{
-						"name": "[variables('lbFE1')]",
+						"name": "[variables('lbFrontEnd')]",
 						"properties": {
 							"privateIPAllocationMethod": "Static",
-							"privateIPAddress": "[variables('staticIp')]",
+							"privateIPAddress": "[variables('listenerIp')]",
 							"subnet": {
 								"id": "[variables('subnetUri')]"
 							}
@@ -82,21 +71,21 @@
 				],
 				"backendAddressPools": [
 					{
-						"name": "[variables('lbBE')]"
+						"name": "[variables('lbBackEnd')]"
 					}
 				],
 				"loadBalancingRules": [
 					{
-						"name": "[variables('sqlAOListener1')]",
+						"name": "[variables('sqlAOListener')]",
 						"properties": {
 							"frontendIPConfiguration": {
-								"id": "[variables('sqlLBFEConfigID1')]"
+								"id": "[variables('lbFrontEndConfigId')]"
 							},
 							"backendAddressPool": {
-								"id": "[variables('sqlLBBEAddressPoolID')]"
+								"id": "[variables('lbBackEndAddressPoolId')]"
 							},
 							"probe": {
-								"id": "[variables('sqlLBProbeID1')]"
+								"id": "[variables('lbProbeId')]"
 							},
 							"protocol": "Tcp",
 							"frontendPort": 1433,
@@ -107,7 +96,7 @@
 				],
 				"probes": [
 					{
-						"name": "[variables('sqlAOProbe1')]",
+						"name": "sqlProbe",
 						"properties": {
 							"protocol": "Tcp",
 							"port": 59999,
@@ -125,15 +114,15 @@
 			"apiVersion": "2015-06-15",
 			"copy": {
 				"name": "nicLoop",
-				"count": 2
+				"count": "[parameters('environmentReference').sqlVmCount]"
 			},
 			"dependsOn": [
-				"[variables('sqlLBID')]"
+				"[variables('lbId')]"
 			],
 			"properties": {
 				"ipConfigurations": [
 					{
-						"name": "ipconfig1",
+						"name": "primary",
 						"properties": {
 							"privateIPAllocationMethod": "Dynamic",
 							"subnet": {
@@ -141,23 +130,14 @@
 							},
 							"loadBalancerBackendAddressPools": [
 								{
-									"id": "[variables('sqlLBBEAddressPoolID')]"
+									"id": "[variables('lbBackEndAddressPoolId')]"
 								}
-							]
+							],
+                            "primary": true
 						}
-					}
-				]
-			}
-		},
-		{
-			"name": "[concat(variables('sqlWitnessVMName'), '-nic')]",
-			"type": "Microsoft.Network/networkInterfaces",
-			"location": "[resourceGroup().location]",
-			"apiVersion": "2015-06-15",
-			"properties": {
-				"ipConfigurations": [
+					},
 					{
-						"name": "ipconfig1",
+						"name": "cluster",
 						"properties": {
 							"privateIPAllocationMethod": "Dynamic",
 							"subnet": {
@@ -175,18 +155,18 @@
 			"location": "[resourceGroup().location]",
 			"copy": {
 				"name": "virtualMachineLoop",
-				"count": 2
+				"count": "[parameters('environmentReference').sqlVmCount]"
 			},
 			"dependsOn": [
 				"[resourceId('Microsoft.Network/networkInterfaces',concat(variables('sqlNamePrefix'), copyindex(), '-nic'))]",
-				"[resourceId('Microsoft.Compute/availabilitySets', variables('sqlAvailabilitySetName'))]"
+				"[concat(parameters('deploymentPrefix'),'-sql-as')]"
 			],
 			"properties": {
 				"hardwareProfile": {
 					"vmSize": "Standard_DS2_v2"
 				},
 				"availabilitySet": {
-					"id": "[resourceId('Microsoft.Compute/availabilitySets', variables('sqlAvailabilitySetName'))]"
+					"id": "[resourceId('Microsoft.Compute/availabilitySets', concat(parameters('deploymentPrefix'),'-sql-as'))]"
 				},
 				"osProfile": {
 					"computerName": "[concat(variables('sqlNamePrefix'), copyindex())]",
@@ -195,30 +175,27 @@
 				},
 				"storageProfile": {
 					"imageReference": {
-                        "publisher": "MicrosoftSQLServer",
-                        "offer": "SQL2016SP1-WS2016",
-                        "sku": "Standard",
-                        "version": "latest"
+						"publisher": "MicrosoftSQLServer",
+						"offer": "SQL2016SP1-WS2016",
+						"sku": "Enterprise",
+						"version": "latest"
 					},
 					"osDisk": {
 						"name": "[concat(variables('sqlNamePrefix'), copyindex(), '-osdisk.vhd')]",
 						"caching": "ReadWrite",
 						"createOption": "FromImage"
 					},
-					"dataDisks": [
+					"copy": [
 						{
-							"name": "[concat(variables('sqlNamePrefix'), copyindex(), '-datadisk1.vhd')]",
-							"caching": "None",
-							"createOption": "Empty",
-							"diskSizeGB": "[variables('sqlDiskSize')]",
-							"lun": 0
-						},
-						{
-							"name": "[concat(variables('sqlNamePrefix'), copyindex(), '-logdisk1.vhd')]",
-							"caching": "None",
-							"createOption": "Empty",
-							"diskSizeGB": "[variables('sqlDiskSize')]",
-							"lun": 1
+							"name": "dataDisks",
+							"count": "[parameters('environmentReference').sqlDiskCount]",
+							"input": {
+								"name": "[concat(variables('sqlNamePrefix'), copyindex('virtualMachineLoop'), '-dd', copyindex('dataDisks'))]",
+								"caching": "None",
+								"createOption": "Empty",
+								"diskSizeGB": "[variables('sqlDiskSize')]",
+								"lun": "[copyindex('dataDisks')]"
+							}
 						}
 					]
 				},
@@ -232,200 +209,130 @@
 			}
 		},
 		{
-			"apiVersion": "2016-04-30-preview",
-			"type": "Microsoft.Compute/virtualMachines",
-			"name": "[variables('sqlWitnessVMName')]",
+			"type": "Microsoft.Compute/virtualMachines/extensions",
+			"name": "[concat(variables('sqlNamePrefix'),copyindex(1),'/sqlPrep')]",
+			"apiVersion": "2015-06-15",
 			"location": "[resourceGroup().location]",
 			"dependsOn": [
-				"[resourceId('Microsoft.Network/networkInterfaces',concat(variables('sqlWitnessVMName'), '-nic'))]",
-				"[resourceId('Microsoft.Compute/availabilitySets', variables('sqlAvailabilitySetName'))]"
+				"virtualMachineLoop"
 			],
+			"copy": {
+				"name": "virtualMachineExtensionLoop",
+				"count": "[sub(parameters('environmentReference').sqlVmCount, 1)]"
+			},
 			"properties": {
-				"hardwareProfile": {
-					"vmSize": "Standard_DS2_v2"
-				},
-				"availabilitySet": {
-					"id": "[resourceId('Microsoft.Compute/availabilitySets', variables('sqlAvailabilitySetName'))]"
-				},
-				"osProfile": {
-					"computerName": "[variables('sqlWitnessVMName')]",
-					"adminUsername": "[parameters('environmentReference').serviceAccess]",
-					"adminPassword": "[parameters('environmentReference').serviceAccessPwD]"
-				},
-				"storageProfile": {
-					"imageReference": {
-                        "publisher": "MicrosoftSQLServer",
-                        "offer": "SQL2016SP1-WS2016",
-                        "sku": "Standard",
-                        "version": "latest"
+				"publisher": "Microsoft.Powershell",
+				"type": "DSC",
+				"typeHandlerVersion": "2.20",
+				"autoUpgradeMinorVersion": true,
+				"settings": {
+					"configuration": {
+						"url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/sql-secondary.zip')]",
+						"script": "sql-secondary.ps1",
+						"function": "sql-secondary"
 					},
-					"osDisk": {
-						"name": "[concat(variables('sqlWitnessVMName'), '-osdisk.vhd')]",
-						"caching": "ReadWrite",
-						"createOption": "FromImage"
-					},
-					"dataDisks": [
-						{
-							"name": "[concat(variables('sqlWitnessVMName'), '-datadisk1.vhd')]",
-							"caching": "None",
-							"createOption": "Empty",
-							"diskSizeGB": "[variables('sqlWitnessDiskSize')]",
-							"lun": 0
+					"configurationArguments": {
+						"deploymentPrefix": "[parameters('deploymentPrefix')]",
+						"domainName": "[parameters('environmentReference').domainName]",
+						"disks": "[parameters('environmentReference').sqlDiskCount]",
+						"SqlAlwaysOnAvailabilityGroupListenerIp": "[variables('listenerIp')]"
+					}
+				},
+				"protectedSettings": {
+					"configurationArguments": {
+						"adminCreds": {
+							"userName": "[parameters('environmentReference').serviceAccess]",
+							"password": "[parameters('environmentReference').serviceAccessPwd]"
+						},
+						"sqlServiceCreds": {
+							"userName": "[concat(parameters('environmentReference').serviceAccess, '-sql')]",
+							"password": "[parameters('environmentReference').serviceAccessPwd]"
 						}
-					]
-				},
-				"networkProfile": {
-					"networkInterfaces": [
-						{
-							"id": "[resourceId('Microsoft.Network/networkInterfaces',concat(variables('sqlWitnessVMName'), '-nic'))]"
-						}
-					]
-				}
-			}
-		},
-		{
-			"name": "[variables('deploySqlWitnessShare')]",
-			"type": "Microsoft.Resources/deployments",
-			"apiVersion": "2015-01-01",
-			"dependsOn": [
-				"[resourceId('Microsoft.Compute/virtualMachines',variables('sqlWitnessVMName'))]"
-			],
-			"properties": {
-				"mode": "Incremental",
-				"templateLink": {
-					"uri": "[variables('deploySqlWitnessShareTemplateUrl')]",
-					"contentVersion": "1.0.0.0"
-				},
-				"parameters": {
-					"sqlWitnessVMName": {
-						"value": "[variables('sqlWitnessVMName')]"
-					},
-					"domainName": {
-						"value": "[parameters('environmentReference').domainName]"
-					},
-					"sharePath": {
-						"value": "[variables('sqlWitnessSharePath')]"
-					},
-					"adminUsername": {
-						"value": "[parameters('environmentReference').serviceAccess]"
-					},
-					"adminPassword": {
-						"value": "[parameters('environmentReference').serviceAccessPwD]"
-					},
-					"_artifactsLocation": {
-						"value": "[parameters('environmentReference').buildingBlocksEndpoint]"
-					},
-					"_artifactsLocationSasToken": {
-						"value": ""
 					}
 				}
 			}
 		},
 		{
-			"name": "deploySqlAlwaysOn",
+			"type": "Microsoft.Compute/virtualMachines/extensions",
+			"name": "[concat(variables('sqlNamePrefix'),'0/sqlConfig')]",
+			"apiVersion": "2015-06-15",
+			"location": "[resourceGroup().location]",
+			"dependsOn": [
+				"virtualMachineLoop"
+			],
+			"properties": {
+				"publisher": "Microsoft.Powershell",
+				"type": "DSC",
+				"typeHandlerVersion": "2.20",
+				"autoUpgradeMinorVersion": true,
+				"settings": {
+					"configuration": {
+						"url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/sql-primary.zip')]",
+						"script": "sql-primary.ps1",
+						"function": "sql-primary"
+					},
+					"configurationArguments": {
+						"deploymentPrefix": "[parameters('deploymentPrefix')]",
+						"domainName": "[parameters('environmentReference').domainName]",
+						"SqlAlwaysOnAvailabilityGroupListenerIp": "[variables('listenerIp')]",
+						"sqlCount": "[parameters('environmentReference').sqlVmCount]",
+						"disks": "[parameters('environmentReference').sqlDiskCount]"
+					}
+				},
+				"protectedSettings": {
+					"configurationArguments": {
+						"witnessAccount": {
+							"userName": "[concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')]",
+							"password": "[listKeys(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2016-01-01').keys[0].value]"
+						},
+						"adminCreds": {
+							"userName": "[parameters('environmentReference').serviceAccess]",
+							"password": "[parameters('environmentReference').serviceAccessPwd]"
+						},
+						"sqlServiceCreds": {
+							"userName": "[concat(parameters('environmentReference').serviceAccess, '-sql')]",
+							"password": "[parameters('environmentReference').serviceAccessPwd]"
+						}
+					}
+				}
+			}
+		},
+		{
+			"condition": false,
+			"name": "[concat(parameters('deploymentPrefix'), 'vmss-', copyIndex())]",
 			"type": "Microsoft.Resources/deployments",
 			"apiVersion": "2015-01-01",
-			"dependsOn": [
-				"[resourceId('Microsoft.Compute/virtualMachines',concat(variables('sqlNamePrefix'),'0'))]",
-				"[resourceId('Microsoft.Compute/virtualMachines',concat(variables('sqlNamePrefix'),'1'))]",
-				"[variables('deploySqlWitnessShareId')]"
-			],
+			"copy": {
+				"name": "vmssCopy",
+				"count": 1
+			},
 			"properties": {
 				"mode": "Incremental",
 				"templateLink": {
-					"uri": "[variables('deploySqlAlwaysOnTemplateUrl')]",
+					"uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_vmss.json')]",
 					"contentVersion": "1.0.0.0"
 				},
 				"parameters": {
-					"sqlNamePrefix": {
-						"value": "[variables('sqlNamePrefix')]"
+					"bossObject": {
+						"value": "[parameters('vmReference')[copyIndex()]]"
 					},
-					"domainName": {
-						"value": "[parameters('environmentReference').domainName]"
+					"location": {
+						"value": "[parameters('location')]"
 					},
-					"namePrefix": {
+					"deploymentPrefix": {
 						"value": "[parameters('deploymentPrefix')]"
 					},
-					"sharePath": {
-						"value": "[variables('sqlWitnessSharePath')]"
-					},
-					"sqlWitnessVMName": {
-						"value": "[variables('sqlWitnessVMName')]"
-					},
-					"sqlLBName": {
-						"value": "[variables('sqlLBName')]"
-					},
-					"sqlLBIPAddress": {
-						"value": "[variables('staticIp')]"
-					},
-					"dnsServerName": {
-						"value": "[concat(parameters('deploymentPrefix'), '-PDC-VM')]"
-					},
-					"sqlServerServiceAccountUserName": {
-						"value": "[concat(parameters('environmentReference').serviceAccess, '-sql')]"
-					},
-					"sqlServerServiceAccountPassword": {
-						"value": "[parameters('environmentReference').serviceAccessPwD]"
-					},
-					"adminUsername": {
-						"value": "[parameters('environmentReference').serviceAccess]"
-					},
-					"adminPassword": {
-						"value": "[parameters('environmentReference').serviceAccessPwD]"
-					},
-					"_artifactsLocation": {
-						"value": "[parameters('environmentReference').buildingBlocksEndpoint]"
-					},
-					"_artifactsLocationSasToken": {
-						"value": ""
-					},
-					"sqlAlwaysOnEndpointName": {
-						"value": "[variables('sqlAOEPName')]"
-					},
-					"sqlAlwaysOnAvailabilityGroupName1": {
-						"value": "[variables('sqlAOAGName1')]"
-					},
-					"sqlAlwaysOnAvailabilityGroupListenerName1": {
-						"value": "[variables('sqlAOListener1')]"
-					}
-				}
-			}
-        },
-        {
-            "name": "[concat(parameters('deploymentPrefix'), 'vmss-', copyIndex())]",
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2015-01-01",
-            "copy": {
-                "name": "vmssCopy",
-                "count": 1
-            },
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_vmss.json')]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "bossObject": {
-                        "value": "[parameters('vmReference')[copyIndex()]]"
-                    },
-                    "location": {
-                        "value": "[parameters('location')]"
-                    },
-                    "deploymentPrefix": {
-                        "value": "[parameters('deploymentPrefix')]"
-                    },
-                    "resourceGroupPrefix": {
-                        "value": "[parameters('resourceGroupPrefix')]"
+					"resourceGroupPrefix": {
+						"value": "[parameters('resourceGroupPrefix')]"
 					},
 					"environmentReference": {
 						"value": "[parameters('environmentReference')]"
 					},
-                    "networkReference": {
-                        "value": "[parameters('networkReference')]"
-                    }
-                }
-            }
-        }
+					"networkReference": {
+						"value": "[parameters('networkReference')]"
+					}
+				}
+			}
+		}
 	]
 }

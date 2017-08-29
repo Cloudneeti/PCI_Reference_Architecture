@@ -9,7 +9,7 @@ $stepsOthers = @(3,4,5,6,7)
 . .\scripts\deployme.ps1
 
 Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupPrefix -location $location -deploymentPrefix dev -steps $steps1_2
-
+Start-Sleep 30
 Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupPrefix -location $location -deploymentPrefix dev -steps $stepsOthers
 
 #Remove-ArmDeployment -subId $subscriptionID -rg $resourceGroupPrefix -dp dev

@@ -1,6 +1,14 @@
-Configuration ssms
-{
-    Import-DscResource -ModuleName PSDesiredStateConfiguration, xPSDesiredStateConfiguration
+Configuration ssms {
+    Param (
+        [Parameter(Mandatory)]
+        [String]$DomainName,
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$Admincreds
+    )
+
+    Import-DscResource -ModuleName PSDesiredStateConfiguration, xPSDesiredStateConfiguration, xComputerManagement
+    [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainNetbiosName}\$($Admincreds.UserName)", $Admincreds.Password)
+
 
     Node 'localhost'
     {
@@ -29,6 +37,12 @@ Configuration ssms
             ProductId = "446B31DB-00FC-4EEF-8B13-7F5F8A38F026"
             DependsOn = "[xRemoteFile]SQLServerMangementPackage"
         }
-        
+
+        xComputer DomainJoin {
+            Name       = $env:COMPUTERNAME
+            DomainName = $DomainName
+            Credential = $DomainCreds
+            DependsOn  = "[Package]ManagementStudio"
+        }
     }
 }

@@ -28,14 +28,9 @@
     "adBDCNicIPAddress": "[concat(variables('substring'), 5)]",
     "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-security')]",
     "adSubnetRef": "[concat(variables('vnetID'),'/subnets/domainSubnet')]",
-    "adDataDiskSize": 1000,
-    "configureADBDCTemplateUri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'activedirectory/configureADBDC.json')]",
-    "adPDCModulesURL": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/createdomain.zip')]",
-    "adPDCConfigurationFunction": "createdomain.ps1\\CreateADPDC",
-    "adBDCPreparationModulesURL": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/PrepareADBDC.zip')]",
-    "adBDCPreparationFunction": "PrepareADBDC.ps1\\PrepareADBDC",
-    "adBDCConfigurationModulesURL": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ConfigureADBDC.zip')]",
-    "adBDCConfigurationFunction": "ConfigureADBDC.ps1\\ConfigureADBDC"
+    "adDataDiskSize": 100,
+    "adBDCPreparationModulesURL": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ad-createdomainbackup.zip')]",
+    "adBDCPreparationFunction": "ad-createdomainbackup.ps1\\ad-createdomainbackup",
   },
   "resources": [
     {
@@ -148,7 +143,7 @@
       },
       "resources": [
         {
-          "name": "CreateADForest",
+          "name": "createPrimaryDomainController",
           "type": "extensions",
           "apiVersion": "2016-03-30",
           "location": "[parameters('location')]",
@@ -161,19 +156,21 @@
             "typeHandlerVersion": "2.19",
             "autoUpgradeMinorVersion": true,
             "settings": {
-              "ModulesUrl": "[variables('adPDCModulesURL')]",
-              "ConfigurationFunction": "[variables('adPDCConfigurationFunction')]",
-              "Properties": {
-                "DomainName": "[parameters('environmentReference').domainName]",
-                "AdminCreds": {
-                  "UserName": "[parameters('environmentReference').serviceAccess]",
-                  "Password": "PrivateSettingsRef:AdminPassword"
-                }
+              "configuration": {
+                "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ad-createdomain.zip')]",
+                "script": "ad-createdomain.ps1",
+                "function": "ad-createdomain"
+              },
+              "configurationArguments": {
+                "domainName": "[parameters('environmentReference').domainName]"
               }
             },
             "protectedSettings": {
-              "Items": {
-                "AdminPassword": "[parameters('environmentReference').serviceAccessPwd]"
+              "configurationArguments": {
+                "adminCreds": {
+                  "userName": "[parameters('environmentReference').serviceAccess]",
+                  "password": "[parameters('environmentReference').serviceAccessPwd]"
+                }
               }
             }
           }
@@ -236,68 +233,43 @@
             "storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
           }
         }
-      }
-    },
-    {
-      "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat(concat(parameters('deploymentPrefix'), '-BDC-VM'),'/PrepareBDC')]",
-      "apiVersion": "2016-03-30",
-      "location": "[parameters('location')]",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', concat(parameters('deploymentPrefix'), '-BDC-VM'))]"
-      ],
-      "properties": {
-        "publisher": "Microsoft.Powershell",
-        "type": "DSC",
-        "typeHandlerVersion": "2.19",
-        "autoUpgradeMinorVersion": true,
-        "settings": {
-          "ModulesUrl": "[variables('adBDCPreparationModulesURL')]",
-          "ConfigurationFunction": "[variables('adBDCPreparationFunction')]",
-          "Properties": {
-            "DNSServer": "[variables('adPDCNicIPAddress')]"
+      },
+      "resources": [
+        {
+          "name": "createSecondaryDomainController",
+          "type": "extensions",
+          "apiVersion": "2016-03-30",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', concat(parameters('deploymentPrefix'), '-BDC-VM'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Powershell",
+            "type": "DSC",
+            "typeHandlerVersion": "2.19",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "configuration": {
+                "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ad-createdomainbackup.zip')]",
+                "script": "ad-createdomainbackup.ps1",
+                "function": "ad-createdomainbackup"
+              },
+              "configurationArguments": {
+                "domainName": "[parameters('environmentReference').domainName]",
+                "DNSServer": "[variables('adPDCNicIPAddress')]"
+              }
+            },
+            "protectedSettings": {
+              "configurationArguments": {
+                "adminCreds": {
+                  "userName": "[parameters('environmentReference').serviceAccess]",
+                  "password": "[parameters('environmentReference').serviceAccessPwd]"
+                }
+              }
+            }
           }
         }
-      }
-    },
-    {
-      "name": "ConfiguringBackupADDomainController",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2016-09-01",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/',concat(parameters('deploymentPrefix'), '-BDC-VM'),'/extensions/PrepareBDC')]",
-        "[concat('Microsoft.Compute/virtualMachines/',concat(parameters('deploymentPrefix'), '-PDC-VM'),'/extensions/CreateADForest')]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[variables('configureADBDCTemplateUri')]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "adBDCVMName": {
-            "value": "[concat(parameters('deploymentPrefix'), '-BDC-VM')]"
-          },
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "adminUsername": {
-            "value": "[parameters('environmentReference').serviceAccess]"
-          },
-          "adminPassword": {
-            "value": "[parameters('environmentReference').serviceAccessPwd]"
-          },
-          "domainName": {
-            "value": "[parameters('environmentReference').domainName]"
-          },
-          "adBDCConfigurationFunction": {
-            "value": "[variables('adBDCConfigurationFunction')]"
-          },
-          "adBDCConfigurationModulesURL": {
-            "value": "[variables('adBDCConfigurationModulesURL')]"
-          }
-        }
-      }
+      ]
     }
   ]
 }

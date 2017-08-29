@@ -127,9 +127,18 @@
                                 "script": "ssms.ps1",
                                 "function": "ssms"
                             },
-                            "configurationArguments": {}
+                            "configurationArguments": {
+                                "domainName": "[parameters('environmentReference').domainName]"
+                            }
                         },
-                        "protectedSettings": {}
+                        "protectedSettings": {
+                            "configurationArguments": {
+                                "adminCreds": {
+                                    "userName": "[parameters('environmentReference').serviceAccess]",
+                                    "password": "[parameters('environmentReference').serviceAccessPwd]"
+                                }
+                            }
+                        }
                     }
                 }
             ]

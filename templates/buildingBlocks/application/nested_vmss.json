@@ -191,7 +191,7 @@
                                     "typeHandlerVersion": "2.19",
                                     "autoUpgradeMinorVersion": true,
                                     "settings": {
-                                        "ModulesUrl": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/webdeploy.zip')]",
+                                        "ModulesUrl": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/iis-webdeploy.zip')]",
                                         "ConfigurationFunction": "webdeploy.ps1\\configure-me",
                                         "Properties": {
                                             "placeholder": "[parameters('environmentReference').domainName]"

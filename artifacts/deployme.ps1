@@ -32,7 +32,7 @@ function Invoke-ArmDeployment {
     )
 
     # Set proper subscription according to input and\or login to Azure and save token for further "deeds"
-    Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Login to your Azure account if prompted" -ForegroundColor DarkYellow
+    Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'): Login to your Azure account if prompted" -ForegroundColor DarkYellow
     Try {
         $null = Set-AzureRmContext -SubscriptionId $subId
     }
@@ -195,6 +195,7 @@ function Publish-BuildingBlocksTemplates ($hash) {
             $StorageAccount | New-AzureStorageContainer -Name $Directory.Name -Permission Container -ErrorAction Stop | Out-Null
         }
         Get-ChildItem $Directory.FullName -File -Filter *.zip | ForEach-Object {
+            # TODO repackage dsc configurations into packages folder, except for sql?
             Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container $Directory.Name -File $_.FullName -Force -ErrorAction Stop | Out-Null
             Write-Host "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)." -ForegroundColor DarkYellow
         }
