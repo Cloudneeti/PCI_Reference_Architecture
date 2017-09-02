@@ -37,7 +37,7 @@
         "nicLogic": "[concat(parameters('deploymentPrefix'), '-alertlogic-nic')]",
         "vmCloudNeeti": "[concat(parameters('deploymentPrefix'), '-cloudneeti')]",
         "nicCloudNeeti": "[concat(parameters('deploymentPrefix'), '-cloudneeti-nic')]",
-        "baseUrl": "https://gallery.azure.com/artifact/20151001/trendmicro.deep-security-manager-stdeep-security-manager.1.0.6/Artifacts",
+        "baseUrl": "https://gallery.azure.com/artifact/20151001/trendmicro.deep-security-manager-st-byoldeep-security-manager-byol.1.0.13/Artifacts",
         "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-security')]",
         "newsqlServerName": "[tolower(concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'sqltdm'))]",
         "deployment-api-version": "2015-11-01",

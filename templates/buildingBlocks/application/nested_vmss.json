@@ -191,13 +191,24 @@
                                     "typeHandlerVersion": "2.19",
                                     "autoUpgradeMinorVersion": true,
                                     "settings": {
-                                        "ModulesUrl": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/iis-webdeploy.zip')]",
-                                        "ConfigurationFunction": "webdeploy.ps1\\configure-me",
-                                        "Properties": {
-                                            "placeholder": "[parameters('environmentReference').domainName]"
+                                        "configuration": {
+                                            "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/iis-webdeploy.zip')]",
+                                            "script": "iis-webdeploy.ps1",
+                                            "function": "iis-webdeploy"
+                                        },
+                                        "configurationArguments": {
+                                            "domainName": "[parameters('environmentReference').domainName]",
+                                            "deploymentPrefix": "[parameters('deploymentPrefix')]"
                                         }
                                     },
-                                    "protectedSettings": {}
+                                    "protectedSettings": {
+                                        "configurationArguments": {
+                                            "adminCreds": {
+                                                "userName": "[parameters('environmentReference').serviceAccess]",
+                                                "password": "[parameters('environmentReference').serviceAccessPwd]"
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         ]

@@ -37,14 +37,14 @@ configuration ad-createdomainbackup {
 
         WindowsFeatureSet Prereqs {
             Name                 = $features
-            Ensure               = 'Present'
+            Ensure               = "Present"
             IncludeAllSubFeature = $true
         } 
 
         xDnsServerAddress DnsServerAddress {
             Address        = $DNSServer
             InterfaceAlias = $Interface.Name
-            AddressFamily  = 'IPv4'
+            AddressFamily  = "IPv4"
             DependsOn      = "[WindowsFeatureSet]Prereqs"
         }
 

@@ -149,6 +149,7 @@
 			}
 		},
 		{
+			"condition": false,
 			"apiVersion": "2016-04-30-preview",
 			"type": "Microsoft.Compute/virtualMachines",
 			"name": "[concat(variables('sqlNamePrefix'), copyindex())]",
@@ -209,6 +210,7 @@
 			}
 		},
 		{
+			"condition": false,
 			"type": "Microsoft.Compute/virtualMachines/extensions",
 			"name": "[concat(variables('sqlNamePrefix'),copyindex(1),'/sqlPrep')]",
 			"apiVersion": "2015-06-15",
@@ -253,6 +255,7 @@
 			}
 		},
 		{
+			"condition": false,
 			"type": "Microsoft.Compute/virtualMachines/extensions",
 			"name": "[concat(variables('sqlNamePrefix'),'0/sqlConfig')]",
 			"apiVersion": "2015-06-15",
@@ -298,13 +301,12 @@
 			}
 		},
 		{
-			"condition": false,
 			"name": "[concat(parameters('deploymentPrefix'), 'vmss-', copyIndex())]",
 			"type": "Microsoft.Resources/deployments",
 			"apiVersion": "2015-01-01",
 			"copy": {
 				"name": "vmssCopy",
-				"count": 1
+				"count": "[length(parameters('vmReference'))]"
 			},
 			"properties": {
 				"mode": "Incremental",

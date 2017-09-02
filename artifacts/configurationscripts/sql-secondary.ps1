@@ -41,8 +41,8 @@ configuration sql-secondary {
 
     Node localhost {
         LocalConfigurationManager {
+            ConfigurationMode  = "ApplyOnly"
             RebootNodeIfNeeded = $true
-            ConfigurationMode  = 'ApplyOnly'
         }
 
         xSqlCreateVirtualDataDisk NewVirtualDisk {
@@ -55,21 +55,22 @@ configuration sql-secondary {
 
         WindowsFeatureSet Prereqs {
             Name                 = $features
-            Ensure               = 'Present'
             IncludeAllSubFeature = $true
+
+            Ensure               = "Present"
         } 
-        
         foreach ($port in $ports) {
             xFirewall "rule-$port" {
-                Direction    = "Inbound"
-                Name         = "SQL-Server-$port-TCP-In"
-                DisplayName  = "SQL Server $port (TCP-In)"
-                Description  = "Inbound rule for SQL Server to allow $port TCP traffic."
-                DisplayGroup = "SQL Server"
-                State        = "Enabled"
                 Access       = "Allow"
-                Protocol     = "TCP"
+                Description  = "Inbound rule for SQL Server to allow $port TCP traffic."
+                Direction    = "Inbound"
+                DisplayName  = "SQL Server $port (TCP-In)"
+                DisplayGroup = "SQL Server"
+                Name         = "SQL-Server-$port-TCP-In"
                 LocalPort    = $port -as [String]
+                Protocol     = "TCP"
+                State        = "Enabled"
+
                 Ensure       = "Present"
             }
         }
@@ -79,68 +80,69 @@ configuration sql-secondary {
             DomainUserCredential = $DomainCreds
             RetryCount           = $RetryCount 
             RetryIntervalSec     = $RetryIntervalSec 
+
             DependsOn            = "[WindowsFeatureSet]Prereqs"
         }
-        
         xComputer DomainJoin {
             Name       = $env:COMPUTERNAME
             DomainName = $DomainName
             Credential = $DomainCreds
+
             DependsOn  = "[xWaitForADDomain]DscForestWait"
         }
 
-        foreach ($user in @($DomainCreds.UserName, $SQLCreds.UserName, 'NT SERVICE\ClusSvc')) {
+        foreach ($user in @($DomainCreds.UserName, $SQLCreds.UserName, "NT SERVICE\ClusSvc")) {
             xSQLServerLogin "sqlLogin$user" {
-                Ensure               = 'Present'
-                SQLServer            = $env:COMPUTERNAME
-                SQLInstanceName      = 'MSSQLSERVER'
                 Name                 = $user
-                LoginType            = 'WindowsUser'
+                LoginType            = "WindowsUser"
+                SQLInstanceName      = "MSSQLSERVER"
+                SQLServer            = $env:COMPUTERNAME
                 
+                Ensure               = "Present"
                 PsDscRunAsCredential = $Admincreds
             }
         }
-        
         xSQLServerRole sqlAdmins {
-            Ensure               = 'Present'
-            ServerRoleName       = 'sysadmin'
             MembersToInclude     = @($DomainCreds.UserName, $SQLCreds.UserName)
+            ServerRoleName       = "sysadmin"
+            SQLInstanceName      = "MSSQLSERVER"
             SQLServer            = $env:COMPUTERNAME
-            SQLInstanceName      = 'MSSQLSERVER'
             
             DependsOn            = "[xComputer]DomainJoin"
+            Ensure               = "Present"
             PsDscRunAsCredential = $Admincreds
         }
-
-        foreach ($user in @('NT AUTHORITY\SYSTEM', 'NT SERVICE\ClusSvc')) {
+        foreach ($user in @("NT AUTHORITY\SYSTEM", "NT SERVICE\ClusSvc")) {
             xSQLServerPermission "sqlPermission$user" {
-                Ensure               = 'Present'
+                InstanceName         = "MSSQLSERVER"
                 NodeName             = $env:COMPUTERNAME
-                InstanceName         = 'MSSQLSERVER'
+                Permission           = @("AlterAnyAvailabilityGroup", "ViewServerState")
                 Principal            = $user
-                Permission           = @('AlterAnyAvailabilityGroup', 'ViewServerState')
-    
+                
+                Ensure               = "Present"
                 PsDscRunAsCredential = $Admincreds
             }
         }
 
-        xSqlTsqlEndpoint AddSqlServerEndpoint {
-            InstanceName               = "MSSQLSERVER"
-            PortNumber                 = $DatabaseEnginePort
-            SqlAdministratorCredential = $Admincreds
-        }
+        xSQLServerNetwork ChangeTcpIpOnDefaultInstance {
+            InstanceName    = "MSSQLSERVER"
+            ProtocolName    = "Tcp"
+            RestartService  = $true
+            TCPPort         = 1433
+            TCPDynamicPorts = ""
 
+            IsEnabled       = $true
+        }
         xSQLServerStorageSettings AddSQLServerStorageSettings {
             InstanceName     = "MSSQLSERVER"
             OptimizationType = $WorkloadType
         }
-        
         xSqlServer ConfigureSqlServer {
+            EnableTcpIp                   = $true
             InstanceName                  = $env:COMPUTERNAME
-            MaxDegreeOfParallelism        = 1
             FilePath                      = "${NextAvailableDiskLetter}:\DATA"
             LogPath                       = "${NextAvailableDiskLetter}:\LOG"
-            EnableTcpIp                   = $true
+            MaxDegreeOfParallelism        = 1
             
             ServiceCredential             = $SQLCreds
             DomainAdministratorCredential = $DomainFQDNCreds
@@ -168,38 +170,38 @@ configuration sql-secondary {
         }
 
         xSQLServerAlwaysOnService enableHadr {
-            Ensure               = "Present"
             SQLServer            = $env:computername
             SQLInstanceName      = "MSSQLSERVER"
-
+            
+            Ensure               = "Present"
             PsDscRunAsCredential = $DomainCreds
         }
         xSQLServerEndpoint endpointHadr {
-            Ensure               = "Present"
-            Port                 = $DatabaseMirrorPort
+            EndPointName         = "${deploymentPrefix}-sql-endpoint"
             SQLServer            = $env:computername
             SQLInstanceName      = "MSSQLSERVER"
-            EndPointName         = "${deploymentPrefix}-sql-endpoint"
-
+            Port                 = $DatabaseMirrorPort
+            
             DependsOn            = "[xSQLServerAlwaysOnService]enableHadr"
+            Ensure               = "Present"
             PsDscRunAsCredential = $SQLCreds
         }
         xSQLServerEndpointPermission endpointPermission {
-            Ensure               = 'Present'
-            NodeName             = $env:computername
             InstanceName         = "MSSQLSERVER"
+            NodeName             = $env:computername
             Name                 = "${deploymentPrefix}-sql-endpoint"
             Principal            = $SQLCreds.UserName
-            Permission           = 'CONNECT'
-
+            Permission           = "CONNECT"
+            
             DependsOn            = "[xSQLServerEndpoint]endpointHadr"
+            Ensure               = "Present"
             PsDscRunAsCredential = $SQLCreds
         }
         xSQLServerEndpointState endpointStart {
-            State                = 'Started'
+            InstanceName         = "MSSQLSERVER"
             NodeName             = $env:computername
-            InstanceName         = 'MSSQLSERVER'
             Name                 = "${deploymentPrefix}-sql-endpoint"
+            State                = "Started"
 
             DependsOn            = "[xSQLServerEndpoint]endpointHadr"
             PsDscRunAsCredential = $SQLCreds
@@ -213,17 +215,16 @@ configuration sql-secondary {
             DependsOn            = @("[xSQLServerEndpointState]endpointStart", "[script]joinCluster")
             PsDscRunAsCredential = $DomainCreds
         }
- 
         xSQLServerAlwaysOnAvailabilityGroupReplica AddReplica {
-            Ensure                        = 'Present'
-            Name                          = $env:COMPUTERNAME
             AvailabilityGroupName         = "${deploymentPrefix}-sql-ag"
-            SQLServer                     = $env:COMPUTERNAME
-            SQLInstanceName               = "MSSQLSERVER"
+            Name                          = $env:COMPUTERNAME
             PrimaryReplicaSQLServer       = "${deploymentPrefix}-sql-0"
             PrimaryReplicaSQLInstanceName = "MSSQLSERVER"
-
+            SQLInstanceName               = "MSSQLSERVER"
+            SQLServer                     = $env:COMPUTERNAME
+            
             DependsOn                     = "[xWaitForAvailabilityGroup]waitforAG"
+            Ensure                        = "Present"
             PsDscRunAsCredential          = $DomainCreds
         }
     }
@@ -235,8 +236,8 @@ function Get-NetBIOSName {
         [string]$DomainName
     )
 
-    if ($DomainName.Contains('.')) {
-        $length = $DomainName.IndexOf('.')
+    if ($DomainName.Contains(".")) {
+        $length = $DomainName.IndexOf(".")
         if ( $length -ge 16) {
             $length = 15
         }

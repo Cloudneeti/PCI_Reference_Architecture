@@ -176,9 +176,9 @@ function Publish-BuildingBlocksTemplates ($hash) {
         $StorageAccount = New-AzureRmStorageAccount -ResourceGroupName (($resourceGroupPrefix, $deploymentPrefix, 'operations') -join '-') -Name $hash -Type Standard_LRS `
             -Location $location -ErrorAction Stop
     }
+    $ContainerList = (Get-AzureStorageContainer -Context $StorageAccount.Context | Select-Object -ExpandProperty Name)
     Get-ChildItem $scriptRoot\templates\buildingblocks -Directory | ForEach-Object {
         $Directory = $_
-        $ContainerList = (Get-AzureStorageContainer -Context $StorageAccount.Context | Select-Object -ExpandProperty Name)
         if ( $Directory -notin $ContainerList ) {
             $StorageAccount | New-AzureStorageContainer -Name $Directory.Name -Permission Container -ErrorAction Stop | Out-Null
         }
@@ -187,18 +187,13 @@ function Publish-BuildingBlocksTemplates ($hash) {
             Write-Host "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)." -ForegroundColor DarkYellow
         }
     }
-
-    Get-ChildItem $scriptRoot\artifacts -Directory | ForEach-Object {
-        $Directory = $_
-        $ContainerList = (Get-AzureStorageContainer -Context $StorageAccount.Context | Select-Object -ExpandProperty Name)
-        if ( $Directory -notin $ContainerList ) {
-            $StorageAccount | New-AzureStorageContainer -Name $Directory.Name -Permission Container -ErrorAction Stop | Out-Null
-        }
-        Get-ChildItem $Directory.FullName -File -Filter *.zip | ForEach-Object {
-            # TODO repackage dsc configurations into packages folder, except for sql?
-            Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container $Directory.Name -File $_.FullName -Force -ErrorAction Stop | Out-Null
-            Write-Host "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)." -ForegroundColor DarkYellow
-        }
+    if ( 'packages' -notin $ContainerList ) {
+        $StorageAccount | New-AzureStorageContainer -Name 'packages' -Permission Container -ErrorAction Stop | Out-Null
+    }
+    Get-ChildItem "$scriptRoot\artifacts\packages" -File -Filter *.zip | ForEach-Object {
+        Compress-Archive -Path "$scriptRoot\artifacts\configurationscripts\$($_.BaseName).ps1" -DestinationPath "$scriptRoot\artifacts\packages\$($_.Name)" -Update
+        Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container 'packages' -File $_.FullName -Force -ErrorAction Stop | Out-Null
+        Write-Host "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)." -ForegroundColor DarkYellow
     }
     return $StorageAccount.PrimaryEndpoints.Blob
 }

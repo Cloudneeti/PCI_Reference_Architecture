@@ -22,35 +22,45 @@
         }
     },
     "variables": {
-        "vmNameWAF": "Barracuda-waf",
-        "vmNameNGF": "Barracuda-ngf",
-        "loadBalancerName": "lb-waf",
-        "bWAFAvailSetName": "avset-waf",
-        "bNGFAvailSetName": "avset-NGF",
-        "subnetName": "dmzSubnet",
-        "publicIpAddressName": "PIP-Barracuda-waf-byol",
-        "networkSecurityGroupName": "dev-dmzSubnet-nsg",
-        "networkInterfaceName02": "nic-barracuda-ngf",
-        "networkInterfaceName01": "nic-barracuda-waf",
-        "virtualNetworkName": "dev-dmz",
-        "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
-        "subnetRef": "[concat(variables('vnetID'),'/subnets/', variables('subnetName'))]",
-        "nsgID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
-        "loadBalancerID": "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancerName'))]",
+        "ngf1": "[concat('#!/bin/bash\n\n', '/opt/phion/bin/editconf -f /opt/phion/config/configroot/boxnet.conf -d REFS -s gendev_eth0\n', '/opt/phion/bin/editconf -f /opt/phion/config/configroot/boxnet.conf -d RENAMED -s gendev_eth0\n')]",
+        "ngf2": "[concat('/opt/phion/bin/cloud-setmip ', variables('ngfIp'), ' 24 ', variables('subnetGateway'))]",
+        "ngfData": "[base64(concat(variables('ngf1'), variables('ngf2'), ' >> /tmp/setmip.log'))]",
+        "addressSpace": "[parameters('networkReference')[0].subnets[0].addressSpacePrefix]",
+        "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
+        "subnetGateway": "[concat(variables('substring'), 1)]",
+        "ngfIp": "[concat(variables('substring'), 4)]",
+        "wafIp": "[concat(variables('substring'), 5)]",
+        "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-dmz'))]",
+        "subnetRef": "[concat(variables('vnetID'),'/subnets/dmzSubnet')]",
+        "loadBalancerID": "[resourceId('Microsoft.Network/loadBalancers', concat(parameters('deploymentPrefix'), '-waf-lb'))]",
         "lbProbeID": "[concat(variables('loadBalancerID'),'/probes/barracudaprobe')]",
         "frontEndIPConfigID": "[concat(variables('loadBalancerID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
-        "lbPoolID": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]",
-        "virtualMachineSize": "Standard_D1",
-        "adminUsername": "badmin",
-        "adminPassword": "Admin1P@s$w0rd"
+        "lbPoolID": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
     },
     "resources": [
         {
+            "type": "Microsoft.Network/routeTables",
+            "name": "[concat(parameters('deploymentPrefix'), '-ngf-routeTable')]",
+            "apiVersion": "2017-06-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "routes": [
+                    {
+                        "name": "defaultRouteViaNGF",
+                        "properties": {
+                            "addressPrefix": "0.0.0.0/0",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIpAddress": "[variables('ngfIp')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
             "type": "Microsoft.Compute/availabilitySets",
-            "name": "[variables('bwafAvailSetName')]",
+            "name": "[concat(parameters('deploymentPrefix'), '-waf-avSet')]",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
-            "comments": "This is the Availability Set for BWAF VM",
             "properties": {
                 "platformFaultDomainCount": 2,
                 "platformUpdateDomainCount": 5,
@@ -59,10 +69,9 @@
         },
         {
             "type": "Microsoft.Compute/availabilitySets",
-            "name": "[variables('bNGFAvailSetName')]",
+            "name": "[concat(parameters('deploymentPrefix'), '-ngf-avSet')]",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
-            "comments": "This is the Availability Set for BWAF VM",
             "properties": {
                 "platformFaultDomainCount": 2,
                 "platformUpdateDomainCount": 5,
@@ -70,22 +79,22 @@
             }
         },
         {
-            "name": "[variables('vmNameWAF')]",
+            "name": "[concat(parameters('deploymentPrefix'), '-waf')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName01'))]",
-                "[concat('Microsoft.Compute/availabilitySets/', variables('bwafAvailSetName'))]"
+                "[concat('Microsoft.Network/networkInterfaces/', concat(parameters('deploymentPrefix'), '-waf-nic'))]",
+                "[concat('Microsoft.Compute/availabilitySets/', concat(parameters('deploymentPrefix'), '-waf-avSet'))]"
             ],
             "properties": {
                 "osProfile": {
-                    "computerName": "[variables('vmNameWAF')]",
-                    "adminUsername": "[variables('adminUsername')]",
-                    "adminPassword": "[variables('adminPassword')]"
+                    "computerName": "[concat(parameters('deploymentPrefix'), '-waf')]",
+                    "adminUsername": "[parameters('environmentReference').serviceAccess]",
+                    "adminPassword": "[parameters('environmentReference').serviceAccessPwd]"
                 },
                 "hardwareProfile": {
-                    "vmSize": "[variables('virtualMachineSize')]"
+                    "vmSize": "Standard_DS1_v2"
                 },
                 "storageProfile": {
                     "imageReference": {
@@ -96,6 +105,7 @@
                     },
                     "osDisk": {
                         "createOption": "FromImage",
+                        "name": "[concat(parameters('deploymentPrefix'), '-waf-osDisk')]",
                         "managedDisk": {
                             "storageAccountType": "Standard_LRS"
                         }
@@ -104,12 +114,12 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName01'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('deploymentPrefix'), '-waf-nic'))]"
                         }
                     ]
                 },
                 "availabilitySet": {
-                    "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('bwafAvailSetName'))]"
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets',concat(parameters('deploymentPrefix'), '-waf-avSet'))]"
                 },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
@@ -125,23 +135,23 @@
             }
         },
         {
-            "name": "[variables('vmNameNGF')]",
+            "name": "[concat(parameters('deploymentPrefix'), '-ngf')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName02'))]",
-                "[concat('Microsoft.Compute/availabilitySets/', variables('bNGFAvailSetName'))]"
+                "[concat('Microsoft.Network/networkInterfaces/', concat(parameters('deploymentPrefix'), '-ngf-nic'))]",
+                "[concat('Microsoft.Compute/availabilitySets/', concat(parameters('deploymentPrefix'), '-ngf-avSet'))]"
             ],
             "properties": {
                 "osProfile": {
-                    "computerName": "[variables('vmNameNGF')]",
-                    "adminUsername": "[variables('adminUsername')]",
-                    "adminPassword": "[variables('adminPassword')]",
-                    "customData": "[base64(concat('#!/bin/bash\n\n', '/opt/phion/bin/editconf -f /opt/phion/config/configroot/boxnet.conf -d REFS -s gendev_eth0\n', '/opt/phion/bin/editconf -f /opt/phion/config/configroot/boxnet.conf -d RENAMED -s gendev_eth0\n', '/opt/phion/bin/cloud-setmip ', '10.4.0.4', ' ', '10.4.0.0/24', ' ', '10.4.0.4', ' >> /tmp/setmip.log'))]"
+                    "computerName": "[concat(parameters('deploymentPrefix'), '-ngf')]",
+                    "adminUsername": "[parameters('environmentReference').serviceAccess]",
+                    "adminPassword": "[parameters('environmentReference').serviceAccessPwd]",
+                    "customData": "[variables('ngfData')]"
                 },
                 "hardwareProfile": {
-                    "vmSize": "[variables('virtualMachineSize')]"
+                    "vmSize": "Standard_DS1_v2"
                 },
                 "storageProfile": {
                     "imageReference": {
@@ -152,6 +162,7 @@
                     },
                     "osDisk": {
                         "createOption": "FromImage",
+                        "name": "[concat(parameters('deploymentPrefix'), '-ngf-osDisk')]",
                         "managedDisk": {
                             "storageAccountType": "Standard_LRS"
                         }
@@ -160,12 +171,12 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName02'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('deploymentPrefix'), '-ngf-nic'))]"
                         }
                     ]
                 },
                 "availabilitySet": {
-                    "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('bNGFAvailSetName'))]"
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets',concat(parameters('deploymentPrefix'), '-ngf-avSet'))]"
                 },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
@@ -181,12 +192,12 @@
             }
         },
         {
-            "name": "[variables('networkInterfaceName02')]",
+            "name": "[concat(parameters('deploymentPrefix'), '-ngf-nic')]",
             "type": "Microsoft.Network/networkInterfaces",
-            "apiVersion": "2016-09-01",
+            "apiVersion": "2017-06-01",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
+                "[concat('Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-waf-lb'))]"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -196,19 +207,20 @@
                             "subnet": {
                                 "id": "[variables('subnetRef')]"
                             },
-                            "privateIPAllocationMethod": "Dynamic"
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[variables('ngfIp')]"
                         }
                     }
                 ]
             }
         },
         {
-            "name": "[variables('networkInterfaceName01')]",
+            "name": "[concat(parameters('deploymentPrefix'), '-waf-nic')]",
             "type": "Microsoft.Network/networkInterfaces",
-            "apiVersion": "2016-09-01",
+            "apiVersion": "2017-06-01",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[concat('Microsoft.Network/loadBalancers/', variables('loadBalancerName'))]"
+                "[concat('Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-waf-lb'))]"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -218,7 +230,8 @@
                             "subnet": {
                                 "id": "[variables('subnetRef')]"
                             },
-                            "privateIPAllocationMethod": "Dynamic",
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[variables('wafIp')]",
                             "loadBalancerBackendAddressPools": [
                                 {
                                     "id": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
@@ -230,9 +243,9 @@
             }
         },
         {
-            "name": "[variables('publicIpAddressName')]",
-            "type": "Microsoft.Network/publicIpAddresses",
-            "apiVersion": "2016-09-01",
+            "name": "[concat(parameters('deploymentPrefix'), '-waf-ip')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2017-06-01",
             "location": "[parameters('location')]",
             "properties": {
                 "publicIPAllocationMethod": "Static"
@@ -240,12 +253,12 @@
         },
         {
             "type": "Microsoft.Network/loadBalancers",
-            "name": "[variables('loadBalancerName')]",
-            "apiVersion": "2017-04-01",
+            "name": "[concat(parameters('deploymentPrefix'), '-waf-lb')]",
+            "apiVersion": "2017-06-01",
             "location": "[parameters('location')]",
             "comments": "This Load Balancer is used to access DMZ",
             "dependsOn": [
-                "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'))]"
+                "[concat('Microsoft.Network/publicIpAddresses/', concat(parameters('deploymentPrefix'), '-waf-ip'))]"
             ],
             "properties": {
                 "frontendIPConfigurations": [
@@ -253,7 +266,7 @@
                         "name": "loadBalancerFrontEnd",
                         "properties": {
                             "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIpAddressName'))]"
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses/', concat(parameters('deploymentPrefix'), '-waf-ip'))]"
                             }
                         }
                     }
