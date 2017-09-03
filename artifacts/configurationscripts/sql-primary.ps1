@@ -241,8 +241,7 @@ configuration sql-primary {
             Ensure               = "Present"
             PsDscRunAsCredential = $DomainCreds
         }
-        xSQLServerAvailabilityGroupListener AvailabilityGroupListener
-        {
+        xSQLServerAvailabilityGroupListener AvailabilityGroupListener {
             AvailabilityGroup    = "${deploymentPrefix}-sql-ag"
             IpAddress            = "$SqlAlwaysOnAvailabilityGroupListenerIp/255.255.255.0"
             InstanceName         = "MSSQLSERVER"
@@ -276,6 +275,14 @@ configuration sql-primary {
             DependsOn             = @("[xDatabase]DeployBacPac", "[xSQLServerAlwaysOnAvailabilityGroup]AvailabilityGroup" )
             Ensure                = "Present"
             PsDscRunAsCredential  = $DomainCreds
+        }
+        
+        User DisableLocalAdmin {
+            Disabled = $true
+            UserName = $Admincreds.UserName
+            
+            DependsOn = "[xComputer]DomainJoin"
+            Ensure = "Present"
         }
     }
 }

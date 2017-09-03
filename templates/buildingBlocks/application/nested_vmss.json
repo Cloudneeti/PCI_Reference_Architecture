@@ -142,7 +142,7 @@
                     },
                     "osProfile": {
                         "computerNamePrefix": "[parameters('bossObject').name]",
-                        "adminUsername": "[parameters('bossObject').name]",
+                        "adminUsername": "[parameters('environmentReference').serviceAccess]",
                         "adminPassword": "[parameters('bossObject').password]"
                     },
                     "networkProfile": {

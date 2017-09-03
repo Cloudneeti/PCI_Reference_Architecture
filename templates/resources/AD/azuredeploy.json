@@ -29,8 +29,8 @@
     "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-security')]",
     "adSubnetRef": "[concat(variables('vnetID'),'/subnets/domainSubnet')]",
     "adDataDiskSize": 100,
-    "adBDCPreparationModulesURL": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ad-createdomainbackup.zip')]",
-    "adBDCPreparationFunction": "ad-createdomainbackup.ps1\\ad-createdomainbackup",
+    "paasPrefix": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'))]",
+    "omsName": "[concat(variables('paasPrefix'), '-oms')]"
   },
   "resources": [
     {
@@ -172,6 +172,28 @@
                   "password": "[parameters('environmentReference').serviceAccessPwd]"
                 }
               }
+            }
+          }
+        },
+        {
+          "type": "extensions",
+          "name": "Microsoft.EnterpriseCloud.Monitoring",
+          "apiVersion": "2016-03-30",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', concat(parameters('deploymentPrefix'), '-PDC-VM'))]",
+            "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('deploymentPrefix'), '-PDC-VM'), 'createPrimaryDomainController')]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+            "type": "MicrosoftMonitoringAgent",
+            "typeHandlerVersion": "1.0",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "workspaceId": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId]"
+            },
+            "protectedSettings": {
+              "workspaceKey": "[listKeys(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey]"
             }
           }
         }

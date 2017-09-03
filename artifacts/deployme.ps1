@@ -164,8 +164,8 @@ function Remove-ArmDeployment ($rg, $dp, $subId) {
 
             Remove-AzureRmResourceGroup -Name $rgName -Force
         }.GetNewClosure()
-            
-        Start-job -Name ("$rg-$dp-$_-delete") -ScriptBlock $importSession -Debug `
+
+        Start-job -Name "delete-$_" -ScriptBlock $importSession -Debug `
             -ArgumentList (($rg, $dp, $_) -join '-'), $global:scriptRoot, $subId
     }
 }

@@ -19,29 +19,40 @@ Configuration ssms {
         
         File SetupDir {
             DestinationPath = "c:\Setup"
-            Ensure          = "Present"
             Type            = "Directory"
+            
+            Ensure          = "Present"
         }
         xRemoteFile SQLServerMangementPackage {
             DestinationPath = "c:\Setup\SSMS-Setup-ENU.exe"
-            DependsOn       = "[File]SetupDir"
             MatchSource     = $false
             Uri             = "http://go.microsoft.com/fwlink/?LinkID=824938"
+            
+            DependsOn       = "[File]SetupDir"
         }
         Package ManagementStudio {
             Arguments = "/q /norestart"
-            DependsOn = "[xRemoteFile]SQLServerMangementPackage"
-            Ensure    = "Present"
             Name      = "ManagementStudio"
             Path      = "C:\Setup\SSMS-Setup-ENU.exe"
             ProductId = "446B31DB-00FC-4EEF-8B13-7F5F8A38F026"
+            
+            DependsOn = "[xRemoteFile]SQLServerMangementPackage"
+            Ensure    = "Present"
         }
 
         xComputer DomainJoin {
             Credential = $DomainCreds
-            DependsOn  = "[Package]ManagementStudio"
             DomainName = $DomainName
             Name       = $env:COMPUTERNAME
+
+            DependsOn  = "[Package]ManagementStudio"
+        }
+        User DisableLocalAdmin {
+            Disabled = $true
+            UserName = $Admincreds.UserName
+            
+            DependsOn = "[xComputer]DomainJoin"
+            Ensure = "Present"
         }
     }
 }

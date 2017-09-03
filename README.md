@@ -4,7 +4,7 @@ PCI (Payment Card Industry) code repository to manage deployment templates.
 ### How to run  
 1. Dot source the script
 ```powershell
-. .\scripts\deployme.ps1
+. .\artifacts\deployme.ps1
 ```
 2. Run it
 ```powershell
@@ -13,12 +13,20 @@ $resourceGroupPrefix = 'pciiaas' #should not start with a number or contain '-' 
 $location = 'South Central US'
 $steps = @(1,2)
 
-Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupPrefix -location $location -deploymentPrefix dev -steps $steps
+Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupPrefix -location $location -deploymentPrefix dev -steps $steps -prerequisiteRefresh
 ```
 To remove all the resource groups you can use the `Remove-ArmDeployment` function
 ```powershell
-Remove-ArmDeployment -subId $subscriptionID -rg $resourceGroupPrefix -dp <dev |prod>
+Remove-ArmDeployment -subId $subscriptionID -rg $resourceGroupPrefix -dp <dev | prod>
 ```
+
+Script parameters rundown:
+-subId               = SubscriptionId to which you are deploying
+-resourceGroupPrefix = Resource Group naming prefix
+-location            = Azure location to deploy to
+-deploymentPrefix    = Prefix resource with this (dev or prod)
+-steps               = Which steps to deploy (array of integers, explained further)
+-prerequisiteRefresh = Upload\Reupload all the templates\DSC stuff
 
 Steps parameter is an array with the values 1 to 7 allowed.
 Each step correspond to deploying specific step in our workflow
@@ -58,17 +66,8 @@ Names, AddressSpaces, Subnets, NSG Rules, and Peerings can be defined
 
 Assumptions:  
 vnets must be in this order: dmz, management, security, application vnets
-infrastructure subnets cannot be renamed, all subnets must have unique names, all subnets must be /24
-Custom NSG rules and predefined are both added to the appropriate NSGs
-
-TODO:
-```
-"fwSubnetSplit": "[split( parameters( 'fwSubnetAddress' ), '/' )]",  
-"fwSubnetAddrSplit": "[split( variables( 'fwSubnetSplit' )[0], '.' )]",  
-"fwSubnetMask": "[variables( 'fwSubnetSplit' )[1]]",  
-"fwSubnetDefaultGw": "[concat(variables('fwSubnetAddrSplit')[0],'.',variables('fwSubnetAddrSplit')[1],'.',variables('fwSubnetAddrSplit')[2],'.',add(int(variables('fwSubnetAddrSplit')[3]),1))]"
-```
-or convert to bytes and calculate and convert back.  
+infrastructure subnets cannot be renamed, all subnets must have unique names
+Custom and predefined NSG rules are both created
 
 ### Compute  
 Configuration is done using the JSON object  
@@ -82,30 +81,24 @@ vm's are registered to the azure automation (maybe configurations are assigned, 
 every tier tied to ilb
 every tier can be deployed into specific vnet\subnet
 
-a. OMS Log Analytics Extension    xxx  
+a. OMS Log Analytics Extension    xxx (done (partly) - vm extension)
 b. Azure Disk Encryption          https://docs.microsoft.com/en-us/azure/security/azure-security-disk-encryption  
-c. VMDiagnosticsSettings          xxx  
+c. VMDiagnosticsSettings          xxx (done - to stogare) 
 d. Service Map                    https://docs.microsoft.com/en-us/azure/operations-management-suite/operations-management-suite-service-map-configure  
 e. TrendMicro                     xxx  
 f. Qualys Virtual Scanner         
 g. Threat manager extension       Script exists  
-h. Network Watcher                xxx  
-i. AD                             https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/201-vm-domain-join-existing/azuredeploy.json  
-j. disable local administrator    net user administrator /active:no
+h. Network Watcher                xxx 
+i. AD                             xxx (done - dsc resource "[xComputer]DomainJoin")
+j. disable local administrator    xxx (done - dsc resource "[User]DisableLocalAdmin")
 
-### Jumpbox  
-Configuration is done using the JSON object  
-Name can be configured
-
-Assumptions:  
-Ip address is infered from the management subnet address range
+### Jumpbox   
+Name can be configured 
+Ip address is calculated from the management subnet address range
 
 ### Domain Services  
-Configuration is done using the JSON object  
-Domain name can be configured
-
-Assumptions:  
-Ip address is infered from the domain subnet address range
+Domain name, admin username and password can be configured 
+Ip address is calculated from the domain subnet address range
 
 ### PaaS  
 No configurations

@@ -77,19 +77,9 @@ Configuration iis-webdeploy {
             MatchSource     = $true
             Uri             = $webDeployUri
         }
-
-        Package WebDeploy {
-            Arguments = "LicenseAccepted='0' ADDLOCAL=ALL"
-            DependsOn = "[xRemoteFile]webdeployDL"
-            Ensure    = "Present"
-            Name      = "Microsoft Web Deploy 3.^"
-            LogPath   = "$Env:SystemDrive\log.txt"
-            Path      = "C:\setup\webdeploy.msi"
-            ProductId = "1A81DA24-AF0B-4406-970E-54400D6EC118"
-        }
         xWebDeploy Deploy {
-            DependsOn   = @( "[Package]WebDeploy", "[xRemoteFile]packageDL" )
-            Destination = "mySecureWebsite"
+            DependsOn   = @( "[xRemoteFile]webdeployDL", "[xRemoteFile]packageDL" )
+            Destination = "Default Web Site"
             Ensure      = "Present"
             SourcePath  = "C:\setup\package.zip"
         }
@@ -98,6 +88,13 @@ Configuration iis-webdeploy {
             Credential = $DomainCreds
             DomainName = $DomainName
             Name       = $env:COMPUTERNAME
+        }
+        User DisableLocalAdmin {
+            Disabled = $true
+            UserName = $Admincreds.UserName
+            
+            DependsOn = "[xComputer]DomainJoin"
+            Ensure = "Present"
         }
     }
 }

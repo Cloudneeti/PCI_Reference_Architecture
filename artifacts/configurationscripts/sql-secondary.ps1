@@ -227,6 +227,14 @@ configuration sql-secondary {
             Ensure                        = "Present"
             PsDscRunAsCredential          = $DomainCreds
         }
+        
+        User DisableLocalAdmin {
+            Disabled = $true
+            UserName = $Admincreds.UserName
+            
+            DependsOn = "[xComputer]DomainJoin"
+            Ensure = "Present"
+        }
     }
 }
 

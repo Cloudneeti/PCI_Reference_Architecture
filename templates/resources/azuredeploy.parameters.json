@@ -17,8 +17,8 @@
                 "jumpbox": "jumpota",
                 "serviceAccessPwd": "!Q2w3e4r5t6y",
                 "serviceAccess": "testo",
-                "sqlVmCount": 3,
-                "sqlDiskCount": 3,
+                "sqlVmCount": 2,
+                "sqlDiskCount": 2,
                 "buildingBlocksEndpoint": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/"
             }
         },
@@ -116,21 +116,7 @@
                             "Firewall": [
                                 "Dummy"
                             ],
-                            "CustomRules": [
-                                {
-                                    "name": "RDP",
-                                    "properties": {
-                                        "protocol": "Tcp",
-                                        "sourcePortRange": "*",
-                                        "destinationPortRange": "3389",
-                                        "sourceAddressPrefix": "*",
-                                        "destinationAddressPrefix": "*",
-                                        "access": "Allow",
-                                        "priority": 2010,
-                                        "direction": "Inbound"
-                                    }
-                                }
-                            ]
+                            "CustomRules": []
                         },
                         {
                             "subnetName": "cloudneetiSubnet",
