@@ -123,6 +123,9 @@
             "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-vmss')]",
             "location": "[parameters('location')]",
             "apiVersion": "[variables('computeApiVersion')]",
+            "dependsOn": [
+                "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb')]"
+            ],
             "sku": {
                 "name": "[parameters('bossObject').size]",
                 "tier": "Standard",

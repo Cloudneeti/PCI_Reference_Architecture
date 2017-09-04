@@ -149,7 +149,6 @@
 			}
 		},
 		{
-			"condition": false,
 			"apiVersion": "2016-04-30-preview",
 			"type": "Microsoft.Compute/virtualMachines",
 			"name": "[concat(variables('sqlNamePrefix'), copyindex())]",
@@ -210,7 +209,6 @@
 			}
 		},
 		{
-			"condition": false,
 			"type": "Microsoft.Compute/virtualMachines/extensions",
 			"name": "[concat(variables('sqlNamePrefix'),copyindex(1),'/sqlPrep')]",
 			"apiVersion": "2015-06-15",
@@ -255,7 +253,6 @@
 			}
 		},
 		{
-			"condition": false,
 			"type": "Microsoft.Compute/virtualMachines/extensions",
 			"name": "[concat(variables('sqlNamePrefix'),'0/sqlConfig')]",
 			"apiVersion": "2015-06-15",
@@ -279,7 +276,8 @@
 						"domainName": "[parameters('environmentReference').domainName]",
 						"SqlAlwaysOnAvailabilityGroupListenerIp": "[variables('listenerIp')]",
 						"sqlCount": "[parameters('environmentReference').sqlVmCount]",
-						"disks": "[parameters('environmentReference').sqlDiskCount]"
+						"disks": "[parameters('environmentReference').sqlDiskCount]",
+						"bacpacUri": "[parameters('environmentReference').bacpacUri]"
 					}
 				},
 				"protectedSettings": {

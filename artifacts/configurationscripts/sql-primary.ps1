@@ -22,6 +22,7 @@ configuration sql-primary {
         # Minor things
         [Parameter(Mandatory)]
         [UInt32]$disks,
+        [String]$bacpacUri = "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac",
         [String]$WorkloadType = "General",
         [Int]$sqlCount = 2,
         [UInt32]$DatabaseEnginePort = 1433,
@@ -76,7 +77,7 @@ configuration sql-primary {
         xRemoteFile FileDownload {
             DestinationPath = "C:\setup\ContosoPayments.bacpac"
             MatchSource     = $true
-            Uri             = "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac"
+            Uri             = $bacpacUri
 
             DependsOn       = "[File]SetupFolder"
         }
@@ -255,11 +256,11 @@ configuration sql-primary {
         }
 
         xDatabase DeployBacPac {
-            Credentials          = $Admincreds
+            Credentials          = $DomainCreds
             BacPacPath           = "C:\setup\ContosoPayments.bacpac"
-            DatabaseName         = "Sample"
-            SqlServer            = ".\$env:COMPUTERNAME"
-            SqlServerVersion     = 2016
+            DatabaseName         = "ContosoClinic"
+            SqlServer            = $env:COMPUTERNAME
+            SqlServerVersion     = "2016-SP1"
             
             DependsOn            = @( "[xSqlServer]ConfigureSqlServer", "[xRemoteFile]FileDownload" )
             Ensure               = "Present"
@@ -268,7 +269,7 @@ configuration sql-primary {
         xSQLServerAlwaysOnAvailabilityGroupDatabaseMembership DatabaseToAlwaysOn {
             AvailabilityGroupName = "${deploymentPrefix}-sql-ag"
             BackupPath            = "${NextAvailableDiskLetter}:\DATA"
-            DatabaseName          = "Sample"
+            DatabaseName          = "ContosoClinic"
             SQLServer             = $env:COMPUTERNAME
             SQLInstanceName       = "MSSQLSERVER"
             
@@ -281,7 +282,7 @@ configuration sql-primary {
             Disabled = $true
             UserName = $Admincreds.UserName
             
-            DependsOn = "[xComputer]DomainJoin"
+            DependsOn = @( "[xComputer]DomainJoin", "[xSQLServerAlwaysOnAvailabilityGroupDatabaseMembership]DatabaseToAlwaysOn" )
             Ensure = "Present"
         }
     }

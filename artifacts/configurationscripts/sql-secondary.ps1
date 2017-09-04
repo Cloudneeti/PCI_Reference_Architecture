@@ -232,7 +232,7 @@ configuration sql-secondary {
             Disabled = $true
             UserName = $Admincreds.UserName
             
-            DependsOn = "[xComputer]DomainJoin"
+            DependsOn = @( "[xComputer]DomainJoin", "[xSQLServerAlwaysOnAvailabilityGroupReplica]AddReplica" )
             Ensure = "Present"
         }
     }
