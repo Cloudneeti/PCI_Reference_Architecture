@@ -40,7 +40,6 @@
         "baseUrl": "https://gallery.azure.com/artifact/20151001/trendmicro.deep-security-manager-st-byoldeep-security-manager-byol.1.0.13/Artifacts",
         "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-security')]",
         "newsqlServerName": "[tolower(concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'sqltdm'))]",
-        "deployment-api-version": "2015-11-01",
         "network-api-version": "2015-06-15",
         "compute-api-version": "2016-04-30-preview"
     },
@@ -48,7 +47,7 @@
         {
             "type": "Microsoft.Resources/deployments",
             "name": "buildSQLServer",
-            "apiVersion": "[variables('deployment-api-version')]",
+            "apiVersion": "2015-11-01",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
@@ -112,8 +111,8 @@
                 },
                 "osProfile": {
                     "computerName": "[variables('vmTDM')]",
-                    "adminUsername": "testo",
-                    "adminPassword": "!Q2w3e4r5t6y",
+                    "adminUsername": "[parameters('environmentReference').serviceAccess]",
+                    "adminPassword": "[parameters('environmentReference').serviceAccessPwd]",
                     "linuxConfiguration": {
                         "disablePasswordAuthentication": false
                     }
@@ -146,8 +145,7 @@
                 }
             },
             "dependsOn": [
-                "[concat('Microsoft.Network/networkInterfaces/', variables('nicTDM'))]",
-                "[concat('Microsoft.Resources/deployments/', 'buildSQLServer')]"
+                "[concat('Microsoft.Network/networkInterfaces/', variables('nicTDM'))]"
             ]
         },
         {
@@ -181,7 +179,8 @@
                 }
             },
             "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', variables('vmTDM'))]"
+                "[concat('Microsoft.Compute/virtualMachines/', variables('vmTDM'))]",
+                "[concat('Microsoft.Resources/deployments/', 'buildSQLServer')]"
             ]
         },
         {
@@ -229,8 +228,8 @@
                 },
                 "osProfile": {
                     "computerName": "[variables('vmQualys')]",
-                    "adminUsername": "testo",
-                    "adminPassword": "!Q2w3e4r5t6y",
+                    "adminUsername": "[parameters('environmentReference').serviceAccess]",
+                    "adminPassword": "[parameters('environmentReference').serviceAccessPwd]",
                     "customData": "IyBDT01NRU5UCg=="
                 },
                 "storageProfile": {
@@ -292,8 +291,8 @@
                 },
                 "osProfile": {
                     "computerName": "[variables('vmlogic')]",
-                    "adminUsername": "testo",
-                    "adminPassword": "!Q2w3e4r5t6y"
+                    "adminUsername": "[parameters('environmentReference').serviceAccess]",
+                    "adminPassword": "[parameters('environmentReference').serviceAccessPwd]"
                 },
                 "storageProfile": {
                     "imageReference": {
@@ -358,8 +357,8 @@
             "properties": {
                 "osProfile": {
                     "computerName": "[variables('vmCloudNeeti')]",
-                    "adminUsername": "testo",
-                    "adminPassword": "!Q2w3e4r5t6y",
+                    "adminUsername": "[parameters('environmentReference').serviceAccess]",
+                    "adminPassword": "[parameters('environmentReference').serviceAccessPwd]",
                     "windowsConfiguration": {
                         "provisionVmAgent": "true"
                     }

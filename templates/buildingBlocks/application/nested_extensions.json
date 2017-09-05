@@ -2,20 +2,14 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "deploymentPrefix": {
-            "type": "string"
+        "oms": {
+            "type": "object"
         },
         "location": {
             "type": "string"
         },
-        "resourceGroupPrefix": {
+        "vmName": {
             "type": "string"
-        },
-        "networkReference": {
-            "type": "array"
-        },
-        "bossObject": {
-            "type": "object"
         }
     },
     "variables": {
@@ -41,7 +35,7 @@
                     "typeHandlerVersion": "9.6"
                 },
                 "settings": {
-                    "DSMname": "[parameters('DSMname')]",
+                    "DSMname": "[parameters('vmName')]",
                     "DSMport": "4120"
                 },
                 "protectedSettings": {
@@ -59,7 +53,7 @@
                     "typeHandlerVersion": "9.6"
                 },
                 "settings": {
-                    "DSMname": "[parameters('DSMname')]",
+                    "DSMname": "[parameters('vmName')]",
                     "DSMport": "4120"
                 },
                 "protectedSettings": {
@@ -68,14 +62,35 @@
                 }
             }
         ],
-        "extensionReference": "[variables(parameters('extensionName'))]"
+        "extensionReference": "placeholder"
     },
     "resources": [
         {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('vmName'),'/AzureNetworkWatcherExtension')]",
-            "apiVersion": "2015-06-15",
+            "name": "[concat(parameters('vmName'),'/omsAgent')]",
+            "apiVersion": "2016-03-30",
             "location": "[parameters('location')]",
+            "properties": {
+                "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+                "type": "MicrosoftMonitoringAgent",
+                "typeHandlerVersion": "1.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "workspaceId": "[parameters('oms').id]"
+                },
+                "protectedSettings": {
+                    "workspaceKey": "[parameters('oms').key]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('vmName'),'/azureNetworkWatcher')]",
+            "apiVersion": "2016-03-30",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'omsAgent')]"
+            ],
             "properties": {
                 "publisher": "Microsoft.Azure.NetworkWatcher",
                 "type": "NetworkWatcherAgentWindows",
@@ -85,41 +100,23 @@
             }
         },
         {
-            "type": "extensions",
-            "name": "Microsoft.EnterpriseCloud.Monitoring",
-            "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-03-30",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('vmName'),'/serviceMap')]",
+            "location": "[parameters('location')]",
             "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'azureNetworkWatcher')]",
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'omsAgent')]"
             ],
             "properties": {
-                "publisher": "Microsoft.EnterpriseCloud.Monitoring",
-                "type": "MicrosoftMonitoringAgent",
-                "typeHandlerVersion": "1.0",
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "1.9",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "workspaceId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName')), '2015-03-20').customerId]"
+                    "commandToExecute": "powershell -command \"iwr https://aka.ms/dependencyagentwindows -UseBasicParsing -OutFile serviceMap.exe; .\\serviceMap.exe /S\""
                 },
-                "protectedSettings": {
-                    "workspaceKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces/', parameters('workspaceName')), '2015-03-20').primarySharedKey]"
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachineScaleSets",
-            "apiVersion": "2016-04-30-preview",
-            "name": "[parameters('vmSSName')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "overprovision": "true",
-                "upgradePolicy": {
-                    "mode": "Manual"
-                },
-                "virtualMachineProfile": {
-                    "extensionProfile": {
-                        "extensions": "[variables('extensionReference')]"
-                    }
-                }
+                "protectedSettings": {}
             }
         }
     ]

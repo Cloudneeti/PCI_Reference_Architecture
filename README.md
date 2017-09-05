@@ -81,16 +81,16 @@ vm's are registered to the azure automation (maybe configurations are assigned, 
 every tier tied to ilb
 every tier can be deployed into specific vnet\subnet
 
-a. OMS Log Analytics Extension    xxx (done (partly) - vm extension)
+a. OMS Log Analytics Extension    vm extension, needs propagating to all vms
 b. Azure Disk Encryption          https://docs.microsoft.com/en-us/azure/security/azure-security-disk-encryption  
-c. VMDiagnosticsSettings          xxx (done - to stogare) 
-d. Service Map                    https://docs.microsoft.com/en-us/azure/operations-management-suite/operations-management-suite-service-map-configure  
-e. TrendMicro                     xxx  
+c. VMDiagnosticsSettings          storage, needs propagating to all vms
+d. Service Map                    vm extension, needs propagating to all vms 
+e. TrendMicro                     
 f. Qualys Virtual Scanner         
 g. Threat manager extension       Script exists  
-h. Network Watcher                xxx 
-i. AD                             xxx (done - dsc resource "[xComputer]DomainJoin")
-j. disable local administrator    xxx (done - dsc resource "[User]DisableLocalAdmin")
+h. Network Watcher                vm extension, needs propagating to all vms
+i. AD                             dsc resource "[xComputer]DomainJoin", needs propagating to all vms
+j. disable local administrator    dsc resource "[User]DisableLocalAdmin", needs propagating to all vms
 
 ### Jumpbox   
 Name can be configured 

@@ -30,7 +30,11 @@
     "adSubnetRef": "[concat(variables('vnetID'),'/subnets/domainSubnet')]",
     "adDataDiskSize": 100,
     "paasPrefix": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'))]",
-    "omsName": "[concat(variables('paasPrefix'), '-oms')]"
+    "omsName": "[concat(variables('paasPrefix'), '-oms')]",
+    "vmNames": [
+      "[concat(parameters('deploymentPrefix'), '-PDC-VM')]",
+      "[concat(parameters('deploymentPrefix'), '-BDC-VM')]"
+    ]
   },
   "resources": [
     {
@@ -174,28 +178,6 @@
               }
             }
           }
-        },
-        {
-          "type": "extensions",
-          "name": "Microsoft.EnterpriseCloud.Monitoring",
-          "apiVersion": "2016-03-30",
-          "location": "[parameters('location')]",
-          "dependsOn": [
-            "[resourceId('Microsoft.Compute/virtualMachines', concat(parameters('deploymentPrefix'), '-PDC-VM'))]",
-            "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('deploymentPrefix'), '-PDC-VM'), 'createPrimaryDomainController')]"
-          ],
-          "properties": {
-            "publisher": "Microsoft.EnterpriseCloud.Monitoring",
-            "type": "MicrosoftMonitoringAgent",
-            "typeHandlerVersion": "1.0",
-            "autoUpgradeMinorVersion": true,
-            "settings": {
-              "workspaceId": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId]"
-            },
-            "protectedSettings": {
-              "workspaceKey": "[listKeys(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey]"
-            }
-          }
         }
       ]
     },
@@ -292,6 +274,40 @@
           }
         }
       ]
+    },
+    {
+      "name": "[concat(variables('vmNames')[copyIndex()], '-nested')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('deploymentPrefix'), '-PDC-VM'), 'createPrimaryDomainController')]",
+        "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('deploymentPrefix'), '-BDC-VM'), 'createSecondaryDomainController')]"
+      ],
+      "copy": {
+        "name": "extensions",
+        "count": "[length(variables('vmNames'))]"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_extensions.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "oms": {
+            "value": {
+              "id": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId]",
+              "key": "[listKeys(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey]"
+            }
+          },
+          "vmName": {
+            "value": "[variables('vmNames')[copyIndex()]]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        }
+      }
     }
   ]
 }

@@ -41,10 +41,13 @@
                     "direction": "Inbound"
                 }
             }
-        ]
+        ],
+        "paasPrefix": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'))]",
+        "omsName": "[concat(variables('paasPrefix'), '-oms')]"
     },
     "resources": [
         {
+            "condition": false,
             "apiVersion": "2016-03-30",
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-nic')]",
@@ -109,10 +112,10 @@
             },
             "resources": [
                 {
-                    "name": "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-vm/dsc')]",
-                    "type": "Microsoft.Compute/virtualMachines/extensions",
+                    "name": "dsc",
+                    "type": "extensions",
                     "location": "[parameters('location')]",
-                    "apiVersion": "2015-06-15",
+                    "apiVersion": "2016-03-30",
                     "dependsOn": [
                         "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-vm')]"
                     ],
@@ -144,6 +147,35 @@
             ]
         },
         {
+            "name": "commonExtensions",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-VM'), 'dsc')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_extensions.json')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "oms": {
+                        "value": {
+                            "id": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId]",
+                            "key": "[listKeys(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey]"
+                        }
+                    },
+                    "vmName": {
+                        "value": "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-VM')]"
+                    },
+                    "location": {
+                        "value": "[parameters('location')]"
+                    }
+                }
+            }
+        },
+        {
             "apiVersion": "2017-05-10",
             "name": "nsgRuleForJumpbox",
             "type": "Microsoft.Resources/deployments",
@@ -166,8 +198,7 @@
                             }
                         }
                     ]
-                },
-                "parameters": {}
+                }
             }
         }
     ]
