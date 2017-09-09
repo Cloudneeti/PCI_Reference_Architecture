@@ -34,7 +34,11 @@
     "vmNames": [
       "[concat(parameters('deploymentPrefix'), '-PDC-VM')]",
       "[concat(parameters('deploymentPrefix'), '-BDC-VM')]"
-    ]
+    ],
+    "network": "[last(parameters('networkReference'))]",
+		"addressSpaceDataTier": "[last(variables('network').subnets).addressSpacePrefix]",
+		"substringDataTier": "[substring(variables('addressSpaceDataTier'), 0, sub(length(variables('addressSpace')), 4))]",
+		"listenerIp": "[concat(variables('substringDataTier'), 10)]"
   },
   "resources": [
     {
@@ -161,12 +165,14 @@
             "autoUpgradeMinorVersion": true,
             "settings": {
               "configuration": {
-                "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ad-createdomain.zip')]",
-                "script": "ad-createdomain.ps1",
-                "function": "ad-createdomain"
+                "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ad-domain.zip')]",
+                "script": "ad-domain.ps1",
+                "function": "ad-createPDC"
               },
               "configurationArguments": {
-                "domainName": "[parameters('environmentReference').domainName]"
+                "domainName": "[parameters('environmentReference').domainName]",
+                "deploymentPrefix": "[parameters('deploymentPrefix')]",
+                "SqlAlwaysOnAvailabilityGroupListenerIp": "[variables('listenerIp')]"
               }
             },
             "protectedSettings": {
@@ -254,9 +260,9 @@
             "autoUpgradeMinorVersion": true,
             "settings": {
               "configuration": {
-                "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ad-createdomainbackup.zip')]",
-                "script": "ad-createdomainbackup.ps1",
-                "function": "ad-createdomainbackup"
+                "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ad-domain.zip')]",
+                "script": "ad-domain.ps1",
+                "function": "ad-createBDC"
               },
               "configurationArguments": {
                 "domainName": "[parameters('environmentReference').domainName]",
@@ -278,7 +284,7 @@
     {
       "name": "[concat(variables('vmNames')[copyIndex()], '-nested')]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2015-01-01",
+      "apiVersion": "2017-05-10",
       "dependsOn": [
         "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('deploymentPrefix'), '-PDC-VM'), 'createPrimaryDomainController')]",
         "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('deploymentPrefix'), '-BDC-VM'), 'createSecondaryDomainController')]"
@@ -294,11 +300,11 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "oms": {
-            "value": {
-              "id": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId]",
-              "key": "[listKeys(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey]"
-            }
+          "deploymentPrefix": {
+            "value": "[parameters('deploymentPrefix')]"
+          },
+          "resourceGroupPrefix": {
+            "value": "[parameters('resourceGroupPrefix')]"
           },
           "vmName": {
             "value": "[variables('vmNames')[copyIndex()]]"

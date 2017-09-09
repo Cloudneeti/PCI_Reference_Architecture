@@ -32,8 +32,8 @@
 		"lbBackEndAddressPoolId": "[concat(variables('lbId'),'/backendAddressPools/',variables('lbBackEnd'))]",
 		"lbProbeId": "[concat(variables('lbId'),'/probes/sqlProbe')]",
 		"sqlAOListener": "[concat(parameters('deploymentPrefix'),'sql-agListener')]",
-		"network": "[last(parameters('networkReference'))]",
 		"subnetUri": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks/Subnets', concat(parameters('deploymentPrefix'), '-', variables('network').name), last(variables('network').subnets).subnetName)]",
+		"network": "[last(parameters('networkReference'))]",
 		"addressSpace": "[last(variables('network').subnets).addressSpacePrefix]",
 		"substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
 		"listenerIp": "[concat(variables('substring'), 10)]"
@@ -133,7 +133,7 @@
 									"id": "[variables('lbBackEndAddressPoolId')]"
 								}
 							],
-                            "primary": true
+							"primary": true
 						}
 					},
 					{
@@ -183,7 +183,10 @@
 					"osDisk": {
 						"name": "[concat(variables('sqlNamePrefix'), copyindex(), '-osdisk.vhd')]",
 						"caching": "ReadWrite",
-						"createOption": "FromImage"
+						"createOption": "FromImage",
+						"managedDisk": {
+							"storageAccountType": "Premium_LRS"
+						}
 					},
 					"copy": [
 						{
@@ -194,7 +197,10 @@
 								"caching": "None",
 								"createOption": "Empty",
 								"diskSizeGB": "[variables('sqlDiskSize')]",
-								"lun": "[copyindex('dataDisks')]"
+								"lun": "[copyindex('dataDisks')]",
+								"managedDisk": {
+									"storageAccountType": "Premium_LRS"
+								}
 							}
 						}
 					]
@@ -205,16 +211,77 @@
 							"id": "[resourceId('Microsoft.Network/networkInterfaces',concat(variables('sqlNamePrefix'), copyindex(), '-nic'))]"
 						}
 					]
+				},
+				"diagnosticsProfile": {
+					"bootDiagnostics": {
+						"enabled": true,
+						"storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
+					}
 				}
-			}
+			},
+			"resources": [
+				{
+					"name": "SqlIaasExtension",
+					"type": "extensions",
+					"apiVersion": "2016-03-30",
+					"location": "[parameters('location')]",
+					"dependsOn": [
+						"[concat(variables('sqlNamePrefix'), copyindex())]"
+					],
+					"properties": {
+						"publisher": "Microsoft.SqlServer.Management",
+						"type": "SqlIaaSAgent",
+						"typeHandlerVersion": "1.2",
+						"autoUpgradeMinorVersion": true,
+						"settings": {
+							"AutoTelemetrySettings": {
+								"Region": "[parameters('location')]"
+							},
+							"AutoPatchingSettings": {
+								"PatchCategory": "WindowsMandatoryUpdates",
+								"Enable": false,
+								"DayOfWeek": "Sunday",
+								"MaintenanceWindowStartingHour": "2",
+								"MaintenanceWindowDuration": "60"
+							},
+							"KeyVaultCredentialSettings": {
+								"Enable": false,
+								"CredentialName": "sysadmin_ekm_cred"
+							},
+							"ServerConfigurationsManagementSettings": {
+								"SQLConnectivityUpdateSettings": {
+									"ConnectivityType": "Private",
+									"Port": 1433
+								},
+								"SQLWorkloadTypeUpdateSettings": {
+									"SQLWorkloadType": "GENERAL"
+								},
+								"SQLStorageUpdateSettings": {
+									"DiskCount": "[parameters('environmentReference').sqlDiskCount]",
+									"NumberOfColumns": "[parameters('environmentReference').sqlDiskCount]",
+									"StartingDeviceID": 2,
+									"DiskConfigurationType": "NEW"
+								}
+							}
+						},
+						"protectedSettings": {
+							"PrivateKeyVaultCredentialSettings": {
+								"AzureKeyVaultUrl": "https://ror.lol",
+								"ServicePrincipalName": "1qazxsW@",
+								"ServicePrincipalSecret": "1qazxsW@"
+							}
+						}
+					}
+				}
+			]
 		},
 		{
 			"type": "Microsoft.Compute/virtualMachines/extensions",
-			"name": "[concat(variables('sqlNamePrefix'),copyindex(1),'/sqlPrep')]",
-			"apiVersion": "2015-06-15",
+			"name": "[concat(variables('sqlNamePrefix'),copyindex(1),'/sql-alwayson')]",
+			"apiVersion": "2016-03-30",
 			"location": "[resourceGroup().location]",
 			"dependsOn": [
-				"virtualMachineLoop"
+				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), copyIndex(1)), 'SqlIaasExtension')]"
 			],
 			"copy": {
 				"name": "virtualMachineExtensionLoop",
@@ -227,15 +294,13 @@
 				"autoUpgradeMinorVersion": true,
 				"settings": {
 					"configuration": {
-						"url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/sql-secondary.zip')]",
-						"script": "sql-secondary.ps1",
+						"url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/sql-alwayson.zip')]",
+						"script": "sql-alwayson.ps1",
 						"function": "sql-secondary"
 					},
 					"configurationArguments": {
 						"deploymentPrefix": "[parameters('deploymentPrefix')]",
-						"domainName": "[parameters('environmentReference').domainName]",
-						"disks": "[parameters('environmentReference').sqlDiskCount]",
-						"SqlAlwaysOnAvailabilityGroupListenerIp": "[variables('listenerIp')]"
+						"domainName": "[parameters('environmentReference').domainName]"
 					}
 				},
 				"protectedSettings": {
@@ -254,11 +319,11 @@
 		},
 		{
 			"type": "Microsoft.Compute/virtualMachines/extensions",
-			"name": "[concat(variables('sqlNamePrefix'),'0/sqlConfig')]",
-			"apiVersion": "2015-06-15",
+			"name": "[concat(variables('sqlNamePrefix'),'0/sql-alwayson')]",
+			"apiVersion": "2016-03-30",
 			"location": "[resourceGroup().location]",
 			"dependsOn": [
-				"virtualMachineLoop"
+				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), '0'), 'SqlIaasExtension')]"
 			],
 			"properties": {
 				"publisher": "Microsoft.Powershell",
@@ -267,16 +332,14 @@
 				"autoUpgradeMinorVersion": true,
 				"settings": {
 					"configuration": {
-						"url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/sql-primary.zip')]",
-						"script": "sql-primary.ps1",
+						"url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/sql-alwayson.zip')]",
+						"script": "sql-alwayson.ps1",
 						"function": "sql-primary"
 					},
 					"configurationArguments": {
 						"deploymentPrefix": "[parameters('deploymentPrefix')]",
 						"domainName": "[parameters('environmentReference').domainName]",
 						"SqlAlwaysOnAvailabilityGroupListenerIp": "[variables('listenerIp')]",
-						"sqlCount": "[parameters('environmentReference').sqlVmCount]",
-						"disks": "[parameters('environmentReference').sqlDiskCount]",
 						"bacpacUri": "[parameters('environmentReference').bacpacUri]"
 					}
 				},
@@ -299,6 +362,40 @@
 			}
 		},
 		{
+		  "name": "[concat(variables('sqlNamePrefix'), 'extension-', copyindex())]",
+		  "type": "Microsoft.Resources/deployments",
+		  "apiVersion": "2017-05-10",
+		  "dependsOn": [
+			"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), copyIndex()), 'sql-alwayson')]"
+		  ],
+		  "copy": {
+			"name": "extensions",
+			"count": "[parameters('environmentReference').sqlVmCount]"
+		  },
+		  "properties": {
+			"mode": "Incremental",
+			"templateLink": {
+			  "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_extensions.json')]",
+			  "contentVersion": "1.0.0.0"
+			},
+			"parameters": {
+			  "deploymentPrefix": {
+				"value": "[parameters('deploymentPrefix')]"
+			  },
+			  "resourceGroupPrefix": {
+				"value": "[parameters('resourceGroupPrefix')]"
+			  },
+			  "vmName": {
+				"value": "[concat(variables('sqlNamePrefix'), copyIndex())]"
+			  },
+			  "location": {
+				"value": "[parameters('location')]"
+			  }
+			}
+		  }
+		},
+		{
+			"condition": false,
 			"name": "[concat(parameters('deploymentPrefix'), 'vmss-', copyIndex())]",
 			"type": "Microsoft.Resources/deployments",
 			"apiVersion": "2015-01-01",

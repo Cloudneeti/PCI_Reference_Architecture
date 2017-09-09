@@ -2,10 +2,13 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "oms": {
-            "type": "object"
+        "deploymentPrefix": {
+            "type": "string"
         },
         "location": {
+            "type": "string"
+        },
+        "resourceGroupPrefix": {
             "type": "string"
         },
         "vmName": {
@@ -62,7 +65,16 @@
                 }
             }
         ],
-        "extensionReference": "placeholder"
+        "extensionReference": "placeholder",
+        "paasPrefix": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'))]",
+        "kvName": "[concat(variables('paasPrefix'), '-kv')]",
+        "bkpName": "[concat(variables('paasPrefix'), '-bkp')]",
+        "automationName": "[concat(variables('paasPrefix'), '-automation')]",
+        "omsName": "[concat(variables('paasPrefix'), '-oms')]",
+        "backupFabric": "Azure",
+        "v2VmType": "Microsoft.Compute/virtualMachines",
+        "v2VmContainer": "iaasvmcontainer;iaasvmcontainerv2;",
+        "v2Vm": "vm;iaasvmcontainerv2;"
     },
     "resources": [
         {
@@ -76,10 +88,10 @@
                 "typeHandlerVersion": "1.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "workspaceId": "[parameters('oms').id]"
+                    "workspaceId": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId]"
                 },
                 "protectedSettings": {
-                    "workspaceKey": "[parameters('oms').key]"
+                    "workspaceKey": "[listKeys(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey]"
                 }
             }
         },
@@ -95,8 +107,7 @@
                 "publisher": "Microsoft.Azure.NetworkWatcher",
                 "type": "NetworkWatcherAgentWindows",
                 "typeHandlerVersion": "1.4",
-                "autoUpgradeMinorVersion": true,
-                "settings": {}
+                "autoUpgradeMinorVersion": true
             }
         },
         {
@@ -105,8 +116,7 @@
             "name": "[concat(parameters('vmName'),'/serviceMap')]",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'azureNetworkWatcher')]",
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'omsAgent')]"
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'azureNetworkWatcher')]"
             ],
             "properties": {
                 "publisher": "Microsoft.Compute",
@@ -115,8 +125,39 @@
                 "autoUpgradeMinorVersion": true,
                 "settings": {
                     "commandToExecute": "powershell -command \"iwr https://aka.ms/dependencyagentwindows -UseBasicParsing -OutFile serviceMap.exe; .\\serviceMap.exe /S\""
-                },
-                "protectedSettings": {}
+                }
+            }
+        },
+        {
+            "condition": false,
+            "apiVersion": "2017-05-10",
+            "name": "[concat('backup-', parameters('vmName'))]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'serviceMap')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "name": "[concat(variables('bkpName'), '/', variables('backupFabric'), '/', variables('v2VmContainer'), resourceGroup().name, ';', parameters('vmName'), '/', variables('v2Vm'), resourceGroup().name, ';', parameters('vmName'))]",
+                            "apiVersion": "2016-06-01",
+                            "location": "[parameters('location')]",
+                            "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
+                            "properties": {
+                                "protectedItemType": "[variables('v2VmType')]",
+                                "policyId": "[resourceId(resourceGroup().name, 'Microsoft.RecoveryServices/vaults/backupPolicies', variables('bkpName'), 'DefaultPolicy' )]",
+                                "sourceResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+                            }
+                        }
+                    ]
+                }
             }
         }
     ]

@@ -3,13 +3,13 @@
 $subscriptionID = 'b4605119-4803-4924-a221-091570e36d01'
 $resourceGroupPrefix = 'rg-pci-iaas'
 $location = 'South Central US'
-$steps1_2 = @(1,2)
+$steps1_2 = @(2,1)
 $stepsOthers = @(5,3,4,6,7)
 
 . .\scripts\deployme.ps1
 
 Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupPrefix -location $location -deploymentPrefix dev -steps $steps1_2 -prerequisiteRefresh
-Start-Sleep 45
+Start-Sleep 75
 Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupPrefix -location $location -deploymentPrefix dev -steps $stepsOthers
 
 #Remove-ArmDeployment -subId $subscriptionID -rg $resourceGroupPrefix -dp dev
