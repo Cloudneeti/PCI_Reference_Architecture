@@ -1,4 +1,4 @@
-Configuration ssms {
+Configuration jumpbox {
     Param (
         [Parameter(Mandatory)]
         [String]$DomainName,

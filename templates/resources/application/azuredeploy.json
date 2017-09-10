@@ -149,6 +149,7 @@
 			}
 		},
 		{
+			"condition": false,
 			"apiVersion": "2016-04-30-preview",
 			"type": "Microsoft.Compute/virtualMachines",
 			"name": "[concat(variables('sqlNamePrefix'), copyindex())]",
@@ -395,7 +396,6 @@
 		  }
 		},
 		{
-			"condition": false,
 			"name": "[concat(parameters('deploymentPrefix'), 'vmss-', copyIndex())]",
 			"type": "Microsoft.Resources/deployments",
 			"apiVersion": "2015-01-01",

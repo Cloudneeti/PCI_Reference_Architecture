@@ -126,9 +126,9 @@
                         "autoUpgradeMinorVersion": true,
                         "settings": {
                             "configuration": {
-                                "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/ssms.zip')]",
-                                "script": "ssms.ps1",
-                                "function": "ssms"
+                                "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/jumpbox.zip')]",
+                                "script": "jumpbox.ps1",
+                                "function": "jumpbox"
                             },
                             "configurationArguments": {
                                 "domainName": "[parameters('environmentReference').domainName]"
@@ -149,7 +149,7 @@
         {
             "name": "commonExtensions",
             "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2015-01-01",
+            "apiVersion": "2017-05-10",
             "dependsOn": [
                 "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-VM'), 'dsc')]"
             ],
@@ -160,18 +160,18 @@
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
-                    "oms": {
-                        "value": {
-                            "id": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId]",
-                            "key": "[listKeys(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey]"
-                        }
-                    },
-                    "vmName": {
+                    "deploymentPrefix": {
+                        "value": "[parameters('deploymentPrefix')]"
+                      },
+                      "resourceGroupPrefix": {
+                        "value": "[parameters('resourceGroupPrefix')]"
+                      },
+                      "vmName": {
                         "value": "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-VM')]"
-                    },
-                    "location": {
+                      },
+                      "location": {
                         "value": "[parameters('location')]"
-                    }
+                      }
                 }
             }
         },

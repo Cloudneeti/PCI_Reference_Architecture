@@ -119,13 +119,10 @@
                 "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'azureNetworkWatcher')]"
             ],
             "properties": {
-                "publisher": "Microsoft.Compute",
-                "type": "CustomScriptExtension",
-                "typeHandlerVersion": "1.9",
-                "autoUpgradeMinorVersion": true,
-                "settings": {
-                    "commandToExecute": "powershell -command \"iwr https://aka.ms/dependencyagentwindows -UseBasicParsing -OutFile serviceMap.exe; .\\serviceMap.exe /S\""
-                }
+                "publisher": "Microsoft.Azure.Monitoring.DependencyAgent",
+                "type": "DependencyAgentWindows",
+                "typeHandlerVersion": "9.1",
+                "autoUpgradeMinorVersion": true
             }
         },
         {

@@ -1,0 +1,101 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "source": {
+            "type": "string"
+        },
+        "state": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "oms": {
+            "type": "object"
+        },
+        "environmentReference": {
+            "type": "object"
+        },
+        "deploymentPrefix": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "empty": [],
+        "OMS": [
+            {
+                "name": "omsAgent",
+                "properties": {
+                    "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+                    "type": "MicrosoftMonitoringAgent",
+                    "typeHandlerVersion": "1.0",
+                    "autoUpgradeMinorVersion": true,
+                    "settings": {
+                        "workspaceId": "[parameters('oms').Id]"
+                    },
+                    "protectedSettings": {
+                        "workspaceKey": "[parameters('oms').Key]"
+                    }
+                }
+            }
+        ],
+        "IIS": [
+            {
+                "name": "Microsoft.Powershell.DSC",
+                "properties": {
+                    "publisher": "Microsoft.Powershell",
+                    "type": "DSC",
+                    "typeHandlerVersion": "2.19",
+                    "autoUpgradeMinorVersion": true,
+                    "settings": {
+                        "configuration": {
+                            "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/iis-webdeploy.zip')]",
+                            "script": "iis-webdeploy.ps1",
+                            "function": "iis-webdeploy"
+                        },
+                        "configurationArguments": {
+                            "domainName": "[parameters('environmentReference').domainName]",
+                            "deploymentPrefix": "[parameters('deploymentPrefix')]"
+                        }
+                    },
+                    "protectedSettings": {
+                        "configurationArguments": {
+                            "adminCreds": {
+                                "userName": "[parameters('environmentReference').serviceAccess]",
+                                "password": "[parameters('environmentReference').serviceAccessPwd]"
+                            }
+                        }
+                    }
+                }
+            }
+        ],
+        "ServiceMap": [
+            {
+                "name": "serviceMap",
+                "properties": {
+                    "publisher": "Microsoft.Azure.Monitoring.DependencyAgent",
+                    "type": "DependencyAgentWindows",
+                    "typeHandlerVersion": "9.1",
+                    "autoUpgradeMinorVersion": true
+                }
+            }
+        ],
+        "NetworkWatcher": [
+            {
+                "name": "azureNetworkWatcher",
+                "properties": {
+                    "publisher": "Microsoft.Azure.NetworkWatcher",
+                    "type": "NetworkWatcherAgentWindows",
+                    "typeHandlerVersion": "1.4",
+                    "autoUpgradeMinorVersion": true
+                }
+            }
+        ]
+    },
+    "resources": [],
+    "outputs": {
+        "collection": {
+            "type": "array",
+            "value": "[concat(parameters('state'), variables(parameters('source')))]"
+        }
+    }
+}

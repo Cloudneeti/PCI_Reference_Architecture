@@ -26,6 +26,7 @@
         "natEndPort": 50119,
         "natBackendPortUbuntu": 22,
         "natBackendPortWindows": 3389,
+        "omsName": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-oms')]",
         "Ubuntu": {
             "publisher": "Canonical",
             "offer": "UbuntuServer",
@@ -185,36 +186,71 @@
                         }
                     },
                     "extensionProfile": {
-                        "extensions": [
-                            {
-                                "name": "Microsoft.Powershell.DSC",
-                                "properties": {
-                                    "publisher": "Microsoft.Powershell",
-                                    "type": "DSC",
-                                    "typeHandlerVersion": "2.19",
-                                    "autoUpgradeMinorVersion": true,
-                                    "settings": {
-                                        "configuration": {
-                                            "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/iis-webdeploy.zip')]",
-                                            "script": "iis-webdeploy.ps1",
-                                            "function": "iis-webdeploy"
-                                        },
-                                        "configurationArguments": {
-                                            "domainName": "[parameters('environmentReference').domainName]",
-                                            "deploymentPrefix": "[parameters('deploymentPrefix')]"
-                                        }
-                                    },
-                                    "protectedSettings": {
-                                        "configurationArguments": {
-                                            "adminCreds": {
-                                                "userName": "[parameters('environmentReference').serviceAccess]",
-                                                "password": "[parameters('environmentReference').serviceAccessPwd]"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        ]
+                        "extensions": "[concat(parameters('bossObject').customExtensions, reference(concat('iterator-', parameters('bossObject').name, '-', sub(length(parameters('bossObject').extensions), 1))).outputs.collection.value)]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "name": "[concat('iterator-', parameters('bossObject').name, '-0')]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_vmss_extensions.json')]"
+                },
+                "parameters": {
+                    "source": {
+                        "value": "empty"
+                    },
+                    "deploymentPrefix": {
+                        "value": "[parameters('deploymentPrefix')]"
+                    },
+                    "environmentReference": {
+                        "value": "[parameters('environmentReference')]"
+                    },
+                    "oms": {
+                        "value": {
+                            "Id": "bogus",
+                            "Key": "bogus"
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "name": "[concat('iterator-', parameters('bossObject').name, '-', copyIndex(1))]",
+            "copy": {
+                "name": "iterator",
+                "count": "[length(parameters('bossObject').extensions)]",
+                "mode": "Serial"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_vmss_extensions.json')]"
+                },
+                "parameters": {
+                    "source": {
+                        "value": "[parameters('bossObject').extensions[copyIndex()]]"
+                    },
+                    "state": {
+                        "value": "[reference(concat('iterator-', parameters('bossObject').name, '-', copyIndex())).outputs.collection.value]"
+                    },
+                    "oms": {
+                        "value": {
+                            "Id": "[if(equals(parameters('bossObject').extensions[copyIndex()], 'OMS'), reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
+                            "Key": "[if(equals(parameters('bossObject').extensions[copyIndex()], 'OMS'), listKeys(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
+                        }
+                    },
+                    "deploymentPrefix": {
+                        "value": "[parameters('deploymentPrefix')]"
+                    },
+                    "environmentReference": {
+                        "value": "[parameters('environmentReference')]"
                     }
                 }
             }

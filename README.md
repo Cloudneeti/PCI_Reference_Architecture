@@ -41,8 +41,8 @@ Steps parameter is an array with the values 1 to 7 allowed. Each step correspond
 ### Notes  
 Azure Functions to proxy requests to Private Github repo http://blog.tyang.org/2017/05/19/deploying-arm-templates-with-artifacts-located-in-a-private-github-repository/
 
-Currently, tracking which steps can run in parallel is the responsibility of the end user. And the progress of deployments is not tracked.  
-Currently, you need to run steps 1 and 2 together, and all the other steps after that (if you choose so)
+Currently, tracking which steps can run in parallel is the responsibility of the end user; the progress of deployments is not tracked.  
+Currently, you need to run steps 2 and 1 together, and all the other steps after that (if you choose so)
 
 ### Networking  
 Configuration is done using the JSON object  

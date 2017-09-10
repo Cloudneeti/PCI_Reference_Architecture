@@ -302,10 +302,12 @@
                 {
                     "balancer": "ilb",
                     "count": 1,
+                    "customExtensions": [],
                     "extensions": [
+                        "IIS",
                         "OMS",
                         "NetworkWatcher",
-                        "IIS"
+                        "ServiceMap"
                     ],
                     "name": "webbito",
                     "os": "Windows",
