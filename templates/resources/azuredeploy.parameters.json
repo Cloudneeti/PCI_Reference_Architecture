@@ -307,7 +307,8 @@
                         "IIS",
                         "OMS",
                         "NetworkWatcher",
-                        "ServiceMap"
+                        "ServiceMap",
+                        "TrendMicro"
                     ],
                     "name": "webbito",
                     "os": "Windows",

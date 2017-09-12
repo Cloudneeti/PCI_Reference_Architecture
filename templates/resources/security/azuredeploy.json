@@ -46,8 +46,8 @@
     "resources": [
         {
             "type": "Microsoft.Resources/deployments",
-            "name": "buildSQLServer",
-            "apiVersion": "2015-11-01",
+            "name": "trendMicroSQL",
+            "apiVersion": "2017-05-10",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {

@@ -41,13 +41,10 @@
                     "direction": "Inbound"
                 }
             }
-        ],
-        "paasPrefix": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'))]",
-        "omsName": "[concat(variables('paasPrefix'), '-oms')]"
+        ]
     },
     "resources": [
         {
-            "condition": false,
             "apiVersion": "2016-03-30",
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-nic')]",

@@ -133,7 +133,7 @@
                 "capacity": "[parameters('bossObject').count]"
             },
             "properties": {
-                "overprovision": "true",
+                "overprovision": false,
                 "upgradePolicy": {
                     "mode": "Manual"
                 },
@@ -186,7 +186,7 @@
                         }
                     },
                     "extensionProfile": {
-                        "extensions": "[concat(parameters('bossObject').customExtensions, reference(concat('iterator-', parameters('bossObject').name, '-', sub(length(parameters('bossObject').extensions), 1))).outputs.collection.value)]"
+                        "extensions": "[concat(parameters('bossObject').customExtensions, reference(concat('iterator-', parameters('bossObject').name, '-', length(parameters('bossObject').extensions))).outputs.collection.value)]"
                     }
                 }
             }

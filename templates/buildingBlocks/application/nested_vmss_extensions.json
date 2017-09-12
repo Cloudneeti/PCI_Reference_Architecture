@@ -89,6 +89,23 @@
                     "autoUpgradeMinorVersion": true
                 }
             }
+        ],
+        "TrendMicro": [
+            {
+                "name": "TrendMicro.DeepSecurity",
+                "properties": {
+                    "publisher": "TrendMicro.DeepSecurity",
+                    "type": "TrendMicroDSA",
+                    "typeHandlerVersion": "10.0",
+                    "autoUpgradeMinorVersion": true,
+                    "settings": {
+                        "DSMname": "10.3.3.4",
+                        "DSMport": "4120",
+                        "tenantID": "NA",
+                        "tenantPassword": "NA"
+                    }
+                }
+            }
         ]
     },
     "resources": [],

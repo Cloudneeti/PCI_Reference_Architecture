@@ -149,7 +149,6 @@
 			}
 		},
 		{
-			"condition": false,
 			"apiVersion": "2016-04-30-preview",
 			"type": "Microsoft.Compute/virtualMachines",
 			"name": "[concat(variables('sqlNamePrefix'), copyindex())]",
