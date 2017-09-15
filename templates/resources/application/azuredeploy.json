@@ -181,7 +181,7 @@
 						"version": "latest"
 					},
 					"osDisk": {
-						"name": "[concat(variables('sqlNamePrefix'), copyindex(), '-osdisk.vhd')]",
+						"name": "[concat(variables('sqlNamePrefix'), copyindex(), '-osDisk')]",
 						"caching": "ReadWrite",
 						"createOption": "FromImage",
 						"managedDisk": {

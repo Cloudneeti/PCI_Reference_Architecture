@@ -195,7 +195,6 @@ function Publish-BuildingBlocksTemplates ($hash) {
         Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container 'packages' -File $_.FullName -Force -ErrorAction Stop | Out-Null
         Write-Host "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)." -ForegroundColor DarkYellow
     }
-    return $StorageAccount.PrimaryEndpoints.Blob
 }
 
 

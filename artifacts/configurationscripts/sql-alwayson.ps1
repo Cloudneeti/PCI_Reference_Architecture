@@ -22,9 +22,7 @@ configuration sql-primary {
         # Minor things
         [String]$bacpacUri = "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac",
         [UInt32]$DatabaseEnginePort = 1433,
-        [UInt32]$DatabaseMirrorPort = 5022,
-        [Int]$RetryCount = 20, 
-        [Int]$RetryIntervalSec = 30
+        [UInt32]$DatabaseMirrorPort = 5022
     )
 
     Import-DscResource -ModuleName PSDesiredStateConfiguration, xPSDesiredStateConfiguration, xComputerManagement, xNetworking, xActiveDirectory, xFailOverCluster, xSQLServer, xDatabase
@@ -234,7 +232,7 @@ configuration sql-primary {
         }
         xSQLServerAlwaysOnAvailabilityGroupDatabaseMembership DatabaseToAlwaysOn {
             AvailabilityGroupName = "${deploymentPrefix}-sql-ag"
-            BackupPath            = "F:\DATA"
+            BackupPath            = "C:\setup"
             DatabaseName          = "ContosoClinic"
             SQLServer             = $env:COMPUTERNAME
             SQLInstanceName       = "MSSQLSERVER"
@@ -263,9 +261,7 @@ configuration sql-secondary {
 
         # Minor things
         [UInt32]$DatabaseEnginePort = 1433,
-        [UInt32]$DatabaseMirrorPort = 5022,
-        [Int]$RetryCount = 20, 
-        [Int]$RetryIntervalSec = 30
+        [UInt32]$DatabaseMirrorPort = 5022
     )
 
     Import-DscResource -ModuleName PSDesiredStateConfiguration, xComputerManagement, xNetworking, xActiveDirectory, xFailoverCluster, xSQLServer
@@ -531,6 +527,9 @@ function Enable-CredSSPNTLM {
 
     Write-Verbose "DONE:Setting up CredSSP for NTLM"
 }
+
+[Int]$RetryCount = 100
+[Int]$RetryIntervalSec = 15
 
 # $cd = @{
 #     AllNodes = @(
