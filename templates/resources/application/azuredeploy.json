@@ -13,6 +13,9 @@
 		}
 	},
 	"variables": {
+		"paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]",
+		"kvName": "[concat(variables('paasPrefix'), '-kv')]",
+		"kvUri": "[concat('https://',variables('paasPrefix'), '-kv.vault.azure.net')]",
 		"sqlDiskSize": 1000,
 		"sqlNamePrefix": "[concat(parameters('environmentReference').deployment.env,'-sql-')]",
 		"sqlLBName": "[concat(variables('sqlNamePrefix'),'ilb')]",
@@ -236,7 +239,7 @@
 								"MaintenanceWindowDuration": "60"
 							},
 							"KeyVaultCredentialSettings": {
-								"Enable": false,
+								"Enable": true,
 								"CredentialName": "sysadmin_ekm_cred"
 							},
 							"ServerConfigurationsManagementSettings": {
@@ -257,9 +260,9 @@
 						},
 						"protectedSettings": {
 							"PrivateKeyVaultCredentialSettings": {
-								"AzureKeyVaultUrl": "https://ror.lol",
-								"ServicePrincipalName": "1qazxsW@",
-								"ServicePrincipalSecret": "1qazxsW@"
+								"AzureKeyVaultUrl": "[variables('kvUri')]",
+								"ServicePrincipalName": "[parameters('environmentReference').azureAD.aadAppClientID]",
+								"ServicePrincipalSecret": "[parameters('environmentReference').azureAD.aadAppPassword]"
 							}
 						}
 					}
@@ -331,7 +334,10 @@
 						"deploymentPrefix": "[parameters('environmentReference').deployment.env]",
 						"domainName": "[parameters('environmentReference').domain.name]",
 						"SqlAlwaysOnAvailabilityGroupListenerIp": "[variables('listenerIp')]",
-						"bacpacUri": "[parameters('environmentReference').sql.bacpacUri]"
+						"bacpacUri": "[parameters('environmentReference').sql.bacpacUri]",
+						"keyVaultName": "[variables('kvName')]",
+						"aadAppClientID": "[parameters('environmentReference').azureAD.aadAppClientID]",
+						"_artifactsLocation":"[parameters('environmentReference').deployment.buildingBlocksEndpoint]"
 					}
 				},
 				"protectedSettings": {
@@ -347,7 +353,8 @@
 						"sqlServiceCreds": {
 							"userName": "[concat(parameters('environmentReference').domain.serviceAccess, '-sql')]",
 							"password": "[parameters('environmentReference').domain.serviceAccessPwd]"
-						}
+						},
+						"aadAppPassword":"[parameters('environmentReference').azureAD.aadAppPassword]"
 					}
 				}
 			}

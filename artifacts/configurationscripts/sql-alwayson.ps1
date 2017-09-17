@@ -4,6 +4,8 @@ configuration sql-primary {
         [Parameter(Mandatory)]
         [String]$deploymentPrefix,
         [Parameter(Mandatory)]
+        [String]$_artifactsLocation,
+        [Parameter(Mandatory)]
         [String]$DomainName,
         [String]$DomainNetbiosName = (Get-NetBIOSName -DomainName $DomainName),
 
@@ -18,6 +20,15 @@ configuration sql-primary {
         # Listener Configuration
         [Parameter(Mandatory)]
         [String]$SqlAlwaysOnAvailabilityGroupListenerIp,
+       
+        # Encryption
+
+        [Parameter(Mandatory)]
+        [String]$keyVaultName,
+        [Parameter(Mandatory)]
+        [String]$aadAppClientID,
+        [Parameter(Mandatory)]
+        [String]$aadAppPassword,
 
         # Minor things
         [String]$bacpacUri = "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac",
@@ -32,6 +43,8 @@ configuration sql-primary {
 
     # Prepare for configuration
     Enable-CredSSPNTLM -DomainName $DomainName
+    $secret = $aadAppClientID.ToString().Replace('-','') + $aadAppPassword
+    $sqlscripts = @("set-columnencryption.sql", "set-serverrole.sql", "set-tdeencryption.sql", "test-columnencryption.sql", "test-tdeencryption.sql")    
     $features = @("Failover-Clustering", "RSAT-Clustering-Mgmt", "RSAT-Clustering-PowerShell", "RSAT-AD-PowerShell")
     $ports = @(59999, $DatabaseEnginePort, $DatabaseMirrorPort)
     WaitForSqlSetup
@@ -61,6 +74,7 @@ configuration sql-primary {
 
             DependsOn       = "[File]SetupFolder"
         }
+
         foreach ($port in $ports) {
             xFirewall "rule-$port" {
                 Access       = "Allow"
@@ -241,6 +255,52 @@ configuration sql-primary {
             Ensure                = "Present"
             PsDscRunAsCredential  = $DomainCreds
         }
+
+        foreach ($sqlscript in $sqlscripts) {
+            xRemoteFile "$sqlscript" {
+                Uri             = "$_artifactsLocation" + "sqlscripts/" + "$sqlscript"
+                DestinationPath = "c:\Setup\$sqlscript"
+                DependsOn       = "[File]SetupFolder"
+            }
+        }
+
+        xGroup LocalAdmins {
+            GroupName = 'Administrators'
+            Ensure = 'Present'
+            Credential = $DomainCreds
+            MembersToInclude = $SQLCreds.UserName
+        }
+
+        xSQLServerScript 'MapCredToLogin'
+        {
+            ServerInstance = 'localhost'
+            SetFilePath    = "c:\Setup\Set-ServerRole.sql"
+            TestFilePath   = "c:\Setup\Set-ServerRole.sql"
+            GetFilePath    = "c:\Setup\Set-ServerRole.sql"
+            DependsOn       = "[xSQLServerAlwaysOnAvailabilityGroupDatabaseMembership]DatabaseToAlwaysOn"
+            PsDscRunAsCredential = $DomainCreds
+        }
+
+        xSQLServerScript 'EnableTdeEncryption'
+        {
+            ServerInstance       = 'localhost'
+            SetFilePath          = 'c:\Setup\Set-TDEEncryption.sql'
+            TestFilePath         = 'c:\Setup\Test-TDEEncryption.sql'
+            GetFilePath          = 'c:\Setup\Set-TDEEncryption.sql'
+            DependsOn            = "[xSQLServerScript]MapCredToLogin"
+            Variable             = @("keyVaultName='$($keyvaultName)'","secret='$($secret)'")
+            PsDscRunAsCredential = $SQLCreds
+        }
+
+        xSQLServerScript 'ColumnEncryption'
+        {
+            ServerInstance       = 'localhost'
+            SetFilePath          = 'c:\Setup\Set-ColumnEncryption.sql'
+            TestFilePath         = 'c:\Setup\Test-ColumnEncryption.sql'
+            GetFilePath          = 'c:\Setup\Set-ColumnEncryption.sql'
+            DependsOn            = "[xSQLServerScript]EnableTdeEncryption"
+            PsDscRunAsCredential = $SQLCreds
+        }        
     }
 }
 

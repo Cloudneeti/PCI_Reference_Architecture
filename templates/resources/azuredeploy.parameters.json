@@ -20,6 +20,10 @@
                     "jumpbox": "jumpota",
                     "serviceAccessPwd": "!Q2w3e4r5t6y",
                     "serviceAccess": "testo"
+                },
+                "azureAD": {
+                    "aadAppClientID": "0034e76a-7ca2-43b7-86ab-688f3ac649e2",
+                    "aadAppPassword": "863a423bdc304a0ab49d11e4aac689eb"
                 }
             }
         },
