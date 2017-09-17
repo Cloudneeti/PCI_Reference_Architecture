@@ -10,13 +10,10 @@
             "defaultValue": []
         },
         "oms": {
-            "type": "object"
+            "type": "secureObject"
         },
         "environmentReference": {
-            "type": "object"
-        },
-        "deploymentPrefix": {
-            "type": "string"
+            "type": "secureObject"
         }
     },
     "variables": {
@@ -48,20 +45,20 @@
                     "autoUpgradeMinorVersion": true,
                     "settings": {
                         "configuration": {
-                            "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/iis-webdeploy.zip')]",
+                            "url": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'packages/iis-webdeploy.zip')]",
                             "script": "iis-webdeploy.ps1",
                             "function": "iis-webdeploy"
                         },
                         "configurationArguments": {
-                            "domainName": "[parameters('environmentReference').domainName]",
-                            "deploymentPrefix": "[parameters('deploymentPrefix')]"
+                            "domainName": "[parameters('environmentReference').domain.name]",
+                            "deploymentPrefix": "[parameters('environmentReference').deployment.env]"
                         }
                     },
                     "protectedSettings": {
                         "configurationArguments": {
                             "adminCreds": {
-                                "userName": "[parameters('environmentReference').serviceAccess]",
-                                "password": "[parameters('environmentReference').serviceAccessPwd]"
+                                "userName": "[parameters('environmentReference').domain.serviceAccess]",
+                                "password": "[parameters('environmentReference').domain.serviceAccessPwd]"
                             }
                         }
                     }

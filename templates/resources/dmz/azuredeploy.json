@@ -2,17 +2,8 @@
     "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "deploymentPrefix": {
-            "type": "string"
-        },
-        "location": {
-            "type": "string"
-        },
-        "resourceGroupPrefix": {
-            "type": "string"
-        },
         "environmentReference": {
-            "type": "object"
+            "type": "secureObject"
         },
         "networkReference": {
             "type": "array"
@@ -30,9 +21,9 @@
         "subnetGateway": "[concat(variables('substring'), 1)]",
         "ngfIp": "[concat(variables('substring'), 4)]",
         "wafIp": "[concat(variables('substring'), 5)]",
-        "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-dmz'))]",
+        "vnetID": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('environmentReference').deployment.env, '-dmz'))]",
         "subnetRef": "[concat(variables('vnetID'),'/subnets/dmzSubnet')]",
-        "loadBalancerID": "[resourceId('Microsoft.Network/loadBalancers', concat(parameters('deploymentPrefix'), '-waf-lb'))]",
+        "loadBalancerID": "[resourceId('Microsoft.Network/loadBalancers', concat(parameters('environmentReference').deployment.env, '-waf-lb'))]",
         "lbProbeID": "[concat(variables('loadBalancerID'),'/probes/barracudaprobe')]",
         "frontEndIPConfigID": "[concat(variables('loadBalancerID'),'/frontendIPConfigurations/LoadBalancerFrontEnd')]",
         "lbPoolID": "[concat(variables('loadBalancerID'),'/backendAddressPools/loadBalancerBackEnd')]"
@@ -40,9 +31,9 @@
     "resources": [
         {
             "type": "Microsoft.Network/routeTables",
-            "name": "[concat(parameters('deploymentPrefix'), '-ngf-routeTable')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf-routeTable')]",
             "apiVersion": "2017-06-01",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "properties": {
                 "routes": [
                     {
@@ -58,9 +49,9 @@
         },
         {
             "type": "Microsoft.Compute/availabilitySets",
-            "name": "[concat(parameters('deploymentPrefix'), '-waf-avSet')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-waf-avSet')]",
             "apiVersion": "2016-04-30-preview",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "properties": {
                 "platformFaultDomainCount": 2,
                 "platformUpdateDomainCount": 5,
@@ -69,9 +60,9 @@
         },
         {
             "type": "Microsoft.Compute/availabilitySets",
-            "name": "[concat(parameters('deploymentPrefix'), '-ngf-avSet')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf-avSet')]",
             "apiVersion": "2016-04-30-preview",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "properties": {
                 "platformFaultDomainCount": 2,
                 "platformUpdateDomainCount": 5,
@@ -79,19 +70,19 @@
             }
         },
         {
-            "name": "[concat(parameters('deploymentPrefix'), '-waf')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-waf')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "dependsOn": [
-                "[concat('Microsoft.Network/networkInterfaces/', concat(parameters('deploymentPrefix'), '-waf-nic'))]",
-                "[concat('Microsoft.Compute/availabilitySets/', concat(parameters('deploymentPrefix'), '-waf-avSet'))]"
+                "[concat('Microsoft.Network/networkInterfaces/', concat(parameters('environmentReference').deployment.env, '-waf-nic'))]",
+                "[concat('Microsoft.Compute/availabilitySets/', concat(parameters('environmentReference').deployment.env, '-waf-avSet'))]"
             ],
             "properties": {
                 "osProfile": {
-                    "computerName": "[concat(parameters('deploymentPrefix'), '-waf')]",
-                    "adminUsername": "[parameters('environmentReference').serviceAccess]",
-                    "adminPassword": "[parameters('environmentReference').serviceAccessPwd]"
+                    "computerName": "[concat(parameters('environmentReference').deployment.env, '-waf')]",
+                    "adminUsername": "[parameters('environmentReference').domain.serviceAccess]",
+                    "adminPassword": "[parameters('environmentReference').domain.serviceAccessPwd]"
                 },
                 "hardwareProfile": {
                     "vmSize": "Standard_DS1_v2"
@@ -105,7 +96,7 @@
                     },
                     "osDisk": {
                         "createOption": "FromImage",
-                        "name": "[concat(parameters('deploymentPrefix'), '-waf-osDisk')]",
+                        "name": "[concat(parameters('environmentReference').deployment.env, '-waf-osDisk')]",
                         "managedDisk": {
                             "storageAccountType": "Standard_LRS"
                         }
@@ -114,17 +105,17 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('deploymentPrefix'), '-waf-nic'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('environmentReference').deployment.env, '-waf-nic'))]"
                         }
                     ]
                 },
                 "availabilitySet": {
-                    "id": "[resourceId('Microsoft.Compute/availabilitySets',concat(parameters('deploymentPrefix'), '-waf-avSet'))]"
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets',concat(parameters('environmentReference').deployment.env, '-waf-avSet'))]"
                 },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
                         "enabled": true,
-                        "storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
+                        "storageUri": "[reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
                     }
                 }
             },
@@ -135,19 +126,19 @@
             }
         },
         {
-            "name": "[concat(parameters('deploymentPrefix'), '-ngf')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "dependsOn": [
-                "[concat('Microsoft.Network/networkInterfaces/', concat(parameters('deploymentPrefix'), '-ngf-nic'))]",
-                "[concat('Microsoft.Compute/availabilitySets/', concat(parameters('deploymentPrefix'), '-ngf-avSet'))]"
+                "[concat('Microsoft.Network/networkInterfaces/', concat(parameters('environmentReference').deployment.env, '-ngf-nic'))]",
+                "[concat('Microsoft.Compute/availabilitySets/', concat(parameters('environmentReference').deployment.env, '-ngf-avSet'))]"
             ],
             "properties": {
                 "osProfile": {
-                    "computerName": "[concat(parameters('deploymentPrefix'), '-ngf')]",
-                    "adminUsername": "[parameters('environmentReference').serviceAccess]",
-                    "adminPassword": "[parameters('environmentReference').serviceAccessPwd]",
+                    "computerName": "[concat(parameters('environmentReference').deployment.env, '-ngf')]",
+                    "adminUsername": "[parameters('environmentReference').domain.serviceAccess]",
+                    "adminPassword": "[parameters('environmentReference').domain.serviceAccessPwd]",
                     "customData": "[variables('ngfData')]"
                 },
                 "hardwareProfile": {
@@ -162,7 +153,7 @@
                     },
                     "osDisk": {
                         "createOption": "FromImage",
-                        "name": "[concat(parameters('deploymentPrefix'), '-ngf-osDisk')]",
+                        "name": "[concat(parameters('environmentReference').deployment.env, '-ngf-osDisk')]",
                         "managedDisk": {
                             "storageAccountType": "Standard_LRS"
                         }
@@ -171,17 +162,17 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('deploymentPrefix'), '-ngf-nic'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('environmentReference').deployment.env, '-ngf-nic'))]"
                         }
                     ]
                 },
                 "availabilitySet": {
-                    "id": "[resourceId('Microsoft.Compute/availabilitySets',concat(parameters('deploymentPrefix'), '-ngf-avSet'))]"
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets',concat(parameters('environmentReference').deployment.env, '-ngf-avSet'))]"
                 },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
                         "enabled": true,
-                        "storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
+                        "storageUri": "[reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
                     }
                 }
             },
@@ -192,12 +183,12 @@
             }
         },
         {
-            "name": "[concat(parameters('deploymentPrefix'), '-ngf-nic')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf-nic')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2017-06-01",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "dependsOn": [
-                "[concat('Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-waf-lb'))]"
+                "[concat('Microsoft.Network/loadBalancers/', concat(parameters('environmentReference').deployment.env, '-waf-lb'))]"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -215,12 +206,12 @@
             }
         },
         {
-            "name": "[concat(parameters('deploymentPrefix'), '-waf-nic')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-waf-nic')]",
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2017-06-01",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "dependsOn": [
-                "[concat('Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-waf-lb'))]"
+                "[concat('Microsoft.Network/loadBalancers/', concat(parameters('environmentReference').deployment.env, '-waf-lb'))]"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -243,22 +234,22 @@
             }
         },
         {
-            "name": "[concat(parameters('deploymentPrefix'), '-waf-ip')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-waf-ip')]",
             "type": "Microsoft.Network/publicIPAddresses",
             "apiVersion": "2017-06-01",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "properties": {
                 "publicIPAllocationMethod": "Static"
             }
         },
         {
             "type": "Microsoft.Network/loadBalancers",
-            "name": "[concat(parameters('deploymentPrefix'), '-waf-lb')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-waf-lb')]",
             "apiVersion": "2017-06-01",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "comments": "This Load Balancer is used to access DMZ",
             "dependsOn": [
-                "[concat('Microsoft.Network/publicIpAddresses/', concat(parameters('deploymentPrefix'), '-waf-ip'))]"
+                "[concat('Microsoft.Network/publicIpAddresses/', concat(parameters('environmentReference').deployment.env, '-waf-ip'))]"
             ],
             "properties": {
                 "frontendIPConfigurations": [
@@ -266,7 +257,7 @@
                         "name": "loadBalancerFrontEnd",
                         "properties": {
                             "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses/', concat(parameters('deploymentPrefix'), '-waf-ip'))]"
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses/', concat(parameters('environmentReference').deployment.env, '-waf-ip'))]"
                             }
                         }
                     }

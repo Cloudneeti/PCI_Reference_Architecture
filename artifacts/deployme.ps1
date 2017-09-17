@@ -123,10 +123,10 @@ function Get-DeploymentData($hash) {
     $tmp = [System.IO.Path]::GetTempFileName()
     $deploymentName = "{0}-{1}" -f $deploymentPrefix, (Get-Date -Format MMddyyyy)
     $parametersData = Get-Content "$scriptRoot\templates\resources\azuredeploy.parameters.json" | ConvertFrom-Json
-    $parametersData.parameters.deploymentPrefix.value = $deploymentPrefix
-    $parametersData.parameters.location.value = $location
-    $parametersData.parameters.resourceGroupPrefix.value = $resourceGroupPrefix
-    $parametersData.parameters.environmentReference.value.buildingBlocksEndpoint = 'https://{0}.blob.core.windows.net/' -f $hash
+    $parametersData.parameters.environmentReference.value.deployment.env = $deploymentPrefix
+    $parametersData.parameters.environmentReference.value.deployment.location = $location
+    $parametersData.parameters.environmentReference.value.deployment.prefix = $resourceGroupPrefix
+    $parametersData.parameters.environmentReference.value.deployment.buildingBlocksEndpoint = 'https://{0}.blob.core.windows.net/' -f $hash
     ( $parametersData | ConvertTo-Json -Depth 10 ) -replace "\\u0027", "'" | Out-File $tmp
     $deploymentName, $tmp
 }

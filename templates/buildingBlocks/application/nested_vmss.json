@@ -2,23 +2,14 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "deploymentPrefix": {
-            "type": "string"
-        },
-        "location": {
-            "type": "string"
-        },
-        "resourceGroupPrefix": {
-            "type": "string"
-        },
         "networkReference": {
             "type": "array"
         },
         "environmentReference": {
-            "type": "object"
+            "type": "secureObject"
         },
         "bossObject": {
-            "type": "object"
+            "type": "secureObject"
         }
     },
     "variables": {
@@ -26,7 +17,7 @@
         "natEndPort": 50119,
         "natBackendPortUbuntu": 22,
         "natBackendPortWindows": 3389,
-        "omsName": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-oms')]",
+        "omsName": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-oms')]",
         "Ubuntu": {
             "publisher": "Canonical",
             "offer": "UbuntuServer",
@@ -46,8 +37,8 @@
         {
             "condition": "[equals(parameters('bossObject').balancer, 'ilb')]",
             "type": "Microsoft.Network/loadBalancers",
-            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb')]",
-            "location": "[parameters('location')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '-ilb')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "apiVersion": "[variables('networkApiVersion')]",
             "properties": {
                 "frontendIPConfigurations": [
@@ -55,7 +46,7 @@
                         "name": "LoadBalancerFrontEnd",
                         "properties": {
                             "subnet": {
-                                "id": "[concat(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').vnet)), '/subnets/', parameters('bossObject').subnet)]"
+                                "id": "[concat(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').vnet)), '/subnets/', parameters('bossObject').subnet)]"
                             }
                         }
                     }
@@ -70,7 +61,7 @@
                         "name": "[concat(parameters('bossObject').name, '-natPoolName')]",
                         "properties": {
                             "frontendIPConfiguration": {
-                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb')), '/frontendIPConfigurations/loadBalancerFrontEnd')]"
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '-ilb')), '/frontendIPConfigurations/loadBalancerFrontEnd')]"
                             },
                             "protocol": "tcp",
                             "frontendPortRangeStart": "[variables('natStartPort')]",
@@ -100,16 +91,16 @@
                             "name": "[concat('lbr-', parameters('bossObject').ports[copyIndex('loadBalancingRules')])]",
                             "properties": {
                                 "backendAddressPool": {
-                                    "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb'), concat('/backendAddressPools/', parameters('bossObject').name, '-bePoolName'))]"
+                                    "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '-ilb'), concat('/backendAddressPools/', parameters('bossObject').name, '-bePoolName'))]"
                                 },
                                 "backendPort": 80,
                                 "enableFloatingIP": false,
                                 "frontendIPConfiguration": {
-                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb')), '/frontendIPConfigurations/loadBalancerFrontEnd')]"
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '-ilb')), '/frontendIPConfigurations/loadBalancerFrontEnd')]"
                                 },
                                 "frontendPort": 80,
                                 "probe": {
-                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb')), concat('/probes/', 'probe-', parameters('bossObject').ports[copyIndex('loadBalancingRules')]))]"
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '-ilb')), concat('/probes/', 'probe-', parameters('bossObject').ports[copyIndex('loadBalancingRules')]))]"
                                 },
                                 "protocol": "Tcp",
                                 "loadDistribution": "SourceIP"
@@ -121,11 +112,11 @@
         },
         {
             "type": "Microsoft.Compute/virtualMachineScaleSets",
-            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-vmss')]",
-            "location": "[parameters('location')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '-vmss')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "apiVersion": "[variables('computeApiVersion')]",
             "dependsOn": [
-                "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb')]"
+                "[concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '-ilb')]"
             ],
             "sku": {
                 "name": "[parameters('bossObject').size]",
@@ -146,7 +137,7 @@
                     },
                     "osProfile": {
                         "computerNamePrefix": "[parameters('bossObject').name]",
-                        "adminUsername": "[parameters('environmentReference').serviceAccess]",
+                        "adminUsername": "[parameters('environmentReference').domain.serviceAccess]",
                         "adminPassword": "[parameters('bossObject').password]"
                     },
                     "networkProfile": {
@@ -160,16 +151,16 @@
                                             "name": "[concat(parameters('bossObject').name, '-ipconfiguration')]",
                                             "properties": {
                                                 "subnet": {
-                                                    "id": "[concat(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').vnet)), '/subnets/', parameters('bossObject').subnet)]"
+                                                    "id": "[concat(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').vnet)), '/subnets/', parameters('bossObject').subnet)]"
                                                 },
                                                 "loadBalancerBackendAddressPools": [
                                                     {
-                                                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb'), concat('/backendAddressPools/', parameters('bossObject').name, '-bePoolName'))]"
+                                                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '-ilb'), concat('/backendAddressPools/', parameters('bossObject').name, '-bePoolName'))]"
                                                     }
                                                 ],
                                                 "loadBalancerInboundNatPools": [
                                                     {
-                                                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '-ilb'), concat('/inboundNatPools/', parameters('bossObject').name, '-natPoolName'))]"
+                                                        "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/loadBalancers/', concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '-ilb'), concat('/inboundNatPools/', parameters('bossObject').name, '-natPoolName'))]"
                                                     }
                                                 ]
                                             }
@@ -182,7 +173,7 @@
                     "diagnosticsProfile": {
                         "bootDiagnostics": {
                             "enabled": true,
-                            "storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
+                            "storageUri": "[reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
                         }
                     },
                     "extensionProfile": {
@@ -198,14 +189,11 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_vmss_extensions.json')]"
+                    "uri": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'application/nested_vmss_extensions.json')]"
                 },
                 "parameters": {
                     "source": {
                         "value": "empty"
-                    },
-                    "deploymentPrefix": {
-                        "value": "[parameters('deploymentPrefix')]"
                     },
                     "environmentReference": {
                         "value": "[parameters('environmentReference')]"
@@ -231,7 +219,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_vmss_extensions.json')]"
+                    "uri": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'application/nested_vmss_extensions.json')]"
                 },
                 "parameters": {
                     "source": {
@@ -242,12 +230,9 @@
                     },
                     "oms": {
                         "value": {
-                            "Id": "[if(equals(parameters('bossObject').extensions[copyIndex()], 'OMS'), reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
-                            "Key": "[if(equals(parameters('bossObject').extensions[copyIndex()], 'OMS'), listKeys(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
+                            "Id": "[if(equals(parameters('bossObject').extensions[copyIndex()], 'OMS'), reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
+                            "Key": "[if(equals(parameters('bossObject').extensions[copyIndex()], 'OMS'), listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
                         }
-                    },
-                    "deploymentPrefix": {
-                        "value": "[parameters('deploymentPrefix')]"
                     },
                     "environmentReference": {
                         "value": "[parameters('environmentReference')]"

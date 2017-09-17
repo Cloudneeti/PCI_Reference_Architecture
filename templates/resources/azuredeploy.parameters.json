@@ -2,25 +2,25 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "deploymentPrefix": {
-            "value": "dev"
-        },
-        "location": {
-            "value": "South Central US"
-        },
-        "resourceGroupPrefix": {
-            "value": "bbb"
-        },
         "environmentReference": {
             "value": {
-                "bacpacUri": "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac",
-                "buildingBlocksEndpoint": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/",
-                "domainName": "test.local",
-                "jumpbox": "jumpota",
-                "serviceAccessPwd": "!Q2w3e4r5t6y",
-                "serviceAccess": "testo",
-                "sqlVmCount": 2,
-                "sqlDiskCount": 2
+                "deployment": {
+                    "env": "dev",
+                    "prefix": "bbb",
+                    "location": "South Central US",
+                    "buildingBlocksEndpoint": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/"
+                },
+                "sql": {
+                    "vmCount": 2,
+                    "diskCount": 2,
+                    "bacpacUri": "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac"
+                },
+                "domain": {
+                    "name": "test.local",
+                    "jumpbox": "jumpota",
+                    "serviceAccessPwd": "!Q2w3e4r5t6y",
+                    "serviceAccess": "testo"
+                }
             }
         },
         "networkReference": {

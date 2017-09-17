@@ -20,7 +20,7 @@
 
     Import-DscResource -ModuleName PSDesiredStateConfiguration, xActiveDirectory, xStorage, xNetworking, xPendingReboot, xDnsServer
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
-    [System.Management.Automation.PSCredential]$TrimCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName + "-sql")", $Admincreds.Password)
+    [System.Management.Automation.PSCredential]$sqlCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName + "-sql")", $Admincreds.Password)
     $Interface = Get-NetAdapter | Where-Object { $_.Name -Like "Ethernet*" } | Select-Object -First 1
     $features = @("RSAT-DNS-Server", "DNS", "AD-Domain-Services", "RSAT-ADDS-Tools", "RSAT-AD-AdminCenter")
 
@@ -82,7 +82,7 @@
         xADUser sqlServiceUser {
             DomainName = $DomainName
             UserName   = $($Admincreds.UserName + "-sql")
-            Password   = $TrimCreds
+            Password   = $sqlCreds
             DependsOn  = "[xPendingReboot]RebootAfterPromotion"
         }
 

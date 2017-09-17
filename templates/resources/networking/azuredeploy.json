@@ -2,17 +2,8 @@
     "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "deploymentPrefix": {
-            "type": "string"
-        },
-        "location": {
-            "type": "string"
-        },
-        "resourceGroupPrefix": {
-            "type": "string"
-        },
         "environmentReference": {
-            "type": "object"
+            "type": "secureObject"
         },
         "networkReference": {
             "type": "array"
@@ -43,24 +34,15 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'networking/nested_vnet.json')]",
+                    "uri": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'networking/nested_vnet.json')]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
                     "bossObject": {
                         "value": "[parameters('networkReference')[copyIndex()]]"
                     },
-                    "location": {
-                        "value": "[parameters('location')]"
-                    },
-                    "deploymentPrefix": {
-                        "value": "[parameters('deploymentPrefix')]"
-                    },
                     "dnsSettings": {
                         "value": "[variables('dnsSettings')]"
-                    },
-                    "resourceGroupPrefix": {
-                        "value": "[parameters('resourceGroupPrefix')]"
                     },
                     "environmentReference": {
                         "value": "[parameters('environmentReference')]"
@@ -79,18 +61,15 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'networking/nested_peerings.json')]",
+                    "uri": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'networking/nested_peerings.json')]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
                     "bossObject": {
                         "value": "[parameters('networkReference')[copyIndex()]]"
                     },
-                    "location": {
-                        "value": "[parameters('location')]"
-                    },
-                    "deploymentPrefix": {
-                        "value": "[parameters('deploymentPrefix')]"
+                    "environmentReference": {
+                        "value": "[parameters('environmentReference')]"
                     }
                 }
             },

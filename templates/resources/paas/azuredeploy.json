@@ -2,17 +2,8 @@
     "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "deploymentPrefix": {
-            "type": "string"
-        },
-        "location": {
-            "type": "string"
-        },
-        "resourceGroupPrefix": {
-            "type": "string"
-        },
         "environmentReference": {
-            "type": "object"
+            "type": "secureObject"
         },
         "networkReference": {
             "type": "array"
@@ -34,7 +25,7 @@
             "SQLAssessment",
             "Updates"
         ],
-        "paasPrefix": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'))]",
+        "paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]",
         "kvName": "[concat(variables('paasPrefix'), '-kv')]",
         "bkpName": "[concat(variables('paasPrefix'), '-bkp')]",
         "automationName": "[concat(variables('paasPrefix'), '-automation')]",
@@ -47,14 +38,14 @@
                 "name": "Standard_LRS"
             },
             "kind": "Storage",
-            "name": "[concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')]",
+            "name": "[concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')]",
             "apiVersion": "2016-12-01",
-            "location": "[parameters('location')]"
+            "location": "[parameters('environmentReference').deployment.location]"
         },
         {
             "apiVersion": "2016-10-01",
             "name": "[variables('kvName')]",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "type": "Microsoft.KeyVault/vaults",
             "dependsOn": [
                 "[concat('Microsoft.OperationalInsights/workspaces/', variables('omsName'))]"
@@ -79,7 +70,7 @@
                     ],
                     "apiVersion": "2017-05-01-preview",
                     "properties": {
-                        "WorkspaceId": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
+                        "WorkspaceId": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
                         "logs": [
                             {
                                 "category": "AuditEvent",
@@ -109,7 +100,7 @@
             "name": "[variables('automationName')]",
             "type": "Microsoft.Automation/automationAccounts",
             "apiVersion": "2015-01-01-preview",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "tags": {},
             "dependsOn": [
                 "[concat('Microsoft.OperationalInsights/workspaces/' , variables('omsName'))]"
@@ -128,7 +119,7 @@
                     ],
                     "apiVersion": "2017-05-01-preview",
                     "properties": {
-                        "WorkspaceId": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
+                        "WorkspaceId": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
                         "logs": [
                             {
                                 "category": "JobLogs",
@@ -199,7 +190,7 @@
         {
             "apiVersion": "2016-06-01",
             "name": "[variables('bkpName')]",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "type": "Microsoft.RecoveryServices/vaults",
             "sku": {
                 "name": "RS0",

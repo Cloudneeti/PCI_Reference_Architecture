@@ -2,17 +2,8 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "deploymentPrefix": {
-            "type": "string"
-        },
-        "location": {
-            "type": "string"
-        },
-        "resourceGroupPrefix": {
-            "type": "string"
-        },
         "environmentReference": {
-            "type": "object"
+            "type": "secureObject"
         },
         "networkReference": {
             "type": "array"
@@ -25,7 +16,7 @@
         "addressSpace": "[parameters('networkReference')[1].subnets[0].addressSpacePrefix]",
         "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
         "staticIp": "[concat(variables('substring'), 4)]",
-        "vnetID": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-management')]",
+        "vnetID": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-management')]",
         "subnetRef": "[concat(variables('vnetID'),'/subnets/', 'managementSubnet')]",
         "nsgRule": [
             {
@@ -47,8 +38,8 @@
         {
             "apiVersion": "2016-03-30",
             "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-nic')]",
-            "location": "[parameters('location')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-nic')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "properties": {
                 "ipConfigurations": [
                     {
@@ -67,19 +58,19 @@
         {
             "apiVersion": "2016-04-30-preview",
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-VM')]",
-            "location": "[parameters('location')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-VM')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-nic'))]"
+                "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-nic'))]"
             ],
             "properties": {
                 "hardwareProfile": {
                     "vmSize": "Standard_A2"
                 },
                 "osProfile": {
-                    "computerName": "[parameters('environmentReference').jumpbox]",
-                    "adminUsername": "[parameters('environmentReference').serviceAccess]",
-                    "adminPassword": "[parameters('environmentReference').serviceAccessPwd]"
+                    "computerName": "[parameters('environmentReference').domain.jumpbox]",
+                    "adminUsername": "[parameters('environmentReference').domain.serviceAccess]",
+                    "adminPassword": "[parameters('environmentReference').domain.serviceAccessPwd]"
                 },
                 "storageProfile": {
                     "imageReference": {
@@ -90,20 +81,20 @@
                     },
                     "osDisk": {
                         "createOption": "FromImage",
-                        "name": "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-hdd')]"
+                        "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-hdd')]"
                     }
                 },
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-nic'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-nic'))]"
                         }
                     ]
                 },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
                         "enabled": true,
-                        "storageUri": "[reference(resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('resourceGroupPrefix'), parameters('deploymentPrefix'), 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
+                        "storageUri": "[reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
                     }
                 }
             },
@@ -111,10 +102,10 @@
                 {
                     "name": "dsc",
                     "type": "extensions",
-                    "location": "[parameters('location')]",
+                    "location": "[parameters('environmentReference').deployment.location]",
                     "apiVersion": "2016-03-30",
                     "dependsOn": [
-                        "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-vm')]"
+                        "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-vm')]"
                     ],
                     "properties": {
                         "publisher": "Microsoft.Powershell",
@@ -123,19 +114,19 @@
                         "autoUpgradeMinorVersion": true,
                         "settings": {
                             "configuration": {
-                                "url": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'packages/jumpbox.zip')]",
+                                "url": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'packages/jumpbox.zip')]",
                                 "script": "jumpbox.ps1",
                                 "function": "jumpbox"
                             },
                             "configurationArguments": {
-                                "domainName": "[parameters('environmentReference').domainName]"
+                                "domainName": "[parameters('environmentReference').domain.name]"
                             }
                         },
                         "protectedSettings": {
                             "configurationArguments": {
                                 "adminCreds": {
-                                    "userName": "[parameters('environmentReference').serviceAccess]",
-                                    "password": "[parameters('environmentReference').serviceAccessPwd]"
+                                    "userName": "[parameters('environmentReference').domain.serviceAccess]",
+                                    "password": "[parameters('environmentReference').domain.serviceAccessPwd]"
                                 }
                             }
                         }
@@ -148,27 +139,21 @@
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2017-05-10",
             "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-VM'), 'dsc')]"
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-VM'), 'dsc')]"
             ],
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'application/nested_extensions.json')]",
+                    "uri": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'application/nested_extensions.json')]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
-                    "deploymentPrefix": {
-                        "value": "[parameters('deploymentPrefix')]"
-                      },
-                      "resourceGroupPrefix": {
-                        "value": "[parameters('resourceGroupPrefix')]"
+                    "environmentReference": {
+                        "value": "[parameters('environmentReference')]"
                       },
                       "vmName": {
-                        "value": "[concat(parameters('deploymentPrefix'), '-', parameters('environmentReference').jumpbox, '-VM')]"
+                        "value": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-VM')]"
                       },
-                      "location": {
-                        "value": "[parameters('location')]"
-                      }
                 }
             }
         },
@@ -176,7 +161,7 @@
             "apiVersion": "2017-05-10",
             "name": "nsgRuleForJumpbox",
             "type": "Microsoft.Resources/deployments",
-            "resourceGroup": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-networking')]",
+            "resourceGroup": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking')]",
             "properties": {
                 "mode": "Incremental",
                 "template": {
@@ -187,9 +172,9 @@
                     "resources": [
                         {
                             "type": "Microsoft.Network/networkSecurityGroups",
-                            "name": "[concat(parameters('deploymentPrefix'), '-managementSubnet-nsg')]",
+                            "name": "[concat(parameters('environmentReference').deployment.env, '-managementSubnet-nsg')]",
                             "apiVersion": "2016-03-30",
-                            "location": "[parameters('location')]",
+                            "location": "[parameters('environmentReference').deployment.location]",
                             "properties": {
                                 "securityRules": "[variables('nsgRule')]"
                             }

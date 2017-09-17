@@ -2,14 +2,11 @@
     "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "location": {
-            "type": "string"
-        },
         "bossObject": {
             "type": "secureObject"
         },
-        "deploymentPrefix": {
-            "type": "string"
+        "environmentReference": {
+            "type": "secureObject"
         }
     },
     "variables": {},
@@ -17,15 +14,15 @@
         {
             "apiVersion": "2017-04-01",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').name, '/Peering-', copyIndex())]",
-            "location": "[parameters('location')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '/Peering-', copyIndex())]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "copy": {
                 "name": "peerings",
                 "count": "[length(parameters('bossObject').peerings)]"
             },
             "properties": {
                 "remoteVirtualNetwork": {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks', concat(parameters('deploymentPrefix'), '-', parameters('bossObject').peerings[copyIndex()]))]"
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').peerings[copyIndex()]))]"
                 },
                 "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": false,

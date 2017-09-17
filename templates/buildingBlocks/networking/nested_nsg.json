@@ -2,20 +2,11 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "location": {
-            "type": "string"
-        },
         "bossObject": {
             "type": "secureObject"
         },
-        "deploymentPrefix": {
-            "type": "string"
-        },
-        "resourceGroupPrefix": {
-            "type": "string"
-        },
         "environmentReference": {
-            "type": "object"
+            "type": "secureObject"
         }
     },
     "variables": {
@@ -95,7 +86,7 @@
                 }
             }
         ],
-        "paasPrefix": "[concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'))]",
+        "paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]",
         "omsName": "[concat(variables('paasPrefix'), '-oms')]"
     },
     "resources": [
@@ -106,7 +97,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'common/nested_iterator.json')]"
+                    "uri": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'common/nested_iterator.json')]"
                 },
                 "parameters": {
                     "source": {
@@ -127,7 +118,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('environmentReference').buildingBlocksEndpoint, 'common/nested_iterator.json')]"
+                    "uri": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'common/nested_iterator.json')]"
                 },
                 "parameters": {
                     "source": {
@@ -141,9 +132,9 @@
         },
         {
             "type": "Microsoft.Network/networkSecurityGroups",
-            "name": "[concat(parameters('deploymentPrefix'), '-', parameters('bossObject').subnetName, '-nsg')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').subnetName, '-nsg')]",
             "apiVersion": "2016-03-30",
-            "location": "[parameters('location')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "properties": {
                 "securityRules": "[reference(concat('iterator-', parameters('bossObject').subnetName, '-', length(parameters('bossObject').Firewall))).outputs.collection.value]"
             },
@@ -152,11 +143,11 @@
                     "type": "providers/diagnosticSettings",
                     "name": "Microsoft.Insights/service",
                     "dependsOn": [
-                        "[concat('Microsoft.Network/networkSecurityGroups/',concat(parameters('deploymentPrefix'), '-', parameters('bossObject').subnetName, '-nsg'))]"
+                        "[concat('Microsoft.Network/networkSecurityGroups/',concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').subnetName, '-nsg'))]"
                     ],
                     "apiVersion": "2017-05-01-preview",
                     "properties": {
-                        "WorkspaceId": "[resourceId(concat(parameters('resourceGroupPrefix'), '-', parameters('deploymentPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
+                        "WorkspaceId": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
                         "logs": [
                             {
                                 "category": "NetworkSecurityGroupEvent",
