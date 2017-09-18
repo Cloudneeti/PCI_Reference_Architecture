@@ -8,7 +8,9 @@
                     "env": "dev",
                     "prefix": "bbb",
                     "location": "South Central US",
-                    "buildingBlocksEndpoint": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/"
+                    "buildingBlocksEndpoint": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/",
+                    "azureApplication": "db6356f0-6324-4b95-bdac-d7e1aedcf8f9",
+                    "keyVersion": "755dc05dec394205b09e15042d6d7987"
                 },
                 "sql": {
                     "vmCount": 2,

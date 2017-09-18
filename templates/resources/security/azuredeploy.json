@@ -93,8 +93,8 @@
             "location": "[parameters('environmentReference').deployment.location]",
             "plan": {
                 "publisher": "trendmicro",
-                "product": "deep-security-vm",
-                "name": "dxxn25d2v2"
+                "product": "deep-security-vm-byol",
+                "name": "dxxnbyol"
             },
             "properties": {
                 "hardwareProfile": {
@@ -111,8 +111,8 @@
                 "storageProfile": {
                     "imageReference": {
                         "publisher": "trendmicro",
-                        "offer": "deep-security-vm",
-                        "sku": "dxxn25d2v2",
+                        "offer": "deep-security-vm-byol",
+                        "sku": "dxxnbyol",
                         "version": "latest"
                     },
                     "osDisk": {

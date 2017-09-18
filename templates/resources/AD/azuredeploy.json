@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "environmentReference": {
-      "type": "secureObject"
+      "type": "Object"
     },
     "networkReference": {
       "type": "array"
@@ -17,7 +17,7 @@
     "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
     "adPDCNicIPAddress": "[concat(variables('substring'), 4)]",
     "adBDCNicIPAddress": "[concat(variables('substring'), 5)]",
-    "vnetID": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-security')]",
+    "vnetID": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('environmentReference').deployment.env, '-security'))]",
     "adSubnetRef": "[concat(variables('vnetID'),'/subnets/domainSubnet')]",
     "adDataDiskSize": 100,
     "vmNames": [
@@ -140,6 +140,7 @@
       },
       "resources": [
         {
+          "condition": false,
           "name": "createPrimaryDomainController",
           "type": "extensions",
           "apiVersion": "2016-03-30",
@@ -235,6 +236,7 @@
       },
       "resources": [
         {
+          "condition": false,
           "name": "createSecondaryDomainController",
           "type": "extensions",
           "apiVersion": "2016-03-30",

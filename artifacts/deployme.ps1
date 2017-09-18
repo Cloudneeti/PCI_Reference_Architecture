@@ -54,12 +54,13 @@ function Invoke-ArmDeployment {
     try {
         # Main routine block
         $deploymentHash = Get-StringHash(($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
+        $guid = Prepare-KeyVault $deploymentHash
         if ($prerequisiteRefresh) {
             $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupPrefix, $deploymentPrefix, $_) -join '-') -Location $location -Force }
             Publish-BuildingBlocksTemplates $deploymentHash
         }
-        
-        $deploymentData = Get-DeploymentData $deploymentHash
+
+        $deploymentData = Get-DeploymentData $deploymentHash $guid
         $deployments = @{
             1 = @{"name" = "paas"; "rg" = "operations"};
             2 = @{"name" = "networking"; "rg" = "networking"};
@@ -69,7 +70,7 @@ function Invoke-ArmDeployment {
             6 = @{"name" = "management"; "rg" = "management"};
             7 = @{"name" = "application"; "rg" = "application"}
         }
-        
+
         foreach ($step in $steps) {
             $importSession = {
                 param(
@@ -95,6 +96,13 @@ function Invoke-ArmDeployment {
                     -TemplateParameterFile $pathParameters `
                     -Name $deploymentName `
                     -ErrorAction Stop -Verbose
+                if ($rgName -like "*operations") {
+                    Start-Sleep 5
+                    Set-AzureRmKeyVaultAccessPolicy -VaultName ( $rgName -replace 'operations', 'kv' ) -ResourceGroupName $rgName -PermissionsToKeys 'Create','Get' `
+                        -ServicePrincipalName ( Get-AzureRmSubscription | ? id -eq $subId ).ExtendedProperties.Account
+                    Start-Sleep 5
+                    Add-AzureKeyVaultKey -VaultName ( $rgName -replace 'operations', 'kv' ) -Name ContosoMasterKey -Destination HSM
+                }
             }.GetNewClosure()
 
             Start-job -Name ("$step-create") -ScriptBlock $importSession -Debug `
@@ -119,7 +127,9 @@ function Invoke-ArmDeployment {
     }
 }
 
-function Get-DeploymentData($hash) {
+function Get-DeploymentData($hash, $guid) {
+    $key = Get-AzureKeyVaultKey -VaultName ( "{0}-{1}-kv" -f $resourceGroupPrefix, $deploymentPrefix ) -Name ContosoMasterKey -ErrorAction SilentlyContinue
+    
     $tmp = [System.IO.Path]::GetTempFileName()
     $deploymentName = "{0}-{1}" -f $deploymentPrefix, (Get-Date -Format MMddyyyy)
     $parametersData = Get-Content "$scriptRoot\templates\resources\azuredeploy.parameters.json" | ConvertFrom-Json
@@ -127,6 +137,8 @@ function Get-DeploymentData($hash) {
     $parametersData.parameters.environmentReference.value.deployment.location = $location
     $parametersData.parameters.environmentReference.value.deployment.prefix = $resourceGroupPrefix
     $parametersData.parameters.environmentReference.value.deployment.buildingBlocksEndpoint = 'https://{0}.blob.core.windows.net/' -f $hash
+    $parametersData.parameters.environmentReference.value.deployment.azureApplication = $guid
+    $parametersData.parameters.environmentReference.value.deployment.keyVersion = $key.Version
     ( $parametersData | ConvertTo-Json -Depth 10 ) -replace "\\u0027", "'" | Out-File $tmp
     $deploymentName, $tmp
 }
@@ -146,6 +158,7 @@ Function Get-StringHash([String]$String, $HashName = "MD5") {
     $StringBuilder.ToString().Substring(0, 24)
 }
 function Remove-ArmDeployment ($rg, $dp, $subId) {
+    Get-AzureRmADApplication -DisplayNameStartWith (Get-StringHash(($subId, $rg, $dp) -join '-')) | Remove-AzureRmADApplication -Force
     $components | ForEach-Object {
         $importSession = {
             param(
@@ -197,6 +210,15 @@ function Publish-BuildingBlocksTemplates ($hash) {
     }
 }
 
+function Prepare-KeyVault ($hash) {
+    $bogusHttp = 'http://localhost/' + $hash
+    $app = Get-AzureRmADApplication -DisplayNameStartWith $hash
+    if (!$app) {
+        $app = New-AzureRmADApplication -DisplayName $hash -HomePage $bogusHttp -IdentifierUris $bogusHttp -Password $hash -ErrorAction SilentlyContinue
+        New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId -ErrorAction SilentlyContinue | Out-Null
+    }
+    $app.ApplicationId.Guid
+}
 
 # Constants
 $request = '{
@@ -245,49 +267,3 @@ $request = '{
 $scriptRoot = Split-Path ( Split-Path $MyInvocation.MyCommand.Path )
 $ProfilePath = "$scriptRoot\auth.json"
 $components = @("application", "dmz", "security", "management", "operations", "networking")
-
-
-# $AAAcct = New-AzureRmAutomationAccount -ResourceGroupName "$locationcoerced-automation" -Location $location -Name $StorageAcct -ErrorAction Stop
-
-# # Get needed Powershell DSC modules and start upload to Azure Automation directly
-# # from powershellgallery.com, need to get this list dynamically from DSC configuration
-# $modules = Find-Module -Name NX, xPSDesiredStateConfiguration, xNetworking, xWebAdministration #, PSDscResources
-# $modules | ForEach-Object {
-#     $url = 'https://www.powershellgallery.com/api/v2/package/{0}/{1}' -f $_.Name, $_.Version
-#     do {
-#         $ActualUrl = $url
-#         $Url = (Invoke-WebRequest -Uri $url -MaximumRedirection 0 -ErrorAction Ignore).Headers.Location
-#     } while ( $Url -ne $Null ) # finding actual module payload url
-
-#     $null = New-AzureRmAutomationModule -ResourceGroupName  "$locationcoerced-automation" -AutomationAccountName $StorageAcct `
-#         -Name $_.Name -ContentLink $ActualUrl -ErrorAction Stop
-# }
-
-# Get List of Files | ForEach-Object {
-#     Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Importing configuration `"$_`"" -ForegroundColor Green
-#     $null = Import-AzureRmAutomationDscConfiguration -SourcePath "$scriptRoot\artifacts\$_" -Published -Force `
-#         -ResourceGroupName "$locationcoerced-automation" -AutomationAccountName $StorageAcct -ErrorAction Stop
-# }
-
-# $modules | ForEach-Object {
-#     do {
-#         Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')  Waiting for module import to succeed" -ForegroundColor DarkYellow; Start-Sleep 10
-#         $uploadStatus = Get-AzureRmAutomationModule -ResourceGroupName "$locationcoerced-automation" -AutomationAccountName $StorageAcct `
-#             -Name $_.Name -ErrorAction Stop
-#     } while ( $uploadStatus.ProvisioningState -notin 'Succeeded', 'Failed')
-
-#     if ( $uploadStatus.ProvisioningState -eq 'Failed' ) {
-#         Write-Error "Module upload failed."
-#         exit 1
-#     }
-# }
-
-# # check status before creating payload vms
-# $null = Start-AzureRmAutomationDscCompilationJob -ResourceGroupName "$locationcoerced-automation" -ConfigurationName 'Ubuntu' `
-#     -AutomationAccountName $StorageAcct -ErrorAction Stop
-# $null = Start-AzureRmAutomationDscCompilationJob -ResourceGroupName "$locationcoerced-automation" -ConfigurationName 'Windows' `
-#     -AutomationAccountName $StorageAcct -ConfigurationData @{ AllNodes = @( @{ NodeName = "ssh"; Role = "BitVise" } ) } -ErrorAction Stop
-# $null = Start-AzureRmAutomationDscCompilationJob -ResourceGroupName "$locationcoerced-automation" -ConfigurationName 'Windows' `
-#     -AutomationAccountName $StorageAcct -ConfigurationData @{ AllNodes = @( @{ NodeName = "bastion"; Role = "Bastion" } ) } -ErrorAction Stop
-# $null = Start-AzureRmAutomationDscCompilationJob -ResourceGroupName "$locationcoerced-automation" -ConfigurationName 'Windows' `
-#     -AutomationAccountName $StorageAcct -ConfigurationData @{ AllNodes = @( @{ NodeName = "web"; Role = "IIS", "BitVise" } ) } -ErrorAction Stop

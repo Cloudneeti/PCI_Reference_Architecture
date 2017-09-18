@@ -59,7 +59,21 @@
                     "name": "Premium",
                     "family": "A"
                 },
-                "accessPolicies": []
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('environmentReference').deployment.azureApplication]",
+                        "permissions": {
+                            "keys": [
+                                "WrapKey"
+                              ],
+                              "secrets": [
+                                "Set"
+                              ],
+                              "certificates": []
+                        }
+                    }
+                ]
             },
             "resources": [
                 {
