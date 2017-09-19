@@ -89,19 +89,20 @@ function Invoke-ArmDeployment {
                     Write-Error $_
                     exit 1337
                 }
-
                 New-AzureRmResourceGroupDeployment `
                     -ResourceGroupName $rgName `
                     -TemplateFile $pathTemplate `
                     -TemplateParameterFile $pathParameters `
                     -Name $deploymentName `
                     -ErrorAction Stop -Verbose
+
                 if ($rgName -like "*operations") {
-                    Start-Sleep 5
-                    Set-AzureRmKeyVaultAccessPolicy -VaultName ( $rgName -replace 'operations', 'kv' ) -ResourceGroupName $rgName -PermissionsToKeys 'Create','Get' `
-                        -ServicePrincipalName ( Get-AzureRmSubscription | ? id -eq $subId ).ExtendedProperties.Account
-                    Start-Sleep 5
-                    Add-AzureKeyVaultKey -VaultName ( $rgName -replace 'operations', 'kv' ) -Name ContosoMasterKey -Destination HSM
+                    do { #hack to wait until kv name resolves
+                        $noKey = $noPermissions = $null
+                        Set-AzureRmKeyVaultAccessPolicy -VaultName ( $rgName -replace 'operations', 'kv' ) -ResourceGroupName $rgName -PermissionsToKeys 'Create','Get' `
+                            -ServicePrincipalName ( Get-AzureRmSubscription | ? id -eq $subId ).ExtendedProperties.Account -ErrorAction SilentlyContinue -ErrorVariable noPermissions
+                        Add-AzureKeyVaultKey -VaultName ( $rgName -replace 'operations', 'kv' ) -Name ContosoMasterKey -Destination HSM -ErrorAction SilentlyContinue -ErrorVariable noKey
+                    } while ($noPermissions -or $noKey)
                 }
             }.GetNewClosure()
 
@@ -129,7 +130,9 @@ function Invoke-ArmDeployment {
 
 function Get-DeploymentData($hash, $guid) {
     $key = Get-AzureKeyVaultKey -VaultName ( "{0}-{1}-kv" -f $resourceGroupPrefix, $deploymentPrefix ) -Name ContosoMasterKey -ErrorAction SilentlyContinue
-    
+    if (!$key -and  $steps -notcontains 1) {
+        throw "no key vault key, rerun step 1 please"
+    }
     $tmp = [System.IO.Path]::GetTempFileName()
     $deploymentName = "{0}-{1}" -f $deploymentPrefix, (Get-Date -Format MMddyyyy)
     $parametersData = Get-Content "$scriptRoot\templates\resources\azuredeploy.parameters.json" | ConvertFrom-Json
@@ -137,7 +140,8 @@ function Get-DeploymentData($hash, $guid) {
     $parametersData.parameters.environmentReference.value.deployment.location = $location
     $parametersData.parameters.environmentReference.value.deployment.prefix = $resourceGroupPrefix
     $parametersData.parameters.environmentReference.value.deployment.buildingBlocksEndpoint = 'https://{0}.blob.core.windows.net/' -f $hash
-    $parametersData.parameters.environmentReference.value.deployment.azureApplication = $guid
+    $parametersData.parameters.environmentReference.value.deployment.azureApplication = $guid[1]
+    $parametersData.parameters.environmentReference.value.deployment.azureApplicationServicePrincipal = $guid[0]
     $parametersData.parameters.environmentReference.value.deployment.keyVersion = $key.Version
     ( $parametersData | ConvertTo-Json -Depth 10 ) -replace "\\u0027", "'" | Out-File $tmp
     $deploymentName, $tmp
@@ -150,6 +154,7 @@ function Get-Token {
     $token = $profileClient.AcquireAccessToken($currentAzureContext.Subscription.TenantId)
     $token.AccessToken
 }
+
 Function Get-StringHash([String]$String, $HashName = "MD5") {
     $StringBuilder = New-Object System.Text.StringBuilder
     [System.Security.Cryptography.HashAlgorithm]::Create($HashName).ComputeHash([System.Text.Encoding]::UTF8.GetBytes($String))| 
@@ -157,6 +162,7 @@ Function Get-StringHash([String]$String, $HashName = "MD5") {
     }
     $StringBuilder.ToString().Substring(0, 24)
 }
+
 function Remove-ArmDeployment ($rg, $dp, $subId) {
     Get-AzureRmADApplication -DisplayNameStartWith (Get-StringHash(($subId, $rg, $dp) -join '-')) | Remove-AzureRmADApplication -Force
     $components | ForEach-Object {
@@ -167,6 +173,7 @@ function Remove-ArmDeployment ($rg, $dp, $subId) {
                 $subId
             )
             try {
+                Start-Sleep (get-random -Maximum 30 -Minimum 5)
                 Import-AzureRmContext -Path "$scriptRoot\auth.json" -ErrorAction Stop
                 Set-AzureRmContext -SubscriptionId $subId
             }
@@ -215,9 +222,12 @@ function Prepare-KeyVault ($hash) {
     $app = Get-AzureRmADApplication -DisplayNameStartWith $hash
     if (!$app) {
         $app = New-AzureRmADApplication -DisplayName $hash -HomePage $bogusHttp -IdentifierUris $bogusHttp -Password $hash -ErrorAction SilentlyContinue
-        New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId -ErrorAction SilentlyContinue | Out-Null
+        $sp = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId -ErrorAction SilentlyContinue
     }
-    $app.ApplicationId.Guid
+    else {
+        $sp = Get-AzureRmADServicePrincipal | Where-Object { $PSItem.ApplicationId -eq $app.ApplicationId.Guid }
+    }
+    @( $sp.Id.Guid, $app.ApplicationId.Guid )
 }
 
 # Constants

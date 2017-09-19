@@ -140,7 +140,6 @@
       },
       "resources": [
         {
-          "condition": false,
           "name": "createPrimaryDomainController",
           "type": "extensions",
           "apiVersion": "2016-03-30",
@@ -236,7 +235,6 @@
       },
       "resources": [
         {
-          "condition": false,
           "name": "createSecondaryDomainController",
           "type": "extensions",
           "apiVersion": "2016-03-30",

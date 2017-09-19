@@ -73,11 +73,13 @@
     },
     "resources": [
         {
-            "condition": false,
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('vmName'),'/omsAgent')]",
             "apiVersion": "2016-03-30",
             "location": "[parameters('environmentReference').deployment.location]",
+            "dependsOn": [
+                "[parameters('vmName')]"
+            ],
             "properties": {
                 "publisher": "Microsoft.EnterpriseCloud.Monitoring",
                 "type": "MicrosoftMonitoringAgent",
@@ -92,7 +94,6 @@
             }
         },
         {
-            "condition": false,
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('vmName'),'/azureNetworkWatcher')]",
             "apiVersion": "2016-03-30",
@@ -108,7 +109,6 @@
             }
         },
         {
-            "condition": false,
             "apiVersion": "2016-03-30",
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('vmName'),'/serviceMap')]",
@@ -124,7 +124,6 @@
             }
         },
         {
-            "condition": false,
             "apiVersion": "2017-05-10",
             "name": "[concat('backup-', parameters('vmName'))]",
             "type": "Microsoft.Resources/deployments",
@@ -156,39 +155,51 @@
             }
         },
         {
-            "name": "[concat(parameters('vmName'), '-encryptionnested')]",
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2017-05-10",
-            "dependsOn": [
-                "[concat('backup-', parameters('vmName'))]"
-            ],
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('vmName'),'/encryption')]",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[parameters('environmentReference').deployment.location]",
             "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/201-encrypt-running-windows-vm/azuredeploy.json",
-                    "contentVersion": "1.0.0.0"
+                "publisher": "Microsoft.Azure.Security",
+                "type": "AzureDiskEncryption",
+                "typeHandlerVersion": "1.1",
+                "autoUpgradeMinorVersion": true,
+                "forceUpdateTag": "1.0",
+                "settings": {
+                    "AADClientID": "[parameters('environmentReference').deployment.azureApplication]",
+                    "KeyVaultURL": "[variables('kvUri')]",
+                    "KeyEncryptionKeyURL": "[concat(variables('kvUri'), 'keys/ContosoMasterKey/', parameters('environmentReference').deployment.keyVersion)]",
+                    "KeyEncryptionAlgorithm": "RSA-OAEP",
+                    "VolumeType": "All",
+                    "EncryptionOperation": "EnableEncryption"
                 },
-                "parameters": {
-                    "vmName": {
-                        "value": "[parameters('vmName')]"
-                    },
-                    "aadClientID": {
-                        "value": "[parameters('environmentReference').deployment.azureApplication]"
-                    },
-                    "aadClientSecret": {
-                        "value": "[substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24)]"
-                    },
-                    "keyVaultName": {
-                        "value": "[concat(variables('paasPrefix'), '-kv')]"
-                    },
-                    "keyVaultResourceGroup": {
-                        "value": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations')]"
-                    },
-                    "useExistingKek": {
-                        "value": "kek"
-                    },
-                    "keyEncryptionKeyURL": {
-                        "value": "[concat(variables('kvUri'), 'keys/ContosoMasterKey/', parameters('environmentReference').deployment.keyVersion)]"
+                "protectedSettings": {
+                    "AADClientSecret": "[substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24)]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2016-04-30-preview",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[parameters('vmName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "storageProfile": {
+                    "osDisk": {
+                        "encryptionSettings": {
+                            "diskEncryptionKey": {
+                                "sourceVault": {
+                                    "id": "[variables('kvId')]"
+                                },
+                                "secretUrl": "[reference(resourceId('Microsoft.Compute/virtualMachines/extensions',  parameters('vmName'), 'encryption')).instanceView.statuses[0].message]"
+                            },
+                            "keyEncryptionKey": {
+                                "sourceVault": {
+                                    "id": "[variables('kvId')]"
+                                },
+                                "keyUrl": "[concat(variables('kvUri'), 'keys/ContosoMasterKey/', parameters('environmentReference').deployment.keyVersion)]"
+                            }
+                        }
                     }
                 }
             }

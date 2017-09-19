@@ -52,25 +52,41 @@
             ],
             "properties": {
                 "enabledForDeployment": false,
-                "enabledForTemplateDeployment": true,
+                "enabledForTemplateDeployment": false,
                 "enabledForDiskEncryption": true,
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
-                    "name": "Premium",
+                    "name": "premium",
                     "family": "A"
                 },
                 "accessPolicies": [
                     {
                         "tenantId": "[subscription().tenantId]",
-                        "objectId": "[parameters('environmentReference').deployment.azureApplication]",
+                        "objectId": "[parameters('environmentReference').deployment.azureApplicationServicePrincipal]",
                         "permissions": {
                             "keys": [
                                 "WrapKey"
-                              ],
-                              "secrets": [
+                            ],
+                            "secrets": [
                                 "Set"
-                              ],
-                              "certificates": []
+                            ],
+                            "certificates": []
+                        }
+                    },
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "2e7c0df0-13d2-4346-9c33-44c7bbb17409",
+                        "permissions": {
+                            "keys": [
+                                "Get",
+                                "List",
+                                "Backup"
+                            ],
+                            "secrets": [
+                                "Get",
+                                "List",
+                                "Backup"
+                            ]
                         }
                     }
                 ]
