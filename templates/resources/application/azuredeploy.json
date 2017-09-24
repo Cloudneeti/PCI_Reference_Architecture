@@ -27,7 +27,8 @@
 		"network": "[last(parameters('networkReference'))]",
 		"addressSpace": "[last(variables('network').subnets).addressSpacePrefix]",
 		"substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
-		"listenerIp": "[concat(variables('substring'), 10)]"
+		"listenerIp": "[concat(variables('substring'), 10)]",
+		"paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]"
 	},
 	"resources": [
 		{
@@ -228,15 +229,22 @@
 							"AutoTelemetrySettings": {
 								"Region": "[parameters('environmentReference').deployment.location]"
 							},
+							"AutoBackupSettings": {
+								"Enable": true,
+								"RetentionPeriod": "30",
+								"EnableEncryption": true,
+								"BackupSystemDbs": "true",
+								"BackupScheduleType": "Automated"
+							},
 							"AutoPatchingSettings": {
 								"PatchCategory": "WindowsMandatoryUpdates",
-								"Enable": false,
+								"Enable": true,
 								"DayOfWeek": "Sunday",
 								"MaintenanceWindowStartingHour": "2",
 								"MaintenanceWindowDuration": "60"
 							},
 							"KeyVaultCredentialSettings": {
-								"Enable": false,
+								"Enable": true,
 								"CredentialName": "sysadmin_ekm_cred"
 							},
 							"ServerConfigurationsManagementSettings": {
@@ -256,10 +264,13 @@
 							}
 						},
 						"protectedSettings": {
+							"StorageUrl": "[reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]",
+							"StorageAccessKey": "[listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').key1]",
+							"Password": "[concat(substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24), '!Q')]",
 							"PrivateKeyVaultCredentialSettings": {
-								"AzureKeyVaultUrl": "https://ror.lol",
-								"ServicePrincipalName": "1qazxsW@",
-								"ServicePrincipalSecret": "1qazxsW@"
+								"AzureKeyVaultUrl": "[concat('https://', variables('paasPrefix'), '-kv.vault.azure.net/')]",
+								"ServicePrincipalName": "[parameters('environmentReference').deployment.azureApplication]",
+								"ServicePrincipalSecret": "[substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24)]"
 							}
 						}
 					}
@@ -291,7 +302,8 @@
 					},
 					"configurationArguments": {
 						"deploymentPrefix": "[parameters('environmentReference').deployment.env]",
-						"domainName": "[parameters('environmentReference').domain.name]"
+						"domainName": "[parameters('environmentReference').domain.name]",
+						"clusterIp": "[reference(concat(variables('sqlNamePrefix'),'0-nic')).ipConfigurations[0].properties.privateIPAddress]"
 					}
 				},
 				"protectedSettings": {
@@ -353,31 +365,31 @@
 			}
 		},
 		{
-		  "name": "[concat(variables('sqlNamePrefix'), 'extension-', copyindex())]",
-		  "type": "Microsoft.Resources/deployments",
-		  "apiVersion": "2017-05-10",
-		  "dependsOn": [
-			"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), copyIndex()), 'sql-alwayson')]"
-		  ],
-		  "copy": {
-			"name": "extensions",
-			"count": "[parameters('environmentReference').sql.vmCount]"
-		  },
-		  "properties": {
-			"mode": "Incremental",
-			"templateLink": {
-			  "uri": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'application/nested_extensions.json')]",
-			  "contentVersion": "1.0.0.0"
+			"name": "[concat(variables('sqlNamePrefix'), 'extension-', copyindex())]",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2017-05-10",
+			"dependsOn": [
+				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), copyIndex()), 'sql-alwayson')]"
+			],
+			"copy": {
+				"name": "extensions",
+				"count": "[parameters('environmentReference').sql.vmCount]"
 			},
-			"parameters": {
-			  "environmentReference": {
-				"value": "[parameters('environmentReference')]"
-			  },
-			  "vmName": {
-				"value": "[concat(variables('sqlNamePrefix'), copyIndex())]"
-			  }
+			"properties": {
+				"mode": "Incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'application/nested_extensions.json')]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"environmentReference": {
+						"value": "[parameters('environmentReference')]"
+					},
+					"vmName": {
+						"value": "[concat(variables('sqlNamePrefix'), copyIndex())]"
+					}
+				}
 			}
-		  }
 		},
 		{
 			"name": "[concat(parameters('environmentReference').deployment.env, 'vmss-', copyIndex())]",

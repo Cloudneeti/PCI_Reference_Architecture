@@ -1,3 +1,54 @@
+
+function Orchestrate-ArmDeployment {
+    [CmdletBinding()]
+    Param
+    (
+        [Parameter(Mandatory = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0)]
+        [guid]$subId,
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 1)]
+        [ValidateScript( {$_ -notmatch '\s+' -and $_ -match '[a-zA-Z0-9]+'})]
+        [string]$resourceGroupPrefix = ( -join ((97..122) | Get-Random -Count 4 | ForEach-Object {[char]$_})),
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 2)]
+        [ValidateSet("Japan East", "East US 2", "West Europe", "Southeast Asia", "South Central US", "UK South", "West Central US", "North Europe", "Canada Central", "Australia Southeast", "Central India")]
+        [string]$location = ( "East US 2", "West Europe", "Southeast Asia", "South Central US", "West Central US" | Get-Random ),
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 3)]
+        [ValidateSet("dev", "prod")]
+        [string]$deploymentPrefix = ( "dev", "prod" | Get-Random ),
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 4)]
+        [int[]]$steps = @(5,7)
+    )
+
+    $hash = Get-StringHash ($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-'
+    $invoker = @{
+        resourceGroupPrefix = $resourceGroupPrefix
+        subId               = $subId
+        location            = $location
+        deploymentPrefix    = $deploymentPrefix
+    }
+
+    "Lets get it started: {0}" -f (Get-Date -f "HH:mm:ss")
+    $modifyMe = "Invoke-ArmDeployment -subId {0} -resourceGroupPrefix {1} -location {2} -deploymentPrefix {3} -steps 5,7 -prerequisiteRefresh" -f $subId, $resourceGroupPrefix, $location, $deploymentPrefix
+    $removeMe = "Remove-ArmDeployment {0} {1} {2}" -f $resourceGroupPrefix, $deploymentPrefix, $subId
+    foreach ($note in @($modifyMe, $removeMe, "Starting networking and paas")) {
+        $note
+    }
+    
+    Invoke-ArmDeployment @invoker -steps 2, 1 -prerequisiteRefresh | Out-Null
+    Wait-ArmDeployment $hash
+    "Starting custom steps: {0}" -f ($steps -join ", ")
+    Invoke-ArmDeployment @invoker -steps $steps | Out-Null
+
+}
 function Invoke-ArmDeployment {
     [CmdletBinding()]
     Param
@@ -32,7 +83,7 @@ function Invoke-ArmDeployment {
     )
 
     # Set proper subscription according to input and\or login to Azure and save token for further "deeds"
-    Write-Host "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'): Login to your Azure account if prompted" -ForegroundColor DarkYellow
+    Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'): Login to your Azure account if prompted"
     Try {
         $null = Set-AzureRmContext -SubscriptionId $subId
     }
@@ -53,7 +104,7 @@ function Invoke-ArmDeployment {
 
     try {
         # Main routine block
-        $deploymentHash = Get-StringHash(($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
+        $deploymentHash = Get-StringHash ($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-'
         $guid = Prepare-KeyVault $deploymentHash
         if ($prerequisiteRefresh) {
             $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupPrefix, $deploymentPrefix, $_) -join '-') -Location $location -Force }
@@ -82,6 +133,7 @@ function Invoke-ArmDeployment {
                     $subId
                 )
                 try {
+                    Start-Sleep (get-random -Maximum 30 -Minimum 5)
                     Import-AzureRmContext -Path "$scriptRoot\auth.json" -ErrorAction Stop
                     Set-AzureRmContext -SubscriptionId $subId
                 }
@@ -97,16 +149,17 @@ function Invoke-ArmDeployment {
                     -ErrorAction Stop -Verbose
 
                 if ($rgName -like "*operations") {
-                    do { #hack to wait until kv name resolves
+                    do {
+                        #hack to wait until kv name resolves
                         $noKey = $noPermissions = $null
-                        Set-AzureRmKeyVaultAccessPolicy -VaultName ( $rgName -replace 'operations', 'kv' ) -ResourceGroupName $rgName -PermissionsToKeys 'Create','Get' `
+                        Set-AzureRmKeyVaultAccessPolicy -VaultName ( $rgName -replace 'operations', 'kv' ) -ResourceGroupName $rgName -PermissionsToKeys 'Create', 'Get' `
                             -ServicePrincipalName ( Get-AzureRmSubscription | ? id -eq $subId ).ExtendedProperties.Account -ErrorAction SilentlyContinue -ErrorVariable noPermissions
                         Add-AzureKeyVaultKey -VaultName ( $rgName -replace 'operations', 'kv' ) -Name ContosoMasterKey -Destination HSM -ErrorAction SilentlyContinue -ErrorVariable noKey
                     } while ($noPermissions -or $noKey)
                 }
             }.GetNewClosure()
 
-            Start-job -Name ("$step-create") -ScriptBlock $importSession -Debug `
+            Start-job -Name "create-$step-$deploymentHash" -ScriptBlock $importSession -Debug `
                 -ArgumentList (($resourceGroupPrefix, $deploymentPrefix, ($deployments.$step).rg) -join '-'), "$scriptRoot\templates\resources\$(($deployments.$step).name)\azuredeploy.json", $deploymentData[1], (($deploymentData[0], ($deployments.$step).name) -join '-'), $scriptRoot, $subId
         }
 
@@ -128,43 +181,9 @@ function Invoke-ArmDeployment {
     }
 }
 
-function Get-DeploymentData($hash, $guid) {
-    $key = Get-AzureKeyVaultKey -VaultName ( "{0}-{1}-kv" -f $resourceGroupPrefix, $deploymentPrefix ) -Name ContosoMasterKey -ErrorAction SilentlyContinue
-    if (!$key -and  $steps -notcontains 1) {
-        throw "no key vault key, rerun step 1 please"
-    }
-    $tmp = [System.IO.Path]::GetTempFileName()
-    $deploymentName = "{0}-{1}" -f $deploymentPrefix, (Get-Date -Format MMddyyyy)
-    $parametersData = Get-Content "$scriptRoot\templates\resources\azuredeploy.parameters.json" | ConvertFrom-Json
-    $parametersData.parameters.environmentReference.value.deployment.env = $deploymentPrefix
-    $parametersData.parameters.environmentReference.value.deployment.location = $location
-    $parametersData.parameters.environmentReference.value.deployment.prefix = $resourceGroupPrefix
-    $parametersData.parameters.environmentReference.value.deployment.buildingBlocksEndpoint = 'https://{0}.blob.core.windows.net/' -f $hash
-    $parametersData.parameters.environmentReference.value.deployment.azureApplication = $guid[1]
-    $parametersData.parameters.environmentReference.value.deployment.azureApplicationServicePrincipal = $guid[0]
-    $parametersData.parameters.environmentReference.value.deployment.keyVersion = $key.Version
-    ( $parametersData | ConvertTo-Json -Depth 10 ) -replace "\\u0027", "'" | Out-File $tmp
-    $deploymentName, $tmp
-}
-
-function Get-Token {
-    $azureRmProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
-    $currentAzureContext = Get-AzureRmContext
-    $profileClient = New-Object Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient($azureRmProfile)
-    $token = $profileClient.AcquireAccessToken($currentAzureContext.Subscription.TenantId)
-    $token.AccessToken
-}
-
-Function Get-StringHash([String]$String, $HashName = "MD5") {
-    $StringBuilder = New-Object System.Text.StringBuilder
-    [System.Security.Cryptography.HashAlgorithm]::Create($HashName).ComputeHash([System.Text.Encoding]::UTF8.GetBytes($String))| 
-        ForEach-Object { [Void]$StringBuilder.Append($_.ToString("x2"))
-    }
-    $StringBuilder.ToString().Substring(0, 24)
-}
-
 function Remove-ArmDeployment ($rg, $dp, $subId) {
-    Get-AzureRmADApplication -DisplayNameStartWith (Get-StringHash(($subId, $rg, $dp) -join '-')) | Remove-AzureRmADApplication -Force
+    $hash = Get-StringHash(($subId, $rg, $dp) -join '-')
+    Get-AzureRmADApplication -DisplayNameStartWith $hash | Remove-AzureRmADApplication -Force
     $components | ForEach-Object {
         $importSession = {
             param(
@@ -185,9 +204,73 @@ function Remove-ArmDeployment ($rg, $dp, $subId) {
             Remove-AzureRmResourceGroup -Name $rgName -Force
         }.GetNewClosure()
 
-        Start-job -Name "delete-$_" -ScriptBlock $importSession -Debug `
+        Start-job -Name "delete-$_-$hash" -ScriptBlock $importSession -Debug `
             -ArgumentList (($rg, $dp, $_) -join '-'), $global:scriptRoot, $subId
     }
+}
+
+function Wait-ArmDeployment($hash) {
+    $start = Get-Date
+    do {
+        Start-Sleep 30
+        $jobs = Get-Job | Where-Object { $PSItem.Name -like "create*${hash}"} | Where-Object { $PSItem.State -eq "Running"}
+        "Waiting for {0} jobs to complete or fail" -f $jobs.Count
+    } while ($jobs -and ($start.AddHours(1) -ge (Get-Date)))
+    if ($jobs.State -contains "Failed") {
+        Throw "Bad place to be, check job(s) output"
+    }
+    else {
+        "Jobs okay, cleaning up"
+        Get-Job | Where-Object { $PSItem.Name -like "create*${hash}"} | Remove-Job -Force
+    }
+}
+
+function Get-DeploymentData($hash, $guid) {
+    $key = Get-AzureKeyVaultKey -VaultName ( "{0}-{1}-kv" -f $resourceGroupPrefix, $deploymentPrefix ) -Name ContosoMasterKey -ErrorAction SilentlyContinue
+    if (!$key -and $steps -notcontains 1) {
+        throw "no key vault key, rerun step 1 please"
+    }
+    $tmp = [System.IO.Path]::GetTempFileName()
+    $deploymentName = "{0}-{1}" -f $deploymentPrefix, (Get-Date -Format MMddyyyy)
+    $parametersData = Get-Content "$scriptRoot\templates\resources\azuredeploy.parameters.json" | ConvertFrom-Json
+    $parametersData.parameters.environmentReference.value.deployment.env = $deploymentPrefix
+    $parametersData.parameters.environmentReference.value.deployment.location = $location
+    $parametersData.parameters.environmentReference.value.deployment.prefix = $resourceGroupPrefix
+    $parametersData.parameters.environmentReference.value.deployment.buildingBlocksEndpoint = 'https://{0}.blob.core.windows.net/' -f $hash
+    $parametersData.parameters.environmentReference.value.deployment.azureApplication = $guid[1]
+    $parametersData.parameters.environmentReference.value.deployment.azureApplicationServicePrincipal = $guid[0]
+    $parametersData.parameters.environmentReference.value.deployment.keyVersion = $key.Version
+    ( $parametersData | ConvertTo-Json -Depth 10 ) -replace "\\u0027", "'" | Out-File $tmp
+    $deploymentName, $tmp
+}
+
+Function Get-StringHash([String]$String, $HashName = "MD5") {
+    $StringBuilder = New-Object System.Text.StringBuilder
+    [System.Security.Cryptography.HashAlgorithm]::Create($HashName).ComputeHash([System.Text.Encoding]::UTF8.GetBytes($String))| 
+        ForEach-Object { [Void]$StringBuilder.Append($_.ToString("x2"))
+    }
+    $StringBuilder.ToString().Substring(0, 24)
+}
+
+function Get-Token {
+    $azureRmProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
+    $currentAzureContext = Get-AzureRmContext
+    $profileClient = New-Object Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient($azureRmProfile)
+    $token = $profileClient.AcquireAccessToken($currentAzureContext.Subscription.TenantId)
+    $token.AccessToken
+}
+
+function Prepare-KeyVault ($hash) {
+    $bogusHttp = 'http://localhost/' + $hash
+    $app = Get-AzureRmADApplication -DisplayNameStartWith $hash
+    if (!$app) {
+        $app = New-AzureRmADApplication -DisplayName $hash -HomePage $bogusHttp -IdentifierUris $bogusHttp -Password $hash -ErrorAction SilentlyContinue
+        $sp = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId -ErrorAction SilentlyContinue
+    }
+    else {
+        $sp = Get-AzureRmADServicePrincipal | Where-Object { $PSItem.ApplicationId -eq $app.ApplicationId.Guid }
+    }
+    @( $sp.Id.Guid, $app.ApplicationId.Guid )
 }
 
 function Publish-BuildingBlocksTemplates ($hash) {
@@ -204,7 +287,7 @@ function Publish-BuildingBlocksTemplates ($hash) {
         }
         Get-ChildItem $Directory.FullName -File -Filter *.json | ForEach-Object {
             Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container $Directory.Name -File $_.FullName -Force -ErrorAction Stop | Out-Null
-            Write-Host "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)." -ForegroundColor DarkYellow
+            Write-Output "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)."
         }
     }
     if ( 'packages' -notin $ContainerList ) {
@@ -213,21 +296,8 @@ function Publish-BuildingBlocksTemplates ($hash) {
     Get-ChildItem "$scriptRoot\artifacts\packages" -File -Filter *.zip | ForEach-Object {
         Compress-Archive -Path "$scriptRoot\artifacts\configurationscripts\$($_.BaseName).ps1" -DestinationPath $_.FullName -Update
         Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container 'packages' -File $_.FullName -Force -ErrorAction Stop | Out-Null
-        Write-Host "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)." -ForegroundColor DarkYellow
+        Write-Output "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)."
     }
-}
-
-function Prepare-KeyVault ($hash) {
-    $bogusHttp = 'http://localhost/' + $hash
-    $app = Get-AzureRmADApplication -DisplayNameStartWith $hash
-    if (!$app) {
-        $app = New-AzureRmADApplication -DisplayName $hash -HomePage $bogusHttp -IdentifierUris $bogusHttp -Password $hash -ErrorAction SilentlyContinue
-        $sp = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId -ErrorAction SilentlyContinue
-    }
-    else {
-        $sp = Get-AzureRmADServicePrincipal | Where-Object { $PSItem.ApplicationId -eq $app.ApplicationId.Guid }
-    }
-    @( $sp.Id.Guid, $app.ApplicationId.Guid )
 }
 
 # Constants
@@ -276,4 +346,4 @@ $request = '{
 }'
 $scriptRoot = Split-Path ( Split-Path $MyInvocation.MyCommand.Path )
 $ProfilePath = "$scriptRoot\auth.json"
-$components = @("application", "dmz", "security", "management", "operations", "networking")
+$components = @("dmz", "security", "management", "operations", "networking", "application")

@@ -25,7 +25,7 @@ configuration sql-primary {
         [UInt32]$DatabaseMirrorPort = 5022
     )
 
-    Import-DscResource -ModuleName PSDesiredStateConfiguration, xPSDesiredStateConfiguration, xComputerManagement, xNetworking, xActiveDirectory, xFailOverCluster, xSQLServer, xDatabase
+    Import-DscResource -ModuleName PSDesiredStateConfiguration, xPSDesiredStateConfiguration, xComputerManagement, xNetworking, xActiveDirectory, xFailOverCluster, xSQLServer, xDatabase, xSmbShare
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainNetbiosName}\$($Admincreds.UserName)", $Admincreds.Password)
     [System.Management.Automation.PSCredential]$DomainFQDNCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
     [System.Management.Automation.PSCredential]$SQLCreds = New-Object System.Management.Automation.PSCredential ("${DomainNetbiosName}\$($SQLServiceCreds.UserName)", $SQLServiceCreds.Password)
@@ -41,7 +41,7 @@ configuration sql-primary {
             ConfigurationMode  = "ApplyOnly"
             RebootNodeIfNeeded = $true
         }
-
+ 
         WindowsFeatureSet Prereqs {
             IncludeAllSubFeature = $true
             Name                 = $features
@@ -53,6 +53,14 @@ configuration sql-primary {
             Type            = "Directory"
 
             Ensure          = "Present"
+        }
+        xSmbShare MySMBShare {
+            Name       = "Setup"
+            Path       = "C:\Setup"
+            FullAccess = "Everyone"
+
+            DependsOn  = "[File]SetupFolder"
+            Ensure     = "Present"
         }
         xRemoteFile FileDownload {
             DestinationPath = "C:\setup\ContosoPayments.bacpac"
@@ -76,7 +84,7 @@ configuration sql-primary {
                 Ensure       = "Present"
             }
         }
-        
+
         xWaitForADDomain DscForestWait { 
             DomainName           = $DomainName
             DomainUserCredential = $DomainCreds
@@ -93,55 +101,49 @@ configuration sql-primary {
             DependsOn  = "[xWaitForADDomain]DscForestWait"
         }
 
+        xSQLServerServiceAccount "sqlServiceDomainAccount" {
+            SQLServer       = $env:COMPUTERNAME
+            SQLInstanceName = "MSSQLSERVER"
+            ServiceType     = "DatabaseEngine"
+            ServiceAccount  = $SQLCreds
+            RestartService  = $true
+        }
         foreach ($user in @($DomainCreds.UserName, $SQLCreds.UserName, "NT SERVICE\ClusSvc")) {
             xSQLServerLogin "sqlLogin$user" {
-                LoginType            = "WindowsUser"
-                Name                 = $user
-                SQLInstanceName      = "MSSQLSERVER"
-                SQLServer            = $env:COMPUTERNAME
-                
-                Ensure               = "Present"
-                PsDscRunAsCredential = $Admincreds
+                LoginType       = "WindowsUser"
+                Name            = $user
+                SQLInstanceName = "MSSQLSERVER"
+                SQLServer       = $env:COMPUTERNAME
+
+                Ensure          = "Present"
             }
         }
-        
         xSQLServerRole sqlAdmins {
-            MembersToInclude     = @($DomainCreds.UserName, $SQLCreds.UserName)
-            ServerRoleName       = "sysadmin"
-            SQLInstanceName      = "MSSQLSERVER"
-            SQLServer            = $env:COMPUTERNAME
-            
-            DependsOn            = "[xComputer]DomainJoin"
-            Ensure               = "Present"
-            PsDscRunAsCredential = $Admincreds
+            MembersToInclude = @($DomainCreds.UserName, $SQLCreds.UserName)
+            ServerRoleName   = "sysadmin"
+            SQLInstanceName  = "MSSQLSERVER"
+            SQLServer        = $env:COMPUTERNAME
+
+            DependsOn        = "[xComputer]DomainJoin"
+            Ensure           = "Present"
         }
         foreach ($user in @("NT AUTHORITY\SYSTEM", "NT SERVICE\ClusSvc")) {
-            xSQLServerPermission "sqlPermission$user" {
-                InstanceName         = "MSSQLSERVER"
-                NodeName             = $env:COMPUTERNAME
-                Permission           = @("AlterAnyAvailabilityGroup", "ViewServerState")
-                Principal            = $user
-                
-                Ensure               = "Present"
-                PsDscRunAsCredential = $Admincreds
+            xSQLServerPermission "sqlPermission-$user" {
+                InstanceName = "MSSQLSERVER"
+                NodeName     = $env:COMPUTERNAME
+                Permission   = @("AlterAnyAvailabilityGroup", "ViewServerState", "ConnectSQL")
+                Principal    = $user
+
+                Ensure       = "Present"
             }
         }
-        # User DisableLocalAdmin {
-        #     Disabled = $true
-        #     UserName = $Admincreds.UserName
-            
-        #     DependsOn = "[xComputer]DomainJoin"
-        #     Ensure = "Present"
-        # }
-
         xSQLServerMaxDop DegreeOfParallelism {
-            DynamicAlloc         = $false
-            MaxDop               = 1
-            SQLServer            = $env:COMPUTERNAME
-            SQLInstanceName      = "MSSQLSERVER"
+            DynamicAlloc    = $false
+            MaxDop          = 1
+            SQLServer       = $env:COMPUTERNAME
+            SQLInstanceName = "MSSQLSERVER"
 
-            Ensure               = 'Present'
-            PsDscRunAsCredential = $DomainCreds
+            Ensure          = "Present"
         }
 
         xCluster FailoverCluster {
@@ -152,59 +154,73 @@ configuration sql-primary {
             PsDscRunAsCredential          = $DomainCreds
         }
         Script CloudWitness {
-            SetScript  = "Set-ClusterQuorum -CloudWitness -AccountName $($WitnessAccount.UserName) -AccessKey $($WitnessAccount.GetNetworkCredential().Password)"
-            TestScript = "(Get-ClusterQuorum).QuorumResource.Name -eq 'Cloud Witness'"
-            GetScript  = "@{Ensure = if ((Get-ClusterQuorum).QuorumResource.Name -eq 'Cloud Witness') {'Present'} else {'Absent'}}"
+            SetScript            = ( {
+                    Set-ClusterQuorum -CloudWitness -AccountName "{0}" -AccessKey "{1}"
+                } -f $WitnessAccount.UserName, $WitnessAccount.GetNetworkCredential().Password )
+            TestScript           = "(Get-ClusterQuorum).QuorumResource.Name -eq `"Cloud Witness`""
+            GetScript            = "@{Ensure = if ((Get-ClusterQuorum).QuorumResource.Name -eq `"Cloud Witness`") {`"Present`"} else {`"Absent`"}}"
 
-            DependsOn  = "[xCluster]FailoverCluster"
-        }
-        
-        xSQLServerAlwaysOnService enableHadr {
-            SQLServer            = $env:computername
-            SQLInstanceName      = "MSSQLSERVER"
-            
-            Ensure               = "Present"
+            DependsOn            = "[xCluster]FailoverCluster"
             PsDscRunAsCredential = $DomainCreds
         }
+
+        xSQLServerAlwaysOnService enableHadr {
+            SQLServer       = $env:computername
+            SQLInstanceName = "MSSQLSERVER"
+
+            DependsOn       = "[xCluster]FailoverCluster"
+            Ensure          = "Present"
+        }
         xSQLServerEndpoint endpointHadr {
-            EndPointName         = "${deploymentPrefix}-sql-endpoint"
-            Port                 = $DatabaseMirrorPort
-            SQLInstanceName      = "MSSQLSERVER"
-            SQLServer            = $env:computername
-            
-            DependsOn            = "[xSQLServerAlwaysOnService]enableHadr"
-            Ensure               = "Present"
-            PsDscRunAsCredential = $SQLCreds
+            EndPointName    = "${deploymentPrefix}-sql-endpoint"
+            Port            = $DatabaseMirrorPort
+            SQLInstanceName = "MSSQLSERVER"
+            SQLServer       = $env:computername
+
+            DependsOn       = "[xSQLServerAlwaysOnService]enableHadr"
+            Ensure          = "Present"
         }
         xSQLServerEndpointPermission endpointPermission {
-            NodeName             = $env:computername
-            InstanceName         = "MSSQLSERVER"
-            Name                 = "${deploymentPrefix}-sql-endpoint"
-            Principal            = $SQLCreds.UserName
-            Permission           = "CONNECT"
-            
-            DependsOn            = "[xSQLServerEndpoint]endpointHadr"
-            Ensure               = "Present"
-            PsDscRunAsCredential = $SQLCreds
+            InstanceName = "MSSQLSERVER"
+            NodeName     = $env:computername
+            Name         = "${deploymentPrefix}-sql-endpoint"
+            Principal    = $SQLCreds.UserName
+            Permission   = "CONNECT"
+
+            DependsOn    = "[xSQLServerEndpoint]endpointHadr"
+            Ensure       = "Present"
         }
         xSQLServerEndpointState endpointStart {
-            InstanceName         = "MSSQLSERVER"
-            NodeName             = $env:computername
-            Name                 = "${deploymentPrefix}-sql-endpoint"
-            State                = "Started"
+            InstanceName = "MSSQLSERVER"
+            NodeName     = $env:computername
+            Name         = "${deploymentPrefix}-sql-endpoint"
+            State        = "Started"
 
-            DependsOn            = "[xSQLServerEndpoint]endpointHadr"
-            PsDscRunAsCredential = $SQLCreds
+            DependsOn    = "[xSQLServerEndpoint]endpointHadr"
         }
  
+        Script setSpn {
+            GetScript            = "@{Ensure = `"set spn for sql service`"}"
+            TestScript           = { $false }
+            SetScript            = ( {
+                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1}:1433 {0}$"
+                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1} {0}$"
+                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1}:1433 {2}"
+                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1} {2}"
+                } -f $env:COMPUTERNAME, $DomainName, $SQLServiceCreds.UserName )
+
+            DependsOn            = @( "[xCluster]FailoverCluster", "[xSQLServerEndpointState]endpointStart" )
+            PsDscRunAsCredential = $DomainCreds
+        }
         xSQLServerAlwaysOnAvailabilityGroup AvailabilityGroup {
+            AvailabilityMode     = "SynchronousCommit"
             Name                 = "${deploymentPrefix}-sql-ag"
             SQLServer            = $env:computername
             SQLInstanceName      = "MSSQLSERVER"
-            
-            DependsOn            = @("[xSQLServerEndpointState]endpointStart", "[xCluster]FailoverCluster")
+
+            DependsOn            = @("[xSQLServerEndpointState]endpointStart", "[xCluster]FailoverCluster", "[Script]setSpn")
             Ensure               = "Present"
-            PsDscRunAsCredential = $DomainCreds
+            PsDscRunAsCredential = $SQLCreds
         }
         xSQLServerAvailabilityGroupListener AvailabilityGroupListener {
             AvailabilityGroup    = "${deploymentPrefix}-sql-ag"
@@ -212,34 +228,33 @@ configuration sql-primary {
             InstanceName         = "MSSQLSERVER"
             NodeName             = $env:COMPUTERNAME
             Name                 = "${deploymentPrefix}-sql-ag"
-            Port                 = $DatabaseEnginePort
-            
+            Port                 = 59999
+
             DependsOn            = "[xSQLServerAlwaysOnAvailabilityGroup]AvailabilityGroup"
             Ensure               = "Present"
             PsDscRunAsCredential = $DomainCreds
         }
 
         xDatabase DeployBacPac {
-            Credentials          = $DomainCreds
-            BacPacPath           = "C:\setup\ContosoPayments.bacpac"
-            DatabaseName         = "ContosoClinic"
-            SqlServer            = $env:COMPUTERNAME
-            SqlServerVersion     = "2016-SP1"
-            
-            DependsOn            = @( "[xSQLServerAlwaysOnAvailabilityGroup]AvailabilityGroup", "[xRemoteFile]FileDownload" )
-            Ensure               = "Present"
-            PsDscRunAsCredential = $DomainCreds
+            Credentials      = $DomainCreds
+            BacPacPath       = "C:\setup\ContosoPayments.bacpac"
+            DatabaseName     = "ContosoClinic"
+            SqlServer        = $env:COMPUTERNAME
+            SqlServerVersion = "2016-SP1"
+
+            DependsOn        = @( "[xSQLServerAlwaysOnAvailabilityGroup]AvailabilityGroup", "[xRemoteFile]FileDownload" )
+            Ensure           = "Present"
         }
         xSQLServerAlwaysOnAvailabilityGroupDatabaseMembership DatabaseToAlwaysOn {
             AvailabilityGroupName = "${deploymentPrefix}-sql-ag"
-            BackupPath            = "C:\setup"
+            BackupPath            = "\\${deploymentPrefix}-sql-0\setup\"
             DatabaseName          = "ContosoClinic"
             SQLServer             = $env:COMPUTERNAME
             SQLInstanceName       = "MSSQLSERVER"
-            
+
             DependsOn             = @("[xDatabase]DeployBacPac", "[xSQLServerAlwaysOnAvailabilityGroup]AvailabilityGroup" )
             Ensure                = "Present"
-            PsDscRunAsCredential  = $DomainCreds
+            PsDscRunAsCredential  = $SQLCreds
         }
     }
 }
@@ -260,6 +275,7 @@ configuration sql-secondary {
         [System.Management.Automation.PSCredential]$SQLServicecreds,
 
         # Minor things
+        [string]$clusterIp,
         [UInt32]$DatabaseEnginePort = 1433,
         [UInt32]$DatabaseMirrorPort = 5022
     )
@@ -285,7 +301,7 @@ configuration sql-secondary {
             IncludeAllSubFeature = $true
 
             Ensure               = "Present"
-        } 
+        }
         foreach ($port in $ports) {
             xFirewall "rule-$port" {
                 Access       = "Allow"
@@ -301,7 +317,6 @@ configuration sql-secondary {
                 Ensure       = "Present"
             }
         }
-
         xWaitForADDomain DscForestWait { 
             DomainName           = $DomainName 
             DomainUserCredential = $DomainCreds
@@ -318,54 +333,49 @@ configuration sql-secondary {
             DependsOn  = "[xWaitForADDomain]DscForestWait"
         }
 
+        xSQLServerServiceAccount "sqlServiceDomainAccount" {
+            SQLServer       = $env:COMPUTERNAME
+            SQLInstanceName = "MSSQLSERVER"
+            ServiceType     = "DatabaseEngine"
+            ServiceAccount  = $SQLCreds
+            RestartService  = $true
+        }
         foreach ($user in @($DomainCreds.UserName, $SQLCreds.UserName, "NT SERVICE\ClusSvc")) {
             xSQLServerLogin "sqlLogin$user" {
-                Name                 = $user
-                LoginType            = "WindowsUser"
-                SQLInstanceName      = "MSSQLSERVER"
-                SQLServer            = $env:COMPUTERNAME
-                
-                Ensure               = "Present"
-                PsDscRunAsCredential = $Admincreds
+                Name            = $user
+                LoginType       = "WindowsUser"
+                SQLInstanceName = "MSSQLSERVER"
+                SQLServer       = $env:COMPUTERNAME
+
+                Ensure          = "Present"
             }
         }
         xSQLServerRole sqlAdmins {
-            MembersToInclude     = @($DomainCreds.UserName, $SQLCreds.UserName)
-            ServerRoleName       = "sysadmin"
-            SQLInstanceName      = "MSSQLSERVER"
-            SQLServer            = $env:COMPUTERNAME
-            
-            DependsOn            = "[xComputer]DomainJoin"
-            Ensure               = "Present"
-            PsDscRunAsCredential = $Admincreds
+            MembersToInclude = @($DomainCreds.UserName, $SQLCreds.UserName)
+            ServerRoleName   = "sysadmin"
+            SQLInstanceName  = "MSSQLSERVER"
+            SQLServer        = $env:COMPUTERNAME
+
+            DependsOn        = "[xComputer]DomainJoin"
+            Ensure           = "Present"
         }
         foreach ($user in @("NT AUTHORITY\SYSTEM", "NT SERVICE\ClusSvc")) {
-            xSQLServerPermission "sqlPermission$user" {
-                InstanceName         = "MSSQLSERVER"
-                NodeName             = $env:COMPUTERNAME
-                Permission           = @("AlterAnyAvailabilityGroup", "ViewServerState")
-                Principal            = $user
-                
-                Ensure               = "Present"
-                PsDscRunAsCredential = $Admincreds
+            xSQLServerPermission "sqlPermission-$user" {
+                InstanceName = "MSSQLSERVER"
+                NodeName     = $env:COMPUTERNAME
+                Permission   = @("AlterAnyAvailabilityGroup", "ViewServerState", "ConnectSQL")
+                Principal    = $user
+
+                Ensure       = "Present"
             }
         }
-        # User DisableLocalAdmin {
-        #     Disabled = $true
-        #     UserName = $Admincreds.UserName
-            
-        #     DependsOn = "[xComputer]DomainJoin"
-        #     Ensure = "Present"
-        # }
-        
         xSQLServerMaxDop DegreeOfParallelism {
-            DynamicAlloc         = $false
-            MaxDop               = 1
-            SQLServer            = $env:COMPUTERNAME
-            SQLInstanceName      = "MSSQLSERVER"
+            DynamicAlloc    = $false
+            MaxDop          = 1
+            SQLServer       = $env:COMPUTERNAME
+            SQLInstanceName = "MSSQLSERVER"
 
-            Ensure               = 'Present'
-            PsDscRunAsCredential = $DomainCreds
+            Ensure          = "Present"
         }
 
         xWaitForCluster waitForCluster {
@@ -376,75 +386,82 @@ configuration sql-secondary {
             PsDscRunAsCredential = $DomainCreds
         }
         script joinCluster {
-            GetScript            = "@{Ensure = 'dirty hacks...'}"
-            TestScript           = { $false }
-            SetScript            = ({
-                $ip = [System.Net.Dns]::GetHostAddresses("{0}-sql-0").IPAddressToString
-                Set-Content -Path "C:\Windows\System32\drivers\etc\hosts" -Value "$ip {0}-sql-cls"
-                Add-ClusterNode -Name "{1}" -NoStorage -Cluster "{0}-sql-cls"
-            } -f $deploymentPrefix, $env:COMPUTERNAME)
+            GetScript            = "@{Ensure = `"join node to cluster with script resource, as cluster resource doesn't work in Azure`"}"
+            TestScript           = "( Get-ClusterNode -Cluster {0} | Select-Object -ExpandProperty Name ) -contains `"{1}`""  -f $clusterIp, $env:COMPUTERNAME
+            SetScript            = "Add-ClusterNode -Name {0} -NoStorage -Cluster {1}" -f $env:COMPUTERNAME, $clusterIp
 
-            DependsOn            = "[xWaitForCluster]waitForCluster"
+            DependsOn = "[xWaitForCluster]waitForCluster"
             PsDscRunAsCredential = $DomainCreds
         }
 
         xSQLServerAlwaysOnService enableHadr {
-            SQLServer            = $env:computername
-            SQLInstanceName      = "MSSQLSERVER"
-            
-            Ensure               = "Present"
-            PsDscRunAsCredential = $DomainCreds
+            SQLServer       = $env:computername
+            SQLInstanceName = "MSSQLSERVER"
+
+            DependsOn       = "[Script]joinCluster"
+            Ensure          = "Present"
         }
         xSQLServerEndpoint endpointHadr {
-            EndPointName         = "${deploymentPrefix}-sql-endpoint"
-            SQLServer            = $env:computername
-            SQLInstanceName      = "MSSQLSERVER"
-            Port                 = $DatabaseMirrorPort
-            
-            DependsOn            = "[xSQLServerAlwaysOnService]enableHadr"
-            Ensure               = "Present"
-            PsDscRunAsCredential = $SQLCreds
+            EndPointName    = "${deploymentPrefix}-sql-endpoint"
+            Port            = $DatabaseMirrorPort
+            SQLInstanceName = "MSSQLSERVER"
+            SQLServer       = $env:computername
+
+            DependsOn       = "[xSQLServerAlwaysOnService]enableHadr"
+            Ensure          = "Present"
         }
         xSQLServerEndpointPermission endpointPermission {
-            InstanceName         = "MSSQLSERVER"
-            NodeName             = $env:computername
-            Name                 = "${deploymentPrefix}-sql-endpoint"
-            Principal            = $SQLCreds.UserName
-            Permission           = "CONNECT"
-            
-            DependsOn            = "[xSQLServerEndpoint]endpointHadr"
-            Ensure               = "Present"
-            PsDscRunAsCredential = $SQLCreds
+            InstanceName = "MSSQLSERVER"
+            NodeName     = $env:computername
+            Name         = "${deploymentPrefix}-sql-endpoint"
+            Principal    = $SQLCreds.UserName
+            Permission   = "CONNECT"
+
+            DependsOn    = "[xSQLServerEndpoint]endpointHadr"
+            Ensure       = "Present"
         }
         xSQLServerEndpointState endpointStart {
-            InstanceName         = "MSSQLSERVER"
-            NodeName             = $env:computername
-            Name                 = "${deploymentPrefix}-sql-endpoint"
-            State                = "Started"
+            InstanceName = "MSSQLSERVER"
+            NodeName     = $env:computername
+            Name         = "${deploymentPrefix}-sql-endpoint"
+            State        = "Started"
 
-            DependsOn            = "[xSQLServerEndpoint]endpointHadr"
-            PsDscRunAsCredential = $SQLCreds
+            DependsOn    = "[xSQLServerEndpoint]endpointHadr"
         }
- 
+
+        Script setSpn {
+            GetScript            = "@{Ensure = `"set spn for sql service`"}"
+            TestScript           = { $false }
+            SetScript            = ( {
+                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1}:1433 {0}$"
+                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1} {0}$"
+                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1}:1433 {2}"
+                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1} {2}"
+                } -f $env:COMPUTERNAME, $DomainName, $SQLServiceCreds.UserName)
+
+            DependsOn            = @( "[Script]joinCluster", "[xSQLServerEndpointState]endpointStart" )                
+            PsDscRunAsCredential = $DomainCreds
+        }
         xWaitForAvailabilityGroup waitforAG {
             Name                 = "${deploymentPrefix}-sql-ag"
             RetryIntervalSec     = $RetryIntervalSec
             RetryCount           = $RetryCount
 
-            DependsOn            = @("[xSQLServerEndpointState]endpointStart", "[script]joinCluster")
+            DependsOn            = @("[xSQLServerEndpointState]endpointStart", "[Script]joinCluster", "[Script]setSpn")
             PsDscRunAsCredential = $DomainCreds
         }
         xSQLServerAlwaysOnAvailabilityGroupReplica AddReplica {
             AvailabilityGroupName         = "${deploymentPrefix}-sql-ag"
+            AvailabilityMode              = "SynchronousCommit"
             Name                          = $env:COMPUTERNAME
             PrimaryReplicaSQLServer       = "${deploymentPrefix}-sql-0"
             PrimaryReplicaSQLInstanceName = "MSSQLSERVER"
             SQLInstanceName               = "MSSQLSERVER"
             SQLServer                     = $env:COMPUTERNAME
-            
+
             DependsOn                     = "[xWaitForAvailabilityGroup]waitforAG"
             Ensure                        = "Present"
-            PsDscRunAsCredential          = $DomainCreds
+            PsDscRunAsCredential          = $SQLCreds
         }
     }
 }
@@ -539,4 +556,12 @@ function Enable-CredSSPNTLM {
 #             PSDscAllowPlainTextPassword = $true
 #         }
 #     )
+# }
+
+# User DisableLocalAdmin {
+#     Disabled = $true
+#     UserName = $Admincreds.UserName
+    
+#     DependsOn = "[xComputer]DomainJoin"
+#     Ensure = "Present"
 # }
