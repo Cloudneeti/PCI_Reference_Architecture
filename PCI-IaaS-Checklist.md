@@ -25,11 +25,11 @@ DMZ  Payload –
 Security Payload -
 
 1.	Cloudneeti
-- [ ] Deploy Cloudneeti VM
+- [x] Deploy Cloudneeti VM
                                                                         
 2.	TrendMicro DSM
 - [x] Deploy TrendMicro VM
-- [ ] Configure TrendMicro VM
+- [x] Configure TrendMicro VM
 
 3.	Qualys Virtual Scanner
 - [x] Deploy Qualys VM
@@ -42,10 +42,10 @@ Management Payload
 
 1.	ADDS
 - [x] Deploy ADDS PDC & BDC
-- [ ] Create necessary user accounts.
+- [x] Create necessary user accounts.
 2.	Jump box
 - [x] Deploy Jump Box VM
-- [ ] Configure Jump Box VM.
+- [x] Configure Jump Box VM.
 
 PaaS Services Payload
 
@@ -54,12 +54,12 @@ Log Analytics
 - [x] Configure Log analytics for all the deployed resources.
 
 Security Center
-- [ ] Configure Azure Security Center.
+- [x] Configure Azure Security Center.
 
 Azure Key Vault.
 - [x] Deploy Azure Key Vault.
-- [ ] Configure Azure Key vault.
+- [x] Configure Azure Key vault.
 
 Azure Recovery Service Vault
 - [x] Deploy Azure Recovery Service Vault.
-- [ ] Add all VMs and VMSS to recovery services vault.
+- [x] Add all VMs and VMSS to recovery services vault.
