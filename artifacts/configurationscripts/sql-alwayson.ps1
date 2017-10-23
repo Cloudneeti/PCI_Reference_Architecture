@@ -41,7 +41,13 @@ configuration sql-primary {
             ConfigurationMode  = "ApplyOnly"
             RebootNodeIfNeeded = $true
         }
- 
+
+        User DisableLocalAdmin {
+            Disabled = $true
+            UserName = $Admincreds.UserName
+
+            Ensure = "Present"
+        }
         WindowsFeatureSet Prereqs {
             IncludeAllSubFeature = $true
             Name                 = $features
@@ -296,6 +302,12 @@ configuration sql-secondary {
             RebootNodeIfNeeded = $true
         }
 
+        User DisableLocalAdmin {
+            Disabled = $true
+            UserName = $Admincreds.UserName
+
+            Ensure = "Present"
+        }
         WindowsFeatureSet Prereqs {
             Name                 = $features
             IncludeAllSubFeature = $true
@@ -556,12 +568,4 @@ function Enable-CredSSPNTLM {
 #             PSDscAllowPlainTextPassword = $true
 #         }
 #     )
-# }
-
-# User DisableLocalAdmin {
-#     Disabled = $true
-#     UserName = $Admincreds.UserName
-    
-#     DependsOn = "[xComputer]DomainJoin"
-#     Ensure = "Present"
 # }

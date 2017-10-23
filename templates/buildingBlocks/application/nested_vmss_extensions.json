@@ -51,7 +51,8 @@
                         },
                         "configurationArguments": {
                             "domainName": "[parameters('environmentReference').domain.name]",
-                            "deploymentPrefix": "[parameters('environmentReference').deployment.env]"
+                            "deploymentPrefix": "[parameters('environmentReference').deployment.env]",
+                            "sqlEndpoint": "[concat(parameters('environmentReference').deployment.prefix, '-sql-ag.', parameters('environmentReference').domain.name)]"
                         }
                     },
                     "protectedSettings": {
@@ -87,7 +88,7 @@
                 }
             }
         ],
-        "TrendMicro": [
+        "MSTrendMicro": [
             {
                 "name": "TrendMicro.DeepSecurity",
                 "properties": {
@@ -97,7 +98,28 @@
                     "autoUpgradeMinorVersion": true,
                     "settings": {
                         "DSMname": "10.3.3.4",
-                        "DSMport": "4120",
+                        "DSMport": "4120"
+                    },
+                    "protectedSettings": {
+                        "tenantID": "NA",
+                        "tenantPassword": "NA"
+                    }
+                }
+            }
+        ],
+        "LinuxTrendMicro": [
+            {
+                "name": "TrendMicro.DeepSecurity",
+                "properties": {
+                    "publisher": "TrendMicro.DeepSecurity",
+                    "type": "TrendMicroDSALinux",
+                    "typeHandlerVersion": "10.0",
+                    "autoUpgradeMinorVersion": true,
+                    "settings": {
+                        "DSMname": "10.3.3.4",
+                        "DSMport": "4120"
+                    },
+                    "protectedSettings": {
                         "tenantID": "NA",
                         "tenantPassword": "NA"
                     }

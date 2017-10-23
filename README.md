@@ -41,8 +41,8 @@ Steps parameter is an array with the values 1 to 7 allowed. Each step correspond
 ### Notes  
 Azure Functions to proxy requests to Private Github repo http://blog.tyang.org/2017/05/19/deploying-arm-templates-with-artifacts-located-in-a-private-github-repository/
 
-Currently, tracking which steps can run in parallel is the responsibility of the end user; the progress of deployments is not tracked.  
 Currently, you need to run steps 2 and 1 together, and all the other steps after that (if you choose so)
+`Orchestrate-ArmDeployment` function can orchestrate the deployment process for you.  
 
 ### Networking  
 Configuration is done using the JSON object  
@@ -65,16 +65,16 @@ vm's are registered to the azure automation (maybe configurations are assigned, 
 every tier tied to ilb  
 every tier can be deployed into specific vnet\subnet
 
-a. OMS Log Analytics Extension    vm extension 
+a. OMS Log Analytics Extension    vm extension  
 b. Azure Disk Encryption          https://docs.microsoft.com/en-us/azure/security/azure-security-disk-encryption  
-c. VMDiagnosticsSettings          vm property (storage) 
+c. VMDiagnosticsSettings          vm property (storage)  
 d. Service Map                    vm extension  
-e. TrendMicro                     
-f. Qualys Virtual Scanner         
-g. Threat manager extension       Script exists  
-h. Network Watcher                vm extension
+e. TrendMicro                     vm extension  
+f. Qualys Virtual Scanner         research  
+g. Threat manager extension       Script exists (TBI)  
+h. Network Watcher                vm extension  
 i. AD                             dsc resource "[xComputer]DomainJoin"
-j. disable local administrator    dsc resource "[User]DisableLocalAdmin" (bug with sql)
+j. disable local administrator    dsc resource "[User]DisableLocalAdmin"  
 
 ### Jumpbox   
 Name can be configured 
@@ -85,10 +85,10 @@ Domain name, admin username and password can be configured
 Ip address is calculated from the domain subnet address range
 
 ### PaaS  
-No configurations
+Key Vault Key is being created
 
 ### Security  
 TODO: Sizes for vm's
 
 ### Barracuda  
-No configurations
+configure NGF\WAF

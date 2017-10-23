@@ -25,9 +25,10 @@
       "[concat(parameters('environmentReference').deployment.env, '-BDC-VM')]"
     ],
     "network": "[last(parameters('networkReference'))]",
-		"addressSpaceDataTier": "[last(variables('network').subnets).addressSpacePrefix]",
-		"substringDataTier": "[substring(variables('addressSpaceDataTier'), 0, sub(length(variables('addressSpace')), 4))]",
-		"listenerIp": "[concat(variables('substringDataTier'), 10)]"
+    "addressSpaceDataTier": "[last(variables('network').subnets).addressSpacePrefix]",
+    "substringDataTier": "[substring(variables('addressSpaceDataTier'), 0, sub(length(variables('addressSpace')), 4))]",
+    "listenerIp": "[concat(variables('substringDataTier'), 10)]",
+    "omsName": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-oms')]"
   },
   "resources": [
     {
@@ -292,8 +293,17 @@
           "environmentReference": {
             "value": "[parameters('environmentReference')]"
           },
-          "vmName": {
-            "value": "[variables('vmNames')[copyIndex()]]"
+          "bossObject": {
+            "value": {
+              "vmName": "[variables('vmNames')[copyIndex()]]",
+              "extensions": "[parameters('environmentReference').domain.domainExtensions]"
+            }
+          },
+          "oms": {
+            "value": {
+              "Id": "[if(contains(parameters('environmentReference').domain.domainExtensions, 'OMS'), reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
+              "Key": "[if(contains(parameters('environmentReference').domain.domainExtensions, 'OMS'), listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
+            }
           }
         }
       }

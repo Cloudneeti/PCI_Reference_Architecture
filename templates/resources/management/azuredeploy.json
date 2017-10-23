@@ -32,7 +32,8 @@
                     "direction": "Inbound"
                 }
             }
-        ]
+        ],
+        "omsName": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-oms')]"
     },
     "resources": [
         {
@@ -150,10 +151,19 @@
                 "parameters": {
                     "environmentReference": {
                         "value": "[parameters('environmentReference')]"
-                      },
-                      "vmName": {
-                        "value": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-VM')]"
-                      },
+                    },
+                    "bossObject": {
+                        "value": {
+                            "vmName": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-VM')]",
+                            "extensions": "[parameters('environmentReference').domain.jumpboxExtensions]"
+                        }
+                    },
+                    "oms": {
+                        "value": {
+                            "Id": "[if(contains(parameters('environmentReference').domain.jumpboxExtensions, 'OMS'), reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
+                            "Key": "[if(contains(parameters('environmentReference').domain.jumpboxExtensions, 'OMS'), listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
+                        }
+                    }
                 }
             }
         },

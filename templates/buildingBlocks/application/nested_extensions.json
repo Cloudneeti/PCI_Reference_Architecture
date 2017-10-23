@@ -5,102 +5,31 @@
         "environmentReference": {
             "type": "secureObject"
         },
-        "vmName": {
-            "type": "string"
+        "bossObject": {
+            "type": "secureObject"
+        },
+        "oms": {
+            "type": "secureObject"
         }
     },
     "variables": {
-        "MSAntiMalware": [
-            {
-                "name": "Microsoft.Azure.Security",
-                "properties": {
-                    "publisher": "Microsoft.Azure.Security",
-                    "settings": {
-                        "RealtimeProtectionEnabled": "true"
-                    },
-                    "type": "IaasAntimalware",
-                    "typeHandlerVersion": "1.5"
-                }
-            }
-        ],
-        "MSTrendMicro": [
-            {
-                "name": "TrendMicro.DeepSecurity",
-                "properties": {
-                    "publisher": "TrendMicro.DeepSecurity",
-                    "type": "TrendMicroDSA",
-                    "typeHandlerVersion": "9.6"
-                },
-                "settings": {
-                    "DSMname": "[parameters('vmName')]",
-                    "DSMport": "4120"
-                },
-                "protectedSettings": {
-                    "tenantID": "NA",
-                    "tenantPassword": "NA"
-                }
-            }
-        ],
-        "LinuxTrendMicro": [
-            {
-                "name": "TrendMicro.DeepSecurity",
-                "properties": {
-                    "publisher": "TrendMicro.DeepSecurity",
-                    "type": "TrendMicroDSALinux",
-                    "typeHandlerVersion": "9.6"
-                },
-                "settings": {
-                    "DSMname": "[parameters('vmName')]",
-                    "DSMport": "4120"
-                },
-                "protectedSettings": {
-                    "tenantID": "NA",
-                    "tenantPassword": "NA"
-                }
-            }
-        ],
-        "extensionReference": "placeholder",
-        "paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]",
-        "kvUri": "[concat('https://', variables('paasPrefix'), '-kv.vault.azure.net/')]",
-        "kvId": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.KeyVault/vaults', concat(variables('paasPrefix'), '-kv'))]",
-        "bkpName": "[concat(variables('paasPrefix'), '-bkp')]",
-        "automationName": "[concat(variables('paasPrefix'), '-automation')]",
-        "omsName": "[concat(variables('paasPrefix'), '-oms')]",
-        "backupFabric": "Azure",
-        "v2VmType": "Microsoft.Compute/virtualMachines",
-        "v2VmContainer": "iaasvmcontainer;iaasvmcontainerv2;",
-        "v2Vm": "vm;iaasvmcontainerv2;"
-    },
-    "resources": [
-        {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('vmName'),'/omsAgent')]",
-            "apiVersion": "2016-03-30",
-            "location": "[parameters('environmentReference').deployment.location]",
-            "dependsOn": [
-                "[parameters('vmName')]"
-            ],
+        "OMS": {
+            "name": "omsAgent",
             "properties": {
                 "publisher": "Microsoft.EnterpriseCloud.Monitoring",
                 "type": "MicrosoftMonitoringAgent",
                 "typeHandlerVersion": "1.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "workspaceId": "[reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId]"
+                    "workspaceId": "[parameters('oms').Id]"
                 },
                 "protectedSettings": {
-                    "workspaceKey": "[listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey]"
+                    "workspaceKey": "[parameters('oms').Key]"
                 }
             }
         },
-        {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('vmName'),'/azureNetworkWatcher')]",
-            "apiVersion": "2016-03-30",
-            "location": "[parameters('environmentReference').deployment.location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'omsAgent')]"
-            ],
+        "NetworkWatcher": {
+            "name": "azureNetworkWatcher",
             "properties": {
                 "publisher": "Microsoft.Azure.NetworkWatcher",
                 "type": "NetworkWatcherAgentWindows",
@@ -108,14 +37,8 @@
                 "autoUpgradeMinorVersion": true
             }
         },
-        {
-            "apiVersion": "2016-03-30",
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('vmName'),'/serviceMap')]",
-            "location": "[parameters('environmentReference').deployment.location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'azureNetworkWatcher')]"
-            ],
+        "ServiceMap": {
+            "name": "serviceMap",
             "properties": {
                 "publisher": "Microsoft.Azure.Monitoring.DependencyAgent",
                 "type": "DependencyAgentWindows",
@@ -123,48 +46,13 @@
                 "autoUpgradeMinorVersion": true
             }
         },
-        {
-            "apiVersion": "2017-05-10",
-            "name": "[concat('backup-', parameters('vmName'))]",
-            "type": "Microsoft.Resources/deployments",
-            "resourceGroup": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'serviceMap')]"
-            ],
-            "properties": {
-                "mode": "Incremental",
-                "template": {
-                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-                    "contentVersion": "1.0.0.0",
-                    "parameters": {},
-                    "variables": {},
-                    "resources": [
-                        {
-                            "name": "[concat(variables('bkpName'), '/', variables('backupFabric'), '/', variables('v2VmContainer'), resourceGroup().name, ';', parameters('vmName'), '/', variables('v2Vm'), resourceGroup().name, ';', parameters('vmName'))]",
-                            "apiVersion": "2016-06-01",
-                            "location": "[parameters('environmentReference').deployment.location]",
-                            "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
-                            "properties": {
-                                "protectedItemType": "[variables('v2VmType')]",
-                                "policyId": "[resourceId(resourceGroup().name, 'Microsoft.RecoveryServices/vaults/backupPolicies', variables('bkpName'), 'DefaultPolicy' )]",
-                                "sourceResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
-                            }
-                        }
-                    ]
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('vmName'),'/encryption')]",
-            "apiVersion": "2016-04-30-preview",
-            "location": "[parameters('environmentReference').deployment.location]",
+        "Encryption": {
+            "name": "encryption",
             "properties": {
                 "publisher": "Microsoft.Azure.Security",
                 "type": "AzureDiskEncryption",
                 "typeHandlerVersion": "1.1",
                 "autoUpgradeMinorVersion": true,
-                "forceUpdateTag": "1.0",
                 "settings": {
                     "AADClientID": "[parameters('environmentReference').deployment.azureApplication]",
                     "KeyVaultURL": "[variables('kvUri')]",
@@ -178,10 +66,114 @@
                 }
             }
         },
+        "MSAntiMalware": {
+            "name": "Microsoft.Azure.Security",
+            "properties": {
+                "publisher": "Microsoft.Azure.Security",
+                "settings": {
+                    "RealtimeProtectionEnabled": "true"
+                },
+                "type": "IaasAntimalware",
+                "autoUpgradeMinorVersion": true,
+                "typeHandlerVersion": "1.5"
+            }
+        },
+        "MSTrendMicro": {
+            "name": "TrendMicro.DeepSecurity",
+            "properties": {
+                "publisher": "TrendMicro.DeepSecurity",
+                "type": "TrendMicroDSA",
+                "typeHandlerVersion": "10.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "DSMname": "10.3.3.4",
+                    "DSMport": "4120"
+                },
+                "protectedSettings": {
+                    "tenantID": "NA",
+                    "tenantPassword": "NA"
+                }
+            }
+        },
+        "LinuxTrendMicro": {
+            "name": "TrendMicro.DeepSecurity",
+            "properties": {
+                "publisher": "TrendMicro.DeepSecurity",
+                "type": "TrendMicroDSALinux",
+                "typeHandlerVersion": "10.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "DSMname": "10.3.3.4",
+                    "DSMport": "4120"
+                },
+                "protectedSettings": {
+                    "tenantID": "NA",
+                    "tenantPassword": "NA"
+                }
+            }
+        },
+        "paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]",
+        "kvUri": "[concat('https://', variables('paasPrefix'), '-kv.vault.azure.net/')]",
+        "kvId": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.KeyVault/vaults', concat(variables('paasPrefix'), '-kv'))]",
+        "bkpName": "[concat(variables('paasPrefix'), '-bkp')]",
+        "automationName": "[concat(variables('paasPrefix'), '-automation')]",
+        "backupFabric": "Azure",
+        "v2VmType": "Microsoft.Compute/virtualMachines",
+        "v2VmContainer": "iaasvmcontainer;iaasvmcontainerv2;",
+        "v2Vm": "vm;iaasvmcontainerv2;"
+    },
+    "resources": [
         {
+            "condition": "[not(equals(parameters('bossObject').extensions[copyIndex()], 'Backup'))]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('bossObject').vmName,'/', variables(parameters('bossObject').extensions[copyIndex()]).name)]",
+            "apiVersion": "2016-03-30",
+            "location": "[parameters('environmentReference').deployment.location]",
+            "copy": {
+                "name": "Extensions",
+                "count": "[length(parameters('bossObject').extensions)]",
+                "mode": "Serial"
+            },
+            "properties": "[variables(parameters('bossObject').extensions[copyIndex()]).properties]"
+        },
+        {
+            "condition": "[contains(parameters('bossObject').extensions, 'backup')]",
+            "apiVersion": "2017-05-10",
+            "name": "[concat('backup-', parameters('bossObject').vmName)]",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations')]",
+            "dependsOn": [
+                "extensions",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('bossObject').vmName)]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "name": "[concat(variables('bkpName'), '/', variables('backupFabric'), '/', variables('v2VmContainer'), resourceGroup().name, ';', parameters('bossObject').vmName, '/', variables('v2Vm'), resourceGroup().name, ';', parameters('bossObject').vmName)]",
+                            "apiVersion": "2016-06-01",
+                            "location": "[parameters('environmentReference').deployment.location]",
+                            "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
+                            "properties": {
+                                "protectedItemType": "[variables('v2VmType')]",
+                                "policyId": "[resourceId(resourceGroup().name, 'Microsoft.RecoveryServices/vaults/backupPolicies', variables('bkpName'), 'DefaultPolicy' )]",
+                                "sourceResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('bossObject').vmName)]"
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "condition": "[contains(parameters('bossObject').extensions, 'Encryption')]",
             "apiVersion": "2016-04-30-preview",
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[parameters('vmName')]",
+            "name": "[parameters('bossObject').vmName]",
             "location": "[resourceGroup().location]",
             "properties": {
                 "storageProfile": {
@@ -191,7 +183,7 @@
                                 "sourceVault": {
                                     "id": "[variables('kvId')]"
                                 },
-                                "secretUrl": "[reference(resourceId('Microsoft.Compute/virtualMachines/extensions',  parameters('vmName'), 'encryption')).instanceView.statuses[0].message]"
+                                "secretUrl": "[reference(resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('bossObject').vmName, 'encryption'), '2016-04-30-preview').instanceView.statuses[0].message]"
                             },
                             "keyEncryptionKey": {
                                 "sourceVault": {

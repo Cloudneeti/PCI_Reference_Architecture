@@ -14,13 +14,34 @@
                     "keyVersion": "key-version-string"
                 },
                 "sql": {
-                    "vmCount": 2,
+                    "bacpacUri": "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac",
+                    "extensions": [
+                        "OMS",
+                        "NetworkWatcher",
+                        "ServiceMap",
+                        "Encryption",
+                        "MSTrendMicro"
+                    ],
                     "diskCount": 2,
-                    "bacpacUri": "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac"
+                    "vmCount": 2
                 },
                 "domain": {
                     "name": "test.local",
+                    "domainExtensions": [
+                        "OMS",
+                        "NetworkWatcher",
+                        "ServiceMap",
+                        "Encryption",
+                        "MSTrendMicro"
+                    ],
                     "jumpbox": "jumpota",
+                    "jumpboxExtensions": [
+                        "OMS",
+                        "NetworkWatcher",
+                        "ServiceMap",
+                        "Encryption",
+                        "MSTrendMicro"
+                    ],
                     "serviceAccessPwd": "!Q2w3e4r5t6y",
                     "serviceAccess": "testo"
                 }
@@ -311,7 +332,7 @@
                         "OMS",
                         "NetworkWatcher",
                         "ServiceMap",
-                        "TrendMicro"
+                        "MSTrendMicro"
                     ],
                     "name": "webbito",
                     "os": "Windows",

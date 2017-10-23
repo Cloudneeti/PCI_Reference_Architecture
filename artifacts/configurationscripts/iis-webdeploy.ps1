@@ -5,6 +5,7 @@ Configuration iis-webdeploy {
         [Parameter(Mandatory)]
         [String]$DomainName,
         [String]$DomainNetbiosName = (Get-NetBIOSName -DomainName $DomainName),
+        [string]$sqlEndpoint,
 
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$Admincreds,
@@ -13,15 +14,14 @@ Configuration iis-webdeploy {
         [string]$packageUri = "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoWebStore.zip"
     )
 
-    Import-DscResource -ModuleName PSDesiredStateConfiguration, xPSDesiredStateConfiguration, xWindowsUpdate, xSystemSecurity, xNetworking, xWebDeploy, xComputerManagement
+    Import-DscResource -ModuleName PSDesiredStateConfiguration, xPSDesiredStateConfiguration, xNetworking, xWebDeploy, xComputerManagement, xWebAdministration
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainNetbiosName}\$($Admincreds.UserName)", $Admincreds.Password)
-    
+
     $features = @( "Web-Server", "Web-WebServer", "Web-Common-Http", "Web-Default-Doc", "Web-Dir-Browsing", "Web-Http-Errors", "Web-Static-Content", "NET-Framework-Core",  
         "Web-Http-Redirect", "Web-Health", "Web-Http-Logging", "Web-Log-Libraries", "Web-Request-Monitor", "Web-Http-Tracing", "Web-Performance", "Web-Mgmt-Service",
         "Web-Stat-Compression", "Web-Dyn-Compression", "Web-Security", "Web-Filtering", "Web-IP-Security", "Web-Windows-Auth", "Web-App-Dev", "Telnet-Client",
         "Web-Net-Ext45", "Web-Asp-Net45", "Web-CGI", "Web-ISAPI-Ext", "Web-ISAPI-Filter", "Web-WebSockets", "Web-Mgmt-Tools", "Web-Mgmt-Console",
         "NET-Framework-45-Features", "NET-Framework-45-Core", "NET-Framework-45-ASPNET", "NET-WCF-Services45", "NET-WCF-HTTP-Activation45" )
-    $ports = @( "80", "443" )
 
     Node localhost {
         LocalConfigurationManager {
@@ -30,58 +30,91 @@ Configuration iis-webdeploy {
         }
 
         WindowsFeatureSet Prereqs {
-            Ensure = "Present"
             Name   = $features
             Source = "c:\WinSxs"
-        }
-        xWindowsUpdateAgent SecurityImportant {
-            IsSingleInstance = "Yes"
-            Notifications    = "Disabled"
-            Source           = "WindowsUpdate"
-            UpdateNow        = $false
-        }
-        xIEEsc SecurityNotImportant {
-            IsEnabled = $false
-            UserRole  = "Administrators"
-        }
-        Script serverManager {
-            GetScript  = { return @{ "Result" = "Turn Off Server Manager at logon" } }
-            SetScript  = { Get-ScheduledTask ServerManager | Disable-ScheduledTask -Verbose }
-            TestScript = { $false }
+
+            Ensure = "Present"
         }
         xFirewall FirewallRules {
             Description = "Firewall Rules for crapervices"
             Direction   = "InBound"
-            DisplayName = "crapervices"
+            DisplayName = "iisPayload"
             Enabled     = "True"
-            Ensure      = "Present"
-            Name        = "crapervices"
-            LocalPort   = $ports
+            LocalPort   = '443'
+            Name        = "iisPayload"
             Profile     = ("Domain", "Private", "Public")
             Protocol    = "TCP"
+            
+            Ensure      = "Present"
         }
         File SetupFolder {
             DestinationPath = "C:\setup"
-            Ensure          = "Present"
             Type            = "Directory"
+            
+            Ensure          = "Present"
         }
         xRemoteFile packageDL {
-            DependsOn       = "[File]SetupFolder"
             DestinationPath = "C:\setup\package.zip"
             MatchSource     = $true
             Uri             = $packageUri
-        }
-        xRemoteFile webdeployDL {
+            
             DependsOn       = "[File]SetupFolder"
+        }
+        xWebAppPool applicationPool {
+            Credential   = $DomainCreds
+            Name         = 'DefaultAppPool'
+            IdentityType = 'SpecificUser'
+            State        = 'Started'
+            
+            Ensure       = 'Present'
+        }
+        xWebsite website {
+            BindingInfo     = MSFT_xWebBindingInformation {
+                Protocol              = 'https'
+                Port                  = '443'
+                CertificateStoreName  = 'MY'
+                CertificateThumbprint = 'BB84DE3EC423DDDE90C08AB3C5A828692089493C'
+                HostName              = $Website
+                IPAddress             = '*'
+                SSLFlags              = '1'
+            }
+            Name            = "Default Web Site"
+            State           = "Started"
+            
+            Ensure          = "Present"
+        }
+        
+        xRemoteFile webdeployDL {
             DestinationPath = "C:\setup\webdeploy.msi"
             MatchSource     = $true
             Uri             = $webDeployUri
+            
+            DependsOn       = "[File]SetupFolder"
         }
         xWebDeploy Deploy {
-            DependsOn   = @( "[xRemoteFile]webdeployDL", "[xRemoteFile]packageDL" )
             Destination = "Default Web Site"
-            Ensure      = "Present"
             SourcePath  = "C:\setup\package.zip"
+            
+            DependsOn   = @( "[xRemoteFile]webdeployDL", "[xRemoteFile]packageDL" )
+            Ensure      = "Present"
+        }
+        Script webConfig {
+            GetScript  = { return @{ "Result" = "Update web.config" } }
+            TestScript = { $false }
+            SetScript  = { 
+                $path = 'c:\inetpub\wwwroot\web.config'
+                [xml]$webCfg = Get-Content $path 
+                $webCfg.configuration.ChildNodes | Where-Object { $_.Name -eq 'connectionStrings' } | ForEach-Object { $_.ParentNode.RemoveChild($_) }
+                [xml]$myXml = @"
+<connectionStrings>
+    <add name="DefaultConnection" connectionString="Data Source=tcp:{0},1433;Initial Catalog=ContosoClinic;Integrated Security=True;Column Encryption Setting=Enabled;Encrypt=True;TrustServerCertificate=False;Connection Timeout=300;" providerName="System.Data.SqlClient" />
+</connectionStrings>
+"@ -f $using:sqlEndpoint
+                $webCFG.configuration.AppendChild($webCFG.ImportNode($myXML.connectionStrings, $true))
+                $webCFG.Save($path)
+            }
+
+            DependsOn  = "[xWebDeploy]Deploy"
         }
 
         xComputer DomainJoin {
@@ -90,11 +123,11 @@ Configuration iis-webdeploy {
             Name       = $env:COMPUTERNAME
         }
         User DisableLocalAdmin {
-            Disabled = $true
-            UserName = $Admincreds.UserName
-            
+            Disabled  = $true
+            UserName  = $Admincreds.UserName
+
             DependsOn = "[xComputer]DomainJoin"
-            Ensure = "Present"
+            Ensure    = "Present"
         }
     }
 }

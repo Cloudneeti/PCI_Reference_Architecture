@@ -13,7 +13,7 @@
 		}
 	},
 	"variables": {
-		"sqlDiskSize": 1000,
+		"sqlDiskSize": 100,
 		"sqlNamePrefix": "[concat(parameters('environmentReference').deployment.env,'-sql-')]",
 		"sqlLBName": "[concat(variables('sqlNamePrefix'),'ilb')]",
 		"lbFrontEnd": "[concat(variables('sqlNamePrefix'),'lbFrontEnd')]",
@@ -23,12 +23,13 @@
 		"lbBackEndAddressPoolId": "[concat(variables('lbId'),'/backendAddressPools/',variables('lbBackEnd'))]",
 		"lbProbeId": "[concat(variables('lbId'),'/probes/sqlProbe')]",
 		"sqlAOListener": "[concat(parameters('environmentReference').deployment.env,'sql-agListener')]",
-		"subnetUri": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks/Subnets', concat(parameters('environmentReference').deployment.env, '-', variables('network').name), last(variables('network').subnets).subnetName)]",
+		"subnetUri": "[resourceId(concat(variables('paasPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks/Subnets', concat(parameters('environmentReference').deployment.env, '-', variables('network').name), last(variables('network').subnets).subnetName)]",
 		"network": "[last(parameters('networkReference'))]",
-		"addressSpace": "[last(variables('network').subnets).addressSpacePrefix]",
+		"addressSpace": "[last(variables('network').subnets).addressSpacePrefix]",	
 		"substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
 		"listenerIp": "[concat(variables('substring'), 10)]",
-		"paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]"
+		"paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]",
+		"omsName": "[concat(variables('paasPrefix'), '-oms')]"
 	},
 	"resources": [
 		{
@@ -207,7 +208,7 @@
 				"diagnosticsProfile": {
 					"bootDiagnostics": {
 						"enabled": true,
-						"storageUri": "[reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
+						"storageUri": "[reference(resourceId(concat(variables('paasPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
 					}
 				}
 			},
@@ -264,8 +265,8 @@
 							}
 						},
 						"protectedSettings": {
-							"StorageUrl": "[reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]",
-							"StorageAccessKey": "[listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').key1]",
+							"StorageUrl": "[reference(resourceId(concat(variables('paasPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]",
+							"StorageAccessKey": "[listKeys(resourceId(concat(variables('paasPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').key1]",
 							"Password": "[concat(substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24), '!Q')]",
 							"PrivateKeyVaultCredentialSettings": {
 								"AzureKeyVaultUrl": "[concat('https://', variables('paasPrefix'), '-kv.vault.azure.net/')]",
@@ -350,7 +351,7 @@
 					"configurationArguments": {
 						"witnessAccount": {
 							"userName": "[concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')]",
-							"password": "[listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2016-01-01').keys[0].value]"
+							"password": "[listKeys(resourceId(concat(variables('paasPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2016-01-01').keys[0].value]"
 						},
 						"adminCreds": {
 							"userName": "[parameters('environmentReference').domain.serviceAccess]",
@@ -385,13 +386,23 @@
 					"environmentReference": {
 						"value": "[parameters('environmentReference')]"
 					},
-					"vmName": {
-						"value": "[concat(variables('sqlNamePrefix'), copyIndex())]"
-					}
+					"bossObject": {
+						"value": {
+						  "vmName": "[concat(variables('sqlNamePrefix'), copyindex())]",
+						  "extensions": "[parameters('environmentReference').sql.extensions]"
+						}
+					  },
+					  "oms": {
+						"value": {
+						  "Id": "[if(contains(parameters('environmentReference').sql.extensions, 'OMS'), reference(resourceId(concat(variables('paasPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
+						  "Key": "[if(contains(parameters('environmentReference').sql.extensions, 'OMS'), listKeys(resourceId(concat(variables('paasPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
+						}
+					  }
 				}
 			}
 		},
 		{
+			"condition": false,
 			"name": "[concat(parameters('environmentReference').deployment.env, 'vmss-', copyIndex())]",
 			"type": "Microsoft.Resources/deployments",
 			"apiVersion": "2015-01-01",

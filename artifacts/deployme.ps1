@@ -36,13 +36,13 @@ function Orchestrate-ArmDeployment {
         deploymentPrefix    = $deploymentPrefix
     }
 
-    "Lets get it started: {0}" -f (Get-Date -f "HH:mm:ss")
-    $modifyMe = "Invoke-ArmDeployment -subId {0} -resourceGroupPrefix {1} -location {2} -deploymentPrefix {3} -steps 5,7 -prerequisiteRefresh" -f $subId, $resourceGroupPrefix, $location, $deploymentPrefix
+    $dateNow  = "Lets get it started: {0}" -f (Get-Date -f "HH:mm:ss")
+    $modifyMe = "Invoke-ArmDeployment -subId {0} -resourceGroupPrefix {1} -location '{2}' -deploymentPrefix {3} -steps 5,7 -prerequisiteRefresh" -f $subId, $resourceGroupPrefix, $location, $deploymentPrefix
     $removeMe = "Remove-ArmDeployment {0} {1} {2}" -f $resourceGroupPrefix, $deploymentPrefix, $subId
-    foreach ($note in @($modifyMe, $removeMe, "Starting networking and paas")) {
+    foreach ( $note in @( $dateNow, $modifyMe, $removeMe, "Starting networking and paas" ) ) {
         $note
     }
-    
+
     Invoke-ArmDeployment @invoker -steps 2, 1 -prerequisiteRefresh | Out-Null
     Wait-ArmDeployment $hash
     "Starting custom steps: {0}" -f ($steps -join ", ")
@@ -104,7 +104,7 @@ function Invoke-ArmDeployment {
 
     try {
         # Main routine block
-        $deploymentHash = Get-StringHash ($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-'
+        $deploymentHash = Get-StringHash (($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
         $guid = Prepare-KeyVault $deploymentHash
         if ($prerequisiteRefresh) {
             $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupPrefix, $deploymentPrefix, $_) -join '-') -Location $location -Force }
@@ -153,7 +153,7 @@ function Invoke-ArmDeployment {
                         #hack to wait until kv name resolves
                         $noKey = $noPermissions = $null
                         Set-AzureRmKeyVaultAccessPolicy -VaultName ( $rgName -replace 'operations', 'kv' ) -ResourceGroupName $rgName -PermissionsToKeys 'Create', 'Get' `
-                            -ServicePrincipalName ( Get-AzureRmSubscription | ? id -eq $subId ).ExtendedProperties.Account -ErrorAction SilentlyContinue -ErrorVariable noPermissions
+                            -ServicePrincipalName ( Get-AzureRmSubscription | Where-Object id -eq $subId ).ExtendedProperties.Account -ErrorAction SilentlyContinue -ErrorVariable noPermissions
                         Add-AzureKeyVaultKey -VaultName ( $rgName -replace 'operations', 'kv' ) -Name ContosoMasterKey -Destination HSM -ErrorAction SilentlyContinue -ErrorVariable noKey
                     } while ($noPermissions -or $noKey)
                 }
@@ -301,6 +301,9 @@ function Publish-BuildingBlocksTemplates ($hash) {
 }
 
 # Constants
+$scriptRoot = Split-Path ( Split-Path $MyInvocation.MyCommand.Path )
+$ProfilePath = "$scriptRoot\auth.json"
+$components = @("dmz", "security", "management", "operations", "networking", "application")
 $request = '{
     "properties": {
         "policyLevel": "Subscription",
@@ -344,6 +347,16 @@ $request = '{
         "lastStorageCreationTime": "1970-01-01T00:00:00Z"
     }
 }'
-$scriptRoot = Split-Path ( Split-Path $MyInvocation.MyCommand.Path )
-$ProfilePath = "$scriptRoot\auth.json"
-$components = @("dmz", "security", "management", "operations", "networking", "application")
+
+## This script generates a self-signed certificate
+
+# $filePath = Read-Host "Enter path to store certificate file (e.g., C:\temp)"
+# $certPassword = Read-Host -assecurestring "Enter certificate password"
+
+# $cert = New-SelfSignedCertificate -certstorelocation cert:\localmachine\my -dnsname contoso.com
+# $path = 'cert:\localMachine\my\' + $cert.thumbprint
+# $certPath = $filePath + '\cert.pfx'
+# $outFilePath = $filePath + '\cert.txt'
+# Export-PfxCertificate -cert $path -FilePath $certPath -Password $certPassword
+# $fileContentBytes = get-content $certPath -Encoding Byte
+# [System.Convert]::ToBase64String($fileContentBytes) | Out-File $outFilePath
