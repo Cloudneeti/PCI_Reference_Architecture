@@ -30,9 +30,7 @@
         "nicCloudNeeti": "[concat(parameters('environmentReference').deployment.env, '-cloudneeti-nic')]",
         "baseUrl": "https://gallery.azure.com/artifact/20151001/trendmicro.deep-security-manager-st-byoldeep-security-manager-byol.1.0.13/Artifacts",
         "vnetID": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('environmentReference').deployment.env, '-security'))]",
-        "newsqlServerName": "[tolower(concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'sqltdm'))]",
-        "network-api-version": "2015-06-15",
-        "compute-api-version": "2016-04-30-preview"
+        "newsqlServerName": "[tolower(concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'sqltdm'))]"
     },
     "resources": [
         {
@@ -70,7 +68,7 @@
         {
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicTDM')]",
-            "apiVersion": "[variables('network-api-version')]",
+            "apiVersion": "2015-06-15",
             "location": "[parameters('environmentReference').deployment.location]",
             "properties": {
                 "ipConfigurations": [
@@ -89,7 +87,7 @@
         {
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmTDM')]",
-            "apiVersion": "[variables('compute-api-version')]",
+            "apiVersion": "2016-04-30-preview",
             "location": "[parameters('environmentReference').deployment.location]",
             "plan": {
                 "publisher": "trendmicro",
@@ -98,7 +96,7 @@
             },
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_DS2_v2_PROMO"
+                    "vmSize": "[parameters('environmentReference').security.securityVmSize]"
                 },
                 "osProfile": {
                     "computerName": "[variables('vmTDM')]",
@@ -159,14 +157,14 @@
                     "adminPassword": "[variables('dsmAdminPassword')]",
                     "databaseUserName": "[variables('dbAdminName')]",
                     "databaseUserPassword": "[variables('dbAdminPassword')]",
-                    "licenseMode": "10",
+                    "licenseMode": "[parameters('environmentReference').security.tdmLicenseMode]",
                     "databaseServer": "[reference('trendMicroSQL').outputs.sqlServerFQDN.value]",
                     "location": "[parameters('environmentReference').deployment.location]",
                     "managerPort": "[variables('managerPort')]",
                     "heartbeatPort": "[variables('heartbeatPort')]",
                     "vmFQDN": "[variables('vmTDM')]",
                     "databaseOption": "new",
-                    "vmSize": "Standard_DS2_v2_PROMO"
+                    "vmSize": "[parameters('environmentReference').security.securityVmSize]"
                 }
             },
             "dependsOn": [
@@ -175,7 +173,7 @@
             ]
         },
         {
-            "apiVersion": "[variables('network-api-Version')]",
+            "apiVersion": "2015-06-15",
             "location": "[parameters('environmentReference').deployment.location]",
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicQualys')]",
@@ -194,7 +192,7 @@
             }
         },
         {
-            "apiVersion": "[variables('compute-Api-Version')]",
+            "apiVersion": "2016-04-30-preview",
             "location": "[parameters('environmentReference').deployment.location]",
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmQualys')]",
@@ -208,7 +206,7 @@
             },
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_DS2_v2_PROMO"
+                    "vmSize": "[parameters('environmentReference').security.securityVmSize]"
                 },
                 "networkProfile": {
                     "networkInterfaces": [
@@ -245,7 +243,7 @@
             }
         },
         {
-            "apiVersion": "[variables('network-api-Version')]",
+            "apiVersion": "2015-06-15",
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('niclogic')]",
             "location": "[parameters('environmentReference').deployment.location]",
@@ -264,7 +262,7 @@
             }
         },
         {
-            "apiVersion": "[variables('compute-api-Version')]",
+            "apiVersion": "2016-04-30-preview",
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmlogic')]",
             "location": "[parameters('environmentReference').deployment.location]",
@@ -278,7 +276,7 @@
             },
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_DS2_v2_PROMO"
+                    "vmSize": "[parameters('environmentReference').security.securityVmSize]"
                 },
                 "osProfile": {
                     "computerName": "[variables('vmlogic')]",
@@ -314,7 +312,7 @@
             }
         },
         {
-            "apiVersion": "[variables('network-api-Version')]",
+            "apiVersion": "2015-06-15",
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicCloudNeeti')]",
             "location": "[parameters('environmentReference').deployment.location]",
@@ -335,7 +333,7 @@
         {
             "name": "[variables('vmCloudNeeti')]",
             "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "[variables('compute-api-version')]",
+            "apiVersion": "2016-04-30-preview",
             "location": "[parameters('environmentReference').deployment.location]",
             "dependsOn": [
                 "[variables('nicCloudNeeti')]"
@@ -355,7 +353,7 @@
                     }
                 },
                 "hardwareProfile": {
-                    "vmSize": "Standard_DS2_v2_PROMO"
+                    "vmSize": "[parameters('environmentReference').security.securityVmSize]"
                 },
                 "storageProfile": {
                     "imageReference": {

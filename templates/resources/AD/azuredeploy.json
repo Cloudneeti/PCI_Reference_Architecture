@@ -19,16 +19,15 @@
     "adBDCNicIPAddress": "[concat(variables('substring'), 5)]",
     "vnetID": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('environmentReference').deployment.env, '-security'))]",
     "adSubnetRef": "[concat(variables('vnetID'),'/subnets/domainSubnet')]",
-    "adDataDiskSize": 100,
-    "vmNames": [
-      "[concat(parameters('environmentReference').deployment.env, '-PDC-VM')]",
-      "[concat(parameters('environmentReference').deployment.env, '-BDC-VM')]"
-    ],
     "network": "[last(parameters('networkReference'))]",
     "addressSpaceDataTier": "[last(variables('network').subnets).addressSpacePrefix]",
     "substringDataTier": "[substring(variables('addressSpaceDataTier'), 0, sub(length(variables('addressSpace')), 4))]",
     "listenerIp": "[concat(variables('substringDataTier'), 10)]",
-    "omsName": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-oms')]"
+    "omsName": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-oms')]",
+    "vmNames": [
+      "[concat(parameters('environmentReference').deployment.env, '-PDC-VM')]",
+      "[concat(parameters('environmentReference').deployment.env, '-BDC-VM')]"
+    ]
   },
   "resources": [
     {
@@ -93,7 +92,7 @@
       ],
       "properties": {
         "hardwareProfile": {
-          "vmSize": "Standard_DS2_v2_PROMO"
+          "vmSize": "[parameters('environmentReference').domain.domainVmSize]"
         },
         "availabilitySet": {
           "id": "[resourceId('Microsoft.Compute/availabilitySets', concat(parameters('environmentReference').deployment.env, '-DC-avSet'))]"
@@ -118,7 +117,7 @@
           "dataDisks": [
             {
               "caching": "None",
-              "diskSizeGB": "[variables('adDataDiskSize')]",
+              "diskSizeGB": "[parameters('environmentReference').domain.diskSize]",
               "lun": 0,
               "createOption": "Empty",
               "name": "[concat(parameters('environmentReference').deployment.env, '-PDC-DATA')]"
@@ -188,7 +187,7 @@
       ],
       "properties": {
         "hardwareProfile": {
-          "vmSize": "Standard_DS2_v2_PROMO"
+          "vmSize": "[parameters('environmentReference').domain.domainVmSize]"
         },
         "availabilitySet": {
           "id": "[resourceId('Microsoft.Compute/availabilitySets', concat(parameters('environmentReference').deployment.env, '-DC-avSet'))]"
@@ -213,7 +212,7 @@
           "dataDisks": [
             {
               "caching": "None",
-              "diskSizeGB": "[variables('adDataDiskSize')]",
+              "diskSizeGB": "[parameters('environmentReference').domain.diskSize]",
               "lun": 0,
               "createOption": "Empty",
               "name": "[concat(parameters('environmentReference').deployment.env, '-BDC-DATA')]"
@@ -296,13 +295,13 @@
           "bossObject": {
             "value": {
               "vmName": "[variables('vmNames')[copyIndex()]]",
-              "extensions": "[parameters('environmentReference').domain.domainExtensions]"
+              "extensions": "[parameters('environmentReference').domain.domainVmExtensions]"
             }
           },
           "oms": {
             "value": {
-              "Id": "[if(contains(parameters('environmentReference').domain.domainExtensions, 'OMS'), reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
-              "Key": "[if(contains(parameters('environmentReference').domain.domainExtensions, 'OMS'), listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
+              "Id": "[if(contains(parameters('environmentReference').domain.domainVmExtensions, 'OMS'), reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
+              "Key": "[if(contains(parameters('environmentReference').domain.domainVmExtensions, 'OMS'), listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
             }
           }
         }

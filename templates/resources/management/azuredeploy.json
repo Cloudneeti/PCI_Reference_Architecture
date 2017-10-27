@@ -39,7 +39,7 @@
         {
             "apiVersion": "2016-03-30",
             "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-nic')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-nic')]",
             "location": "[parameters('environmentReference').deployment.location]",
             "properties": {
                 "ipConfigurations": [
@@ -59,17 +59,17 @@
         {
             "apiVersion": "2016-04-30-preview",
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-VM')]",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-VM')]",
             "location": "[parameters('environmentReference').deployment.location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-nic'))]"
+                "[resourceId('Microsoft.Network/networkInterfaces/', concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-nic'))]"
             ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_DS2_v2_PROMO"
+                    "vmSize": "[parameters('environmentReference').security.jumpboxVmSize]"
                 },
                 "osProfile": {
-                    "computerName": "[parameters('environmentReference').domain.jumpbox]",
+                    "computerName": "[parameters('environmentReference').security.jumpbox]",
                     "adminUsername": "[parameters('environmentReference').domain.serviceAccess]",
                     "adminPassword": "[parameters('environmentReference').domain.serviceAccessPwd]"
                 },
@@ -82,13 +82,13 @@
                     },
                     "osDisk": {
                         "createOption": "FromImage",
-                        "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-hdd')]"
+                        "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-hdd')]"
                     }
                 },
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-nic'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-nic'))]"
                         }
                     ]
                 },
@@ -106,7 +106,7 @@
                     "location": "[parameters('environmentReference').deployment.location]",
                     "apiVersion": "2016-03-30",
                     "dependsOn": [
-                        "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-vm')]"
+                        "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-vm')]"
                     ],
                     "properties": {
                         "publisher": "Microsoft.Powershell",
@@ -140,7 +140,7 @@
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2017-05-10",
             "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-VM'), 'dsc')]"
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-VM'), 'dsc')]"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -154,14 +154,14 @@
                     },
                     "bossObject": {
                         "value": {
-                            "vmName": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').domain.jumpbox, '-VM')]",
-                            "extensions": "[parameters('environmentReference').domain.jumpboxExtensions]"
+                            "vmName": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-VM')]",
+                            "extensions": "[parameters('environmentReference').security.jumpboxVmExtensions]"
                         }
                     },
                     "oms": {
                         "value": {
-                            "Id": "[if(contains(parameters('environmentReference').domain.jumpboxExtensions, 'OMS'), reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
-                            "Key": "[if(contains(parameters('environmentReference').domain.jumpboxExtensions, 'OMS'), listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
+                            "Id": "[if(contains(parameters('environmentReference').security.jumpboxVmExtensions, 'OMS'), reference(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
+                            "Key": "[if(contains(parameters('environmentReference').security.jumpboxVmExtensions, 'OMS'), listKeys(resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
                         }
                     }
                 }

@@ -9,25 +9,27 @@ Enable-AzureRmContextAutosave
 ```
 
 ### How to run  
-1. Dot source the script (requires AzureRM 4.2 or greater)
+1. Import Azure-PCI-IaaS Module (requires AzureRM 4.4 or greater)
 ```powershell
-. .\artifacts\deployme.ps1
+Import-Module path\to\repo\Azure-PCI-IaaS.psd1
 ```
 2. Run it
 ```powershell
-$subscriptionID = 'XXXXX-XXX....XXXX' #preferred Subs for Avyan are Cloudly Dev or AvyanMPN6k, as this template requires third party VM installations.
-$resourceGroupPrefix = 'pciiaas' #should not start with a number or contain '-' in the prefix
-$location = 'South Central US'
-$steps = @(2,1)
-
-Invoke-ArmDeployment -subId $subscriptionID -resourceGroupPrefix $resourceGroupPrefix -location $location -deploymentPrefix dev -steps $steps -prerequisiteRefresh
+Orchestrate-ArmDeployment -subId $subId -complete
 ```
 To remove all the resource groups you can use the `Remove-ArmDeployment` function
 ```powershell
 Remove-ArmDeployment -subId $subscriptionID -rg $resourceGroupPrefix -dp <dev | prod>
 ```
+Invoke-ArmDeployment function parameters rundown:
+-subId               = SubscriptionId to which you are deploying
+-resourceGroupPrefix = Resource Group naming prefix
+-location            = Azure location to deploy to
+-deploymentPrefix    = Prefix resource with this (dev or prod)
+-steps               = Which steps to deploy (array of integers, explained further)
+-complete            = Deploys Entire solutions (steps are ignored in this case)
 
-Script parameters rundown:
+Invoke-ArmDeployment function parameters rundown:
 -subId               = SubscriptionId to which you are deploying
 -resourceGroupPrefix = Resource Group naming prefix
 -location            = Azure location to deploy to
@@ -71,13 +73,14 @@ os are custom from the predefined pool
 vm's are registered to the azure automation (maybe configurations are assigned, not sure at this point)  
 every tier tied to ilb  
 every tier can be deployed into specific vnet\subnet
+sql tier cannot be altered (except for vmCount, vmSize, diskCount, diskSize)
 
 a. OMS Log Analytics Extension    vm extension  
 b. Azure Disk Encryption          https://docs.microsoft.com/en-us/azure/security/azure-security-disk-encryption  
 c. VMDiagnosticsSettings          vm property (storage)  
 d. Service Map                    vm extension  
 e. TrendMicro                     vm extension  
-f. Qualys Virtual Scanner         research  
+f. Qualys Virtual Scanner         agents (probably dsc?)  
 g. Threat manager extension       Script exists (TBI)  
 h. Network Watcher                vm extension  
 i. AD                             dsc resource "[xComputer]DomainJoin"
@@ -86,16 +89,20 @@ j. disable local administrator    dsc resource "[User]DisableLocalAdmin"
 ### Jumpbox   
 Name can be configured 
 Ip address is calculated from the management subnet address range
+VM Size
 
 ### Domain Services  
 Domain name, admin username and password can be configured 
 Ip address is calculated from the domain subnet address range
+VM Sizes
 
 ### PaaS  
 Key Vault Key is being created
 
 ### Security  
-TODO: Sizes for vm's
+VM Sizes
+TDM License mode 
 
 ### Barracuda  
 configure NGF\WAF
+VM Sizes # TODO

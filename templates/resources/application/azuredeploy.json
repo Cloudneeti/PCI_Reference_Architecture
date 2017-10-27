@@ -155,7 +155,7 @@
 			],
 			"properties": {
 				"hardwareProfile": {
-					"vmSize": "Standard_DS2_v2_PROMO"
+					"vmSize": "[parameters('environmentReference').sql.vmSize]"
 				},
 				"availabilitySet": {
 					"id": "[resourceId('Microsoft.Compute/availabilitySets', concat(parameters('environmentReference').deployment.env,'-sql-as'))]"
