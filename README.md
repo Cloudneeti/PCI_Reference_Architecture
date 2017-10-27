@@ -1,6 +1,13 @@
 # PCI_Reference_Architecture  
 PCI (Payment Card Industry) code repository to manage deployment templates.
 
+### Prerequisites
+
+Context saving enabled (AzureRM >= 4.4.0)
+```powershell
+Enable-AzureRmContextAutosave
+```
+
 ### How to run  
 1. Dot source the script (requires AzureRM 4.2 or greater)
 ```powershell
@@ -34,8 +41,8 @@ Steps parameter is an array with the values 1 to 7 allowed. Each step correspond
 2. Networking
 3. Dmz
 4. Security
-5. Management
-6. Domain
+5. Domain
+6. Management
 7. Payload
 
 ### Notes  

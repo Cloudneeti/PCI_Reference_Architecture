@@ -114,6 +114,35 @@ configuration sql-primary {
             ServiceAccount  = $SQLCreds
             RestartService  = $true
         }
+        Script setSpn {
+            GetScript            = "@{Ensure = `"set spn for sql service`"}"
+            TestScript           = { $false }
+            SetScript            = ( {
+                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1}:1433 {0}$"
+                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1} {0}$"
+                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1}:1433 {2}"
+                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1} {2}"
+                } -f $env:COMPUTERNAME, $DomainName, $SQLServiceCreds.UserName )
+                
+            PsDscRunAsCredential = $DomainCreds
+        }
+        xCluster FailoverCluster {
+            DomainAdministratorCredential = $DomainCreds
+            Name                          = "${deploymentPrefix}-sql-cls"
+            StaticIPAddress               = "${SqlAlwaysOnAvailabilityGroupListenerIp}0"
+            
+            PsDscRunAsCredential          = $DomainCreds
+        }
+        Script CloudWitness {
+            SetScript            = ( {
+                    Set-ClusterQuorum -CloudWitness -AccountName "{0}" -AccessKey "{1}"
+                } -f $WitnessAccount.UserName, $WitnessAccount.GetNetworkCredential().Password )
+            TestScript           = "(Get-ClusterQuorum).QuorumResource.Name -eq `"Cloud Witness`""
+            GetScript            = "@{Ensure = if ((Get-ClusterQuorum).QuorumResource.Name -eq `"Cloud Witness`") {`"Present`"} else {`"Absent`"}}"
+            
+            DependsOn            = "[xCluster]FailoverCluster"
+            PsDscRunAsCredential = $DomainCreds
+        }
         foreach ($user in @($DomainCreds.UserName, $SQLCreds.UserName, "NT SERVICE\ClusSvc")) {
             xSQLServerLogin "sqlLogin$user" {
                 LoginType       = "WindowsUser"
@@ -143,6 +172,7 @@ configuration sql-primary {
                 Ensure       = "Present"
             }
         }
+        
         xSQLServerMaxDop DegreeOfParallelism {
             DynamicAlloc    = $false
             MaxDop          = 1
@@ -151,25 +181,6 @@ configuration sql-primary {
 
             Ensure          = "Present"
         }
-
-        xCluster FailoverCluster {
-            DomainAdministratorCredential = $DomainCreds
-            Name                          = "${deploymentPrefix}-sql-cls"
-            StaticIPAddress               = "${SqlAlwaysOnAvailabilityGroupListenerIp}0"
-
-            PsDscRunAsCredential          = $DomainCreds
-        }
-        Script CloudWitness {
-            SetScript            = ( {
-                    Set-ClusterQuorum -CloudWitness -AccountName "{0}" -AccessKey "{1}"
-                } -f $WitnessAccount.UserName, $WitnessAccount.GetNetworkCredential().Password )
-            TestScript           = "(Get-ClusterQuorum).QuorumResource.Name -eq `"Cloud Witness`""
-            GetScript            = "@{Ensure = if ((Get-ClusterQuorum).QuorumResource.Name -eq `"Cloud Witness`") {`"Present`"} else {`"Absent`"}}"
-
-            DependsOn            = "[xCluster]FailoverCluster"
-            PsDscRunAsCredential = $DomainCreds
-        }
-
         xSQLServerAlwaysOnService enableHadr {
             SQLServer       = $env:computername
             SQLInstanceName = "MSSQLSERVER"
@@ -205,19 +216,6 @@ configuration sql-primary {
             DependsOn    = "[xSQLServerEndpoint]endpointHadr"
         }
  
-        Script setSpn {
-            GetScript            = "@{Ensure = `"set spn for sql service`"}"
-            TestScript           = { $false }
-            SetScript            = ( {
-                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1}:1433 {0}$"
-                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1} {0}$"
-                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1}:1433 {2}"
-                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1} {2}"
-                } -f $env:COMPUTERNAME, $DomainName, $SQLServiceCreds.UserName )
-
-            DependsOn            = @( "[xCluster]FailoverCluster", "[xSQLServerEndpointState]endpointStart" )
-            PsDscRunAsCredential = $DomainCreds
-        }
         xSQLServerAlwaysOnAvailabilityGroup AvailabilityGroup {
             AvailabilityMode     = "SynchronousCommit"
             Name                 = "${deploymentPrefix}-sql-ag"
@@ -352,6 +350,18 @@ configuration sql-secondary {
             ServiceAccount  = $SQLCreds
             RestartService  = $true
         }
+        Script setSpn {
+            GetScript            = "@{Ensure = `"set spn for sql service`"}"
+            TestScript           = { $false }
+            SetScript            = ( {
+                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1}:1433 {0}$"
+                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1} {0}$"
+                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1}:1433 {2}"
+                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1} {2}"
+                } -f $env:COMPUTERNAME, $DomainName, $SQLServiceCreds.UserName)
+               
+            PsDscRunAsCredential = $DomainCreds
+        }
         foreach ($user in @($DomainCreds.UserName, $SQLCreds.UserName, "NT SERVICE\ClusSvc")) {
             xSQLServerLogin "sqlLogin$user" {
                 Name            = $user
@@ -399,7 +409,7 @@ configuration sql-secondary {
         }
         script joinCluster {
             GetScript            = "@{Ensure = `"join node to cluster with script resource, as cluster resource doesn't work in Azure`"}"
-            TestScript           = "( Get-ClusterNode -Cluster {0} | Select-Object -ExpandProperty Name ) -contains `"{1}`""  -f $clusterIp, $env:COMPUTERNAME
+            TestScript           = "( Get-ClusterNode -Cluster {0} | Select-Object -ExpandProperty Name ) -contains `"{1}`"" -f $clusterIp, $env:COMPUTERNAME
             SetScript            = "Add-ClusterNode -Name {0} -NoStorage -Cluster {1}" -f $env:COMPUTERNAME, $clusterIp
 
             DependsOn = "[xWaitForCluster]waitForCluster"
@@ -441,19 +451,7 @@ configuration sql-secondary {
             DependsOn    = "[xSQLServerEndpoint]endpointHadr"
         }
 
-        Script setSpn {
-            GetScript            = "@{Ensure = `"set spn for sql service`"}"
-            TestScript           = { $false }
-            SetScript            = ( {
-                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1}:1433 {0}$"
-                    Invoke-Expression "setspn -D MSSQLSvc/{0}.{1} {0}$"
-                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1}:1433 {2}"
-                    Invoke-Expression "setspn -S MSSQLSvc/{0}.{1} {2}"
-                } -f $env:COMPUTERNAME, $DomainName, $SQLServiceCreds.UserName)
 
-            DependsOn            = @( "[Script]joinCluster", "[xSQLServerEndpointState]endpointStart" )                
-            PsDscRunAsCredential = $DomainCreds
-        }
         xWaitForAvailabilityGroup waitforAG {
             Name                 = "${deploymentPrefix}-sql-ag"
             RetryIntervalSec     = $RetryIntervalSec

@@ -16,7 +16,7 @@
         "addressSpace": "[parameters('networkReference')[1].subnets[0].addressSpacePrefix]",
         "substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
         "staticIp": "[concat(variables('substring'), 4)]",
-        "vnetID": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-management')]",
+        "vnetID": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('environmentReference').deployment.env, '-management'))]",
         "subnetRef": "[concat(variables('vnetID'),'/subnets/', 'managementSubnet')]",
         "nsgRule": [
             {
@@ -66,7 +66,7 @@
             ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_A2"
+                    "vmSize": "Standard_DS2_v2_PROMO"
                 },
                 "osProfile": {
                     "computerName": "[parameters('environmentReference').domain.jumpbox]",
@@ -77,7 +77,7 @@
                     "imageReference": {
                         "publisher": "MicrosoftWindowsServer",
                         "offer": "WindowsServer",
-                        "sku": "2016-Datacenter",
+                        "sku": "2016-Datacenter-smalldisk",
                         "version": "latest"
                     },
                     "osDisk": {

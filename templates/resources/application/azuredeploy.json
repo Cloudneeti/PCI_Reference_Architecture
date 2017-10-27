@@ -13,7 +13,6 @@
 		}
 	},
 	"variables": {
-		"sqlDiskSize": 100,
 		"sqlNamePrefix": "[concat(parameters('environmentReference').deployment.env,'-sql-')]",
 		"sqlLBName": "[concat(variables('sqlNamePrefix'),'ilb')]",
 		"lbFrontEnd": "[concat(variables('sqlNamePrefix'),'lbFrontEnd')]",
@@ -25,7 +24,7 @@
 		"sqlAOListener": "[concat(parameters('environmentReference').deployment.env,'sql-agListener')]",
 		"subnetUri": "[resourceId(concat(variables('paasPrefix'), '-networking'), 'Microsoft.Network/virtualNetworks/Subnets', concat(parameters('environmentReference').deployment.env, '-', variables('network').name), last(variables('network').subnets).subnetName)]",
 		"network": "[last(parameters('networkReference'))]",
-		"addressSpace": "[last(variables('network').subnets).addressSpacePrefix]",	
+		"addressSpace": "[last(variables('network').subnets).addressSpacePrefix]",
 		"substring": "[substring(variables('addressSpace'), 0, sub(length(variables('addressSpace')), 4))]",
 		"listenerIp": "[concat(variables('substring'), 10)]",
 		"paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]",
@@ -156,7 +155,7 @@
 			],
 			"properties": {
 				"hardwareProfile": {
-					"vmSize": "Standard_DS2_v2"
+					"vmSize": "Standard_DS2_v2_PROMO"
 				},
 				"availabilitySet": {
 					"id": "[resourceId('Microsoft.Compute/availabilitySets', concat(parameters('environmentReference').deployment.env,'-sql-as'))]"
@@ -189,7 +188,7 @@
 								"name": "[concat(variables('sqlNamePrefix'), copyindex('virtualMachineLoop'), '-dd', copyindex('dataDisks'))]",
 								"caching": "None",
 								"createOption": "Empty",
-								"diskSizeGB": "[variables('sqlDiskSize')]",
+								"diskSizeGB": "[parameters('environmentReference').sql.diskSize]",
 								"lun": "[copyindex('dataDisks')]",
 								"managedDisk": {
 									"storageAccountType": "Premium_LRS"
@@ -211,72 +210,74 @@
 						"storageUri": "[reference(resourceId(concat(variables('paasPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]"
 					}
 				}
+			}
+		},
+		{
+			"name": "[concat(variables('sqlNamePrefix'),copyindex(),'/SqlIaasExtension')]",
+			"type": "Microsoft.Compute/virtualMachines/extensions",
+			"apiVersion": "2016-03-30",
+			"location": "[parameters('environmentReference').deployment.location]",
+			"copy": {
+				"name": "SqlIaasExtensionLoop",
+				"count": "[parameters('environmentReference').sql.vmCount]"
 			},
-			"resources": [
-				{
-					"name": "SqlIaasExtension",
-					"type": "extensions",
-					"apiVersion": "2016-03-30",
-					"location": "[parameters('environmentReference').deployment.location]",
-					"dependsOn": [
-						"[concat(variables('sqlNamePrefix'), copyindex())]"
-					],
-					"properties": {
-						"publisher": "Microsoft.SqlServer.Management",
-						"type": "SqlIaaSAgent",
-						"typeHandlerVersion": "1.2",
-						"autoUpgradeMinorVersion": true,
-						"settings": {
-							"AutoTelemetrySettings": {
-								"Region": "[parameters('environmentReference').deployment.location]"
-							},
-							"AutoBackupSettings": {
-								"Enable": true,
-								"RetentionPeriod": "30",
-								"EnableEncryption": true,
-								"BackupSystemDbs": "true",
-								"BackupScheduleType": "Automated"
-							},
-							"AutoPatchingSettings": {
-								"PatchCategory": "WindowsMandatoryUpdates",
-								"Enable": true,
-								"DayOfWeek": "Sunday",
-								"MaintenanceWindowStartingHour": "2",
-								"MaintenanceWindowDuration": "60"
-							},
-							"KeyVaultCredentialSettings": {
-								"Enable": true,
-								"CredentialName": "sysadmin_ekm_cred"
-							},
-							"ServerConfigurationsManagementSettings": {
-								"SQLConnectivityUpdateSettings": {
-									"ConnectivityType": "Private",
-									"Port": 1433
-								},
-								"SQLWorkloadTypeUpdateSettings": {
-									"SQLWorkloadType": "GENERAL"
-								},
-								"SQLStorageUpdateSettings": {
-									"DiskCount": "[parameters('environmentReference').sql.diskCount]",
-									"NumberOfColumns": "[parameters('environmentReference').sql.diskCount]",
-									"StartingDeviceID": 2,
-									"DiskConfigurationType": "NEW"
-								}
-							}
+			"dependsOn": [
+				"[resourceId('Microsoft.Compute/virtualMachines', concat(variables('sqlNamePrefix'), copyindex()))]"
+			],
+			"properties": {
+				"publisher": "Microsoft.SqlServer.Management",
+				"type": "SqlIaaSAgent",
+				"typeHandlerVersion": "1.2",
+				"autoUpgradeMinorVersion": true,
+				"settings": {
+					"AutoTelemetrySettings": {
+						"Region": "[parameters('environmentReference').deployment.location]"
+					},
+					"AutoBackupSettings": {
+						"Enable": true,
+						"RetentionPeriod": "30",
+						"EnableEncryption": true,
+						"BackupSystemDbs": "true",
+						"BackupScheduleType": "Automated"
+					},
+					"AutoPatchingSettings": {
+						"PatchCategory": "WindowsMandatoryUpdates",
+						"Enable": true,
+						"DayOfWeek": "Sunday",
+						"MaintenanceWindowStartingHour": "2",
+						"MaintenanceWindowDuration": "60"
+					},
+					"KeyVaultCredentialSettings": {
+						"Enable": true,
+						"CredentialName": "sysadmin_ekm_cred"
+					},
+					"ServerConfigurationsManagementSettings": {
+						"SQLConnectivityUpdateSettings": {
+							"ConnectivityType": "Private",
+							"Port": 1433
 						},
-						"protectedSettings": {
-							"StorageUrl": "[reference(resourceId(concat(variables('paasPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]",
-							"StorageAccessKey": "[listKeys(resourceId(concat(variables('paasPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').key1]",
-							"Password": "[concat(substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24), '!Q')]",
-							"PrivateKeyVaultCredentialSettings": {
-								"AzureKeyVaultUrl": "[concat('https://', variables('paasPrefix'), '-kv.vault.azure.net/')]",
-								"ServicePrincipalName": "[parameters('environmentReference').deployment.azureApplication]",
-								"ServicePrincipalSecret": "[substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24)]"
-							}
+						"SQLWorkloadTypeUpdateSettings": {
+							"SQLWorkloadType": "GENERAL"
+						},
+						"SQLStorageUpdateSettings": {
+							"DiskCount": "[parameters('environmentReference').sql.diskCount]",
+							"NumberOfColumns": "[parameters('environmentReference').sql.diskCount]",
+							"StartingDeviceID": 2,
+							"DiskConfigurationType": "NEW"
 						}
 					}
+				},
+				"protectedSettings": {
+					"StorageUrl": "[reference(resourceId(concat(variables('paasPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').primaryEndpoints['blob']]",
+					"StorageAccessKey": "[listKeys(resourceId(concat(variables('paasPrefix'), '-operations'), 'Microsoft.Storage/storageAccounts', concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')), '2015-06-15').key1]",
+					"Password": "[concat(substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24), '!Q')]",
+					"PrivateKeyVaultCredentialSettings": {
+						"AzureKeyVaultUrl": "[concat('https://', variables('paasPrefix'), '-kv.vault.azure.net/')]",
+						"ServicePrincipalName": "[parameters('environmentReference').deployment.azureApplication]",
+						"ServicePrincipalSecret": "[substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24)]"
+					}
 				}
-			]
+			}
 		},
 		{
 			"type": "Microsoft.Compute/virtualMachines/extensions",
@@ -284,7 +285,8 @@
 			"apiVersion": "2016-03-30",
 			"location": "[parameters('environmentReference').deployment.location]",
 			"dependsOn": [
-				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), copyIndex(1)), 'SqlIaasExtension')]"
+				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), copyIndex(1)), 'SqlIaasExtension')]",
+				"extensionsLoop"
 			],
 			"copy": {
 				"name": "virtualMachineExtensionLoop",
@@ -327,7 +329,8 @@
 			"apiVersion": "2016-03-30",
 			"location": "[parameters('environmentReference').deployment.location]",
 			"dependsOn": [
-				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), '0'), 'SqlIaasExtension')]"
+				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), '0'), 'SqlIaasExtension')]",
+				"extensionsLoop"
 			],
 			"properties": {
 				"publisher": "Microsoft.Powershell",
@@ -370,10 +373,11 @@
 			"type": "Microsoft.Resources/deployments",
 			"apiVersion": "2017-05-10",
 			"dependsOn": [
-				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), copyIndex()), 'sql-alwayson')]"
+				"virtualMachineLoop",
+				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), copyindex()), 'SqlIaasExtension')]"
 			],
 			"copy": {
-				"name": "extensions",
+				"name": "extensionsLoop",
 				"count": "[parameters('environmentReference').sql.vmCount]"
 			},
 			"properties": {
@@ -388,16 +392,16 @@
 					},
 					"bossObject": {
 						"value": {
-						  "vmName": "[concat(variables('sqlNamePrefix'), copyindex())]",
-						  "extensions": "[parameters('environmentReference').sql.extensions]"
+							"vmName": "[concat(variables('sqlNamePrefix'), copyindex())]",
+							"extensions": "[parameters('environmentReference').sql.extensions]"
 						}
-					  },
-					  "oms": {
+					},
+					"oms": {
 						"value": {
-						  "Id": "[if(contains(parameters('environmentReference').sql.extensions, 'OMS'), reference(resourceId(concat(variables('paasPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
-						  "Key": "[if(contains(parameters('environmentReference').sql.extensions, 'OMS'), listKeys(resourceId(concat(variables('paasPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
+							"Id": "[if(contains(parameters('environmentReference').sql.extensions, 'OMS'), reference(resourceId(concat(variables('paasPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').customerId, 'bogus')]",
+							"Key": "[if(contains(parameters('environmentReference').sql.extensions, 'OMS'), listKeys(resourceId(concat(variables('paasPrefix'), '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName')), '2015-03-20').primarySharedKey, 'bogus')]"
 						}
-					  }
+					}
 				}
 			}
 		},

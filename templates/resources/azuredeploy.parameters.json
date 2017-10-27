@@ -23,23 +23,24 @@
                         "MSTrendMicro"
                     ],
                     "diskCount": 2,
+                    "diskSize": 100,
                     "vmCount": 2
                 },
                 "domain": {
                     "name": "test.local",
                     "domainExtensions": [
+                        "Encryption",
                         "OMS",
                         "NetworkWatcher",
                         "ServiceMap",
-                        "Encryption",
                         "MSTrendMicro"
                     ],
                     "jumpbox": "jumpota",
                     "jumpboxExtensions": [
+                        "Encryption",
                         "OMS",
                         "NetworkWatcher",
                         "ServiceMap",
-                        "Encryption",
                         "MSTrendMicro"
                     ],
                     "serviceAccessPwd": "!Q2w3e4r5t6y",
@@ -340,7 +341,7 @@
                     "ports": [
                         443
                     ],
-                    "size": "Standard_DS2_v2",
+                    "size": "Standard_DS2_v2_PROMO",
                     "subnet": "webTier",
                     "vnet": "application"
                 }

@@ -29,7 +29,7 @@
         "vmCloudNeeti": "[concat(parameters('environmentReference').deployment.env, '-cloudneeti')]",
         "nicCloudNeeti": "[concat(parameters('environmentReference').deployment.env, '-cloudneeti-nic')]",
         "baseUrl": "https://gallery.azure.com/artifact/20151001/trendmicro.deep-security-manager-st-byoldeep-security-manager-byol.1.0.13/Artifacts",
-        "vnetID": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', 'dev-security')]",
+        "vnetID": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-networking'), 'Microsoft.Network/virtualNetworks', concat(parameters('environmentReference').deployment.env, '-security'))]",
         "newsqlServerName": "[tolower(concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'sqltdm'))]",
         "network-api-version": "2015-06-15",
         "compute-api-version": "2016-04-30-preview"
@@ -98,7 +98,7 @@
             },
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_DS2_v2"
+                    "vmSize": "Standard_DS2_v2_PROMO"
                 },
                 "osProfile": {
                     "computerName": "[variables('vmTDM')]",
@@ -166,7 +166,7 @@
                     "heartbeatPort": "[variables('heartbeatPort')]",
                     "vmFQDN": "[variables('vmTDM')]",
                     "databaseOption": "new",
-                    "vmSize": "Standard_DS2_v2"
+                    "vmSize": "Standard_DS2_v2_PROMO"
                 }
             },
             "dependsOn": [
@@ -208,7 +208,7 @@
             },
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_DS2_v2"
+                    "vmSize": "Standard_DS2_v2_PROMO"
                 },
                 "networkProfile": {
                     "networkInterfaces": [
@@ -278,7 +278,7 @@
             },
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_DS2_v2"
+                    "vmSize": "Standard_DS2_v2_PROMO"
                 },
                 "osProfile": {
                     "computerName": "[variables('vmlogic')]",
@@ -355,7 +355,7 @@
                     }
                 },
                 "hardwareProfile": {
-                    "vmSize": "Standard_DS2_v2"
+                    "vmSize": "Standard_DS2_v2_PROMO"
                 },
                 "storageProfile": {
                     "imageReference": {
