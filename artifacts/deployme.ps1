@@ -45,7 +45,7 @@ function Orchestrate-ArmDeployment {
     }
 
     Invoke-ArmDeployment @invoker -steps 2, 1 -prerequisiteRefresh | Out-Null
-    Wait-ArmDeployment $hash
+    Wait-OrchestrationJobs $hash 'create' $components
     if ( $complete.IsPresent ) {
         Invoke-ArmDeployment @invoker -steps 5,3,4,6,7 | Out-Null
     } else {
@@ -174,7 +174,8 @@ function Invoke-ArmDeployment {
                 }
             }.GetNewClosure()
 
-            Start-job -Name "create-$step-$deploymentHash" -ScriptBlock $importSession -ArgumentList (($resourceGroupPrefix, $deploymentPrefix, ($deployments.$step).rg) -join '-'), `
+            $jobName = ("create", ($deployments.$step).name, $deploymentHash) -join "-"
+            Start-job -Name $jobName -ScriptBlock $importSession -ArgumentList (($resourceGroupPrefix, $deploymentPrefix, ($deployments.$step).rg) -join '-'), `
                 "$scriptRoot\templates\resources\$(($deployments.$step).name)\azuredeploy.json", $deploymentData[1], (($deploymentData[0], ($deployments.$step).name) -join '-'), $subId
             Write-Host ("Started Job {0}" -f ($deployments.$step).name) -ForegroundColor Yellow
         }
@@ -203,22 +204,33 @@ function Remove-ArmDeployment ($rg, $dp, $subId) {
     $components | ForEach-Object {
         $importSession = {
             param(
-                $rgName,
-                $subId
+                $subId,
+                $rgp,
+                $dp,
+                $component,
+                $hash,
+                $components
             )
             Set-AzureRmContext -SubscriptionId $subId
-            Remove-AzureRmResourceGroup -Name $rgName -Force
+            if ($component -eq 'networking') {
+                [System.Collections.ArrayList]$componentList = $components
+                $componentList.remove('networking')
+                Wait-OrchestrationJobs $hash 'delete' $componentList
+            }
+            Remove-AzureRmResourceGroup -Name (($rgp, $dp, $component) -join '-') -Force
         }.GetNewClosure()
 
-        Start-job -Name "delete-$_-$hash" -ScriptBlock $importSession -ArgumentList (($rg, $dp, $_) -join '-'), $subId
+        Start-job -Name "delete-$_-$hash" -ScriptBlock $importSession -ArgumentList $subId, $rg, $dp, $_, $hash, $components
     }
 }
 
-function Wait-ArmDeployment($hash) {
+function Wait-OrchestrationJobs($hash, $action, $componentList) {
     $start = Get-Date
     do {
         Start-Sleep 30
-        $jobs = Get-Job | Where-Object { $PSItem.Name -like "create*${hash}"} | Where-Object { $PSItem.State -eq "Running"}
+        $jobs = Get-Job | Where-Object { $PSItem.Name -like "${action}*${hash}"} | `
+                          Where-Object { $PSItem.Name -replace "-${hash}" -replace "${action}-" -in $componentList } | `
+                          Where-Object { $PSItem.State -eq "Running"}
         "Waiting for {0} jobs to complete or fail" -f $jobs.Count
     } while ($jobs -and ($start.AddHours(1) -ge (Get-Date)))
     if ($jobs.State -contains "Failed") {
@@ -226,7 +238,9 @@ function Wait-ArmDeployment($hash) {
     }
     else {
         "Jobs okay, cleaning up"
-        Get-Job | Where-Object { $PSItem.Name -like "create*${hash}"} | Remove-Job -Force
+        Get-Job | Where-Object { $PSItem.Name -like "${action}*${hash}"} | `
+                  Where-Object { $PSItem.Name -replace "-${hash}" -replace "${action}-" -in $componentList } | `
+                  Remove-Job -Force
     }
 }
 
