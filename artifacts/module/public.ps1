@@ -194,12 +194,16 @@ function Remove-ArmDeployment ($rg, $dp, $subId) {
         $deploymentScriptblock = {
             param(
                 $rgName,
-                $subId
+                $subId,
+                $component
             )
             Set-AzureRmContext -SubscriptionId $subId
+            if ($component -eq 'networking') {
+                Start-Sleep -Seconds 300
+            }
             Remove-AzureRmResourceGroup -Name $rgName -Force
         }.GetNewClosure()
 
-        Start-job -Name "delete-$_-$hash" -ScriptBlock $deploymentScriptblock -ArgumentList (($rg, $dp, $_) -join '-'), $subId
+        Start-job -Name "delete-$_-$hash" -ScriptBlock $deploymentScriptblock -ArgumentList (($rg, $dp, $_) -join '-'), $subId, $_
     }
 }
