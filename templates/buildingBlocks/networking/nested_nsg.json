@@ -91,9 +91,9 @@
     },
     "resources": [
         {
-            "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-09-01",
             "name": "[concat('iterator-', parameters('bossObject').subnetName, '-0')]",
+            "type": "Microsoft.Resources/deployments",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
@@ -107,9 +107,9 @@
             }
         },
         {
-            "type": "Microsoft.Resources/deployments",
             "apiVersion": "2016-09-01",
             "name": "[concat('iterator-', parameters('bossObject').subnetName, '-', copyIndex(1))]",
+            "type": "Microsoft.Resources/deployments",
             "copy": {
                 "name": "iterator",
                 "count": "[length(parameters('bossObject').Firewall)]",
@@ -131,10 +131,10 @@
             }
         },
         {
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').subnetName, '-nsg')]",
             "apiVersion": "2016-03-30",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').subnetName, '-nsg')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/networkSecurityGroups",
             "properties": {
                 "securityRules": "[reference(concat('iterator-', parameters('bossObject').subnetName, '-', length(parameters('bossObject').Firewall))).outputs.collection.value]"
             },

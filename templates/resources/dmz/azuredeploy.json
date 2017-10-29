@@ -30,10 +30,10 @@
     },
     "resources": [
         {
-            "type": "Microsoft.Network/routeTables",
-            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf-routeTable')]",
             "apiVersion": "2017-06-01",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf-routeTable')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/routeTables",
             "properties": {
                 "routes": [
                     {
@@ -48,21 +48,10 @@
             }
         },
         {
-            "type": "Microsoft.Compute/availabilitySets",
+            "apiVersion": "2016-04-30-preview",
             "name": "[concat(parameters('environmentReference').deployment.env, '-waf-avSet')]",
-            "apiVersion": "2016-04-30-preview",
             "location": "[parameters('environmentReference').deployment.location]",
-            "properties": {
-                "platformFaultDomainCount": 2,
-                "platformUpdateDomainCount": 5,
-                "managed": true
-            }
-        },
-        {
             "type": "Microsoft.Compute/availabilitySets",
-            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf-avSet')]",
-            "apiVersion": "2016-04-30-preview",
-            "location": "[parameters('environmentReference').deployment.location]",
             "properties": {
                 "platformFaultDomainCount": 2,
                 "platformUpdateDomainCount": 5,
@@ -70,10 +59,21 @@
             }
         },
         {
-            "name": "[concat(parameters('environmentReference').deployment.env, '-waf')]",
-            "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf-avSet')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Compute/availabilitySets",
+            "properties": {
+                "platformFaultDomainCount": 2,
+                "platformUpdateDomainCount": 5,
+                "managed": true
+            }
+        },
+        {
+            "apiVersion": "2016-04-30-preview",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-waf')]",
+            "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Compute/virtualMachines",
             "dependsOn": [
                 "[concat('Microsoft.Network/networkInterfaces/', concat(parameters('environmentReference').deployment.env, '-waf-nic'))]",
                 "[concat('Microsoft.Compute/availabilitySets/', concat(parameters('environmentReference').deployment.env, '-waf-avSet'))]"
@@ -126,10 +126,10 @@
             }
         },
         {
-            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf')]",
-            "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Compute/virtualMachines",
             "dependsOn": [
                 "[concat('Microsoft.Network/networkInterfaces/', concat(parameters('environmentReference').deployment.env, '-ngf-nic'))]",
                 "[concat('Microsoft.Compute/availabilitySets/', concat(parameters('environmentReference').deployment.env, '-ngf-avSet'))]"
@@ -183,10 +183,10 @@
             }
         },
         {
-            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf-nic')]",
-            "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2017-06-01",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-ngf-nic')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/networkInterfaces",
             "dependsOn": [
                 "[concat('Microsoft.Network/loadBalancers/', concat(parameters('environmentReference').deployment.env, '-waf-lb'))]"
             ],
@@ -206,10 +206,10 @@
             }
         },
         {
-            "name": "[concat(parameters('environmentReference').deployment.env, '-waf-nic')]",
-            "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2017-06-01",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-waf-nic')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/networkInterfaces",
             "dependsOn": [
                 "[concat('Microsoft.Network/loadBalancers/', concat(parameters('environmentReference').deployment.env, '-waf-lb'))]"
             ],
@@ -234,20 +234,19 @@
             }
         },
         {
-            "name": "[concat(parameters('environmentReference').deployment.env, '-waf-ip')]",
-            "type": "Microsoft.Network/publicIPAddresses",
             "apiVersion": "2017-06-01",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-waf-ip')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/publicIPAddresses",
             "properties": {
                 "publicIPAllocationMethod": "Static"
             }
         },
         {
-            "type": "Microsoft.Network/loadBalancers",
             "name": "[concat(parameters('environmentReference').deployment.env, '-waf-lb')]",
             "apiVersion": "2017-06-01",
             "location": "[parameters('environmentReference').deployment.location]",
-            "comments": "This Load Balancer is used to access DMZ",
+            "type": "Microsoft.Network/loadBalancers",
             "dependsOn": [
                 "[concat('Microsoft.Network/publicIpAddresses/', concat(parameters('environmentReference').deployment.env, '-waf-ip'))]"
             ],

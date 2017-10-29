@@ -83,18 +83,14 @@ function New-DeploymentContextKV ($hash) {
     }
     @( $sp.Id.Guid, $app.ApplicationId.Guid )
 }
-function Wait-ArmDeployment ($hash) {
+function Wait-ArmDeployment ($hash, $sleep) {
     $start = Get-Date
     do {
-        Start-Sleep 30
-        $jobs = Get-Job | Where-Object { $PSItem.Name -like "create*${hash}"} | Where-Object { $PSItem.State -eq "Running"}
+        Start-Sleep $sleep
+        $jobs = Get-Job | Where-Object { $PSItem.Name -like "create*$hash" -and $PSItem.State -ne "Completed" }
         "Waiting for {0} jobs to complete or fail" -f $jobs.Count
+        if ($jobs.State -contains "Failed") {
+            Throw "Some jobs failes, check job(s) output ( gjb | ? name -like 'create*{0}' | rcjb )." -f $hash
+        }
     } while ($jobs -and ($start.AddHours(1) -ge (Get-Date)))
-    if ($jobs.State -contains "Failed") {
-        Throw "Bad place to be, check job(s) output"
-    }
-    else {
-        "Jobs okay, cleaning up"
-        Get-Job | Where-Object { $PSItem.Name -like "create*${hash}"} | Remove-Job -Force
-    }
 }

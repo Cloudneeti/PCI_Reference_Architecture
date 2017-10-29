@@ -17,7 +17,30 @@
         }
     },
     "variables": {
+        "paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]",
+        "kvUri": "[concat('https://', variables('paasPrefix'), '-kv.vault.azure.net/')]",
+        "kvId": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.KeyVault/vaults', concat(variables('paasPrefix'), '-kv'))]",
         "empty": [],
+        "Encryption": [
+            {
+                "name": "encryption",
+                "properties": {
+                    "publisher": "Microsoft.Azure.Security",
+                    "type": "AzureDiskEncryption",
+                    "typeHandlerVersion": "2.1",
+                    "autoUpgradeMinorVersion": true,
+                    "settings": {
+                        "EncryptionOperation": "EnableEncryption",
+                        "KekVaultResourceId": "[variables('kvId')]",
+                        "KeyVaultResourceId": "[variables('kvId')]",
+                        "KeyVaultURL": "[variables('kvUri')]",
+                        "KeyEncryptionKeyURL": "[concat(variables('kvUri'), 'keys/ContosoMasterKey/', parameters('environmentReference').deployment.keyVersion)]",
+                        "KeyEncryptionAlgorithm": "RSA-OAEP",
+                        "VolumeType": "All"
+                    }
+                }
+            }
+        ],
         "OMS": [
             {
                 "name": "omsAgent",

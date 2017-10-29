@@ -32,10 +32,10 @@
 	},
 	"resources": [
 		{
-			"type": "Microsoft.Compute/availabilitySets",
-			"name": "[concat(parameters('environmentReference').deployment.env,'-sql-as')]",
 			"apiVersion": "2016-04-30-preview",
+			"name": "[concat(parameters('environmentReference').deployment.env,'-sql-as')]",
 			"location": "[parameters('environmentReference').deployment.location]",
+			"type": "Microsoft.Compute/availabilitySets",
 			"properties": {
 				"platformFaultDomainCount": 2,
 				"platformUpdateDomainCount": 5,
@@ -45,8 +45,8 @@
 		{
 			"apiVersion": "2015-06-15",
 			"name": "[variables('sqlLBName')]",
-			"type": "Microsoft.Network/loadBalancers",
 			"location": "[parameters('environmentReference').deployment.location]",
+			"type": "Microsoft.Network/loadBalancers",
 			"dependsOn": [],
 			"properties": {
 				"frontendIPConfigurations": [
@@ -100,10 +100,10 @@
 			}
 		},
 		{
-			"name": "[concat(variables('sqlNamePrefix'), copyindex(), '-nic')]",
-			"type": "Microsoft.Network/networkInterfaces",
-			"location": "[parameters('environmentReference').deployment.location]",
 			"apiVersion": "2015-06-15",
+			"name": "[concat(variables('sqlNamePrefix'), copyindex(), '-nic')]",
+			"location": "[parameters('environmentReference').deployment.location]",
+			"type": "Microsoft.Network/networkInterfaces",
 			"copy": {
 				"name": "nicLoop",
 				"count": "[parameters('environmentReference').sql.vmCount]"
@@ -142,9 +142,9 @@
 		},
 		{
 			"apiVersion": "2016-04-30-preview",
-			"type": "Microsoft.Compute/virtualMachines",
 			"name": "[concat(variables('sqlNamePrefix'), copyindex())]",
 			"location": "[parameters('environmentReference').deployment.location]",
+			"type": "Microsoft.Compute/virtualMachines",
 			"copy": {
 				"name": "virtualMachineLoop",
 				"count": "[parameters('environmentReference').sql.vmCount]"
@@ -213,10 +213,10 @@
 			}
 		},
 		{
-			"name": "[concat(variables('sqlNamePrefix'),copyindex(),'/SqlIaasExtension')]",
-			"type": "Microsoft.Compute/virtualMachines/extensions",
 			"apiVersion": "2016-03-30",
+			"name": "[concat(variables('sqlNamePrefix'),copyindex(),'/SqlIaasExtension')]",
 			"location": "[parameters('environmentReference').deployment.location]",
+			"type": "Microsoft.Compute/virtualMachines/extensions",
 			"copy": {
 				"name": "SqlIaasExtensionLoop",
 				"count": "[parameters('environmentReference').sql.vmCount]"
@@ -280,10 +280,10 @@
 			}
 		},
 		{
-			"type": "Microsoft.Compute/virtualMachines/extensions",
-			"name": "[concat(variables('sqlNamePrefix'),copyindex(1),'/sql-alwayson')]",
 			"apiVersion": "2016-03-30",
+			"name": "[concat(variables('sqlNamePrefix'),copyindex(1),'/sql-alwayson')]",
 			"location": "[parameters('environmentReference').deployment.location]",
+			"type": "Microsoft.Compute/virtualMachines/extensions",
 			"dependsOn": [
 				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), copyIndex(1)), 'SqlIaasExtension')]",
 				"extensionsLoop"
@@ -324,10 +324,10 @@
 			}
 		},
 		{
-			"type": "Microsoft.Compute/virtualMachines/extensions",
-			"name": "[concat(variables('sqlNamePrefix'),'0/sql-alwayson')]",
 			"apiVersion": "2016-03-30",
+			"name": "[concat(variables('sqlNamePrefix'),'0/sql-alwayson')]",
 			"location": "[parameters('environmentReference').deployment.location]",
+			"type": "Microsoft.Compute/virtualMachines/extensions",
 			"dependsOn": [
 				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), '0'), 'SqlIaasExtension')]",
 				"extensionsLoop"
@@ -369,9 +369,9 @@
 			}
 		},
 		{
+			"apiVersion": "2017-05-10",
 			"name": "[concat(variables('sqlNamePrefix'), 'extension-', copyindex())]",
 			"type": "Microsoft.Resources/deployments",
-			"apiVersion": "2017-05-10",
 			"dependsOn": [
 				"virtualMachineLoop",
 				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'), copyindex()), 'SqlIaasExtension')]"
@@ -406,10 +406,9 @@
 			}
 		},
 		{
-			"condition": false,
+			"apiVersion": "2015-01-01",
 			"name": "[concat(parameters('environmentReference').deployment.env, 'vmss-', copyIndex())]",
 			"type": "Microsoft.Resources/deployments",
-			"apiVersion": "2015-01-01",
 			"copy": {
 				"name": "vmssCopy",
 				"count": "[length(parameters('vmReference'))]"

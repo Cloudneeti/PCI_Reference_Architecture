@@ -13,9 +13,9 @@
     "resources": [
         {
             "apiVersion": "2017-04-01",
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name, '/Peering-', copyIndex())]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "copy": {
                 "name": "peerings",
                 "count": "[length(parameters('bossObject').peerings)]"

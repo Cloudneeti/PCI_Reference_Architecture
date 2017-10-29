@@ -24,9 +24,9 @@
     },
     "resources": [
         {
-            "type": "Microsoft.Resources/deployments",
-            "name": "[concat('vnets-nested-', copyIndex())]",
             "apiVersion": "2016-09-01",
+            "name": "[concat('vnets-nested-', copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
             "copy": {
                 "name": "deployvnets",
                 "count": "[length(parameters('networkReference'))]"
@@ -51,9 +51,9 @@
             }
         },
         {
-            "type": "Microsoft.Resources/deployments",
-            "name": "[concat('peerings-nested-', copyIndex())]",
             "apiVersion": "2016-09-01",
+            "name": "[concat('peerings-nested-', copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
             "copy": {
                 "name": "peering",
                 "count": "[length(parameters('networkReference'))]"

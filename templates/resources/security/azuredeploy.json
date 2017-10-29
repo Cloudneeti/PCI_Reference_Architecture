@@ -85,10 +85,10 @@
             }
         },
         {
-            "type": "Microsoft.Compute/virtualMachines",
-            "name": "[variables('vmTDM')]",
             "apiVersion": "2016-04-30-preview",
+            "name": "[variables('vmTDM')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Compute/virtualMachines",
             "plan": {
                 "publisher": "trendmicro",
                 "product": "deep-security-vm-byol",
@@ -138,10 +138,10 @@
             ]
         },
         {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(variables('vmTDM'),'/installDSM')]",
             "apiVersion": "2015-05-01-preview",
+            "name": "[concat(variables('vmTDM'),'/installDSM')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
             "properties": {
                 "publisher": "Microsoft.OSTCExtensions",
                 "type": "CustomScriptForLinux",
@@ -174,9 +174,9 @@
         },
         {
             "apiVersion": "2015-06-15",
+            "name": "[variables('nicQualys')]",
             "location": "[parameters('environmentReference').deployment.location]",
             "type": "Microsoft.Network/networkInterfaces",
-            "name": "[variables('nicQualys')]",
             "properties": {
                 "ipConfigurations": [
                     {
@@ -193,9 +193,9 @@
         },
         {
             "apiVersion": "2016-04-30-preview",
+            "name": "[variables('vmQualys')]",
             "location": "[parameters('environmentReference').deployment.location]",
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[variables('vmQualys')]",
             "dependsOn": [
                 "[concat('Microsoft.Network/networkInterfaces/', variables('nicQualys'))]"
             ],
@@ -244,9 +244,9 @@
         },
         {
             "apiVersion": "2015-06-15",
-            "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('niclogic')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/networkInterfaces",
             "properties": {
                 "ipConfigurations": [
                     {
@@ -263,9 +263,9 @@
         },
         {
             "apiVersion": "2016-04-30-preview",
-            "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmlogic')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Compute/virtualMachines",
             "dependsOn": [
                 "[concat('Microsoft.Network/networkInterfaces/', variables('niclogic'))]"
             ],
@@ -313,9 +313,9 @@
         },
         {
             "apiVersion": "2015-06-15",
-            "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicCloudNeeti')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/networkInterfaces",
             "properties": {
                 "ipConfigurations": [
                     {
@@ -331,10 +331,10 @@
             }
         },
         {
-            "name": "[variables('vmCloudNeeti')]",
-            "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2016-04-30-preview",
+            "name": "[variables('vmCloudNeeti')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Compute/virtualMachines",
             "dependsOn": [
                 "[variables('nicCloudNeeti')]"
             ],

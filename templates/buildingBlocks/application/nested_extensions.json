@@ -125,10 +125,10 @@
     "resources": [
         {
             "condition": "[not(equals(parameters('bossObject').extensions[copyIndex()], 'Backup'))]",
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('bossObject').vmName,'/', variables(parameters('bossObject').extensions[copyIndex()]).name)]",
             "apiVersion": "2016-03-30",
+            "name": "[concat(parameters('bossObject').vmName,'/', variables(parameters('bossObject').extensions[copyIndex()]).name)]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
             "copy": {
                 "name": "Extensions",
                 "count": "[length(parameters('bossObject').extensions)]",
@@ -172,9 +172,9 @@
         {
             "condition": "[contains(parameters('bossObject').extensions, 'Encryption')]",
             "apiVersion": "2016-04-30-preview",
-            "type": "Microsoft.Compute/virtualMachines",
             "name": "[parameters('bossObject').vmName]",
             "location": "[resourceGroup().location]",
+            "type": "Microsoft.Compute/virtualMachines",
             "properties": {
                 "storageProfile": {
                     "osDisk": {

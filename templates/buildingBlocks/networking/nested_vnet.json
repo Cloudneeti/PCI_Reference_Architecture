@@ -22,10 +22,10 @@
     },
     "resources": [
         {
-            "type": "Microsoft.Network/virtualNetworks",
-            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name)]",
             "apiVersion": "2016-03-30",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('bossObject').name)]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/virtualNetworks",
             "dependsOn": [
                 "deployNSGs"
             ],
@@ -56,9 +56,9 @@
             }
         },
         {
-            "type": "Microsoft.Resources/deployments",
-            "name": "[concat('deployNSG-', parameters('bossObject').name, copyIndex())]",
             "apiVersion": "2016-09-01",
+            "name": "[concat('deployNSG-', parameters('bossObject').name, copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
             "copy": {
                 "name": "deployNSGs",
                 "count": "[length(parameters('bossObject').subnets)]"

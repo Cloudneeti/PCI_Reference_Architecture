@@ -16,11 +16,11 @@
                 "sql": {
                     "bacpacUri": "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac",
                     "extensions": [
+                        "Encryption",
                         "OMS",
                         "NetworkWatcher",
                         "ServiceMap",
-                        "MSTrendMicro",
-                        "Encryption"
+                        "MSTrendMicro"
                     ],
                     "diskCount": 2,
                     "diskSize": 100,
@@ -341,7 +341,8 @@
                         "OMS",
                         "NetworkWatcher",
                         "ServiceMap",
-                        "MSTrendMicro"
+                        "MSTrendMicro",
+                        "Encryption"
                     ],
                     "name": "webbito",
                     "os": "Windows",

@@ -33,14 +33,14 @@
     },
     "resources": [
         {
+            "apiVersion": "2016-12-01",
+            "name": "[concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')]",
+            "location": "[parameters('environmentReference').deployment.location]",
             "type": "Microsoft.Storage/storageAccounts",
             "sku": {
                 "name": "Standard_LRS"
             },
-            "kind": "Storage",
-            "name": "[concat(parameters('environmentReference').deployment.prefix, parameters('environmentReference').deployment.env, 'diagstor')]",
-            "apiVersion": "2016-12-01",
-            "location": "[parameters('environmentReference').deployment.location]"
+            "kind": "Storage"
         },
         {
             "apiVersion": "2016-10-01",
@@ -65,10 +65,13 @@
                         "objectId": "[parameters('environmentReference').deployment.azureApplicationServicePrincipal]",
                         "permissions": {
                             "keys": [
-                                "WrapKey"
+                                "list",
+                                "get",
+                                "wrapKey",
+                                "unwrapKey"
                             ],
                             "secrets": [
-                                "Set"
+                                "set"
                             ],
                             "certificates": []
                         }
@@ -78,14 +81,14 @@
                         "objectId": "2e7c0df0-13d2-4346-9c33-44c7bbb17409",
                         "permissions": {
                             "keys": [
-                                "Get",
-                                "List",
-                                "Backup"
+                                "get",
+                                "list",
+                                "backup"
                             ],
                             "secrets": [
-                                "Get",
-                                "List",
-                                "Backup"
+                                "get",
+                                "list",
+                                "backup"
                             ]
                         }
                     }
@@ -93,12 +96,12 @@
             },
             "resources": [
                 {
-                    "type": "providers/diagnosticSettings",
+                    "apiVersion": "2017-05-01-preview",
                     "name": "Microsoft.Insights/service",
+                    "type": "providers/diagnosticSettings",
                     "dependsOn": [
                         "[concat('Microsoft.KeyVault/vaults/',variables('kvName'))]"
                     ],
-                    "apiVersion": "2017-05-01-preview",
                     "properties": {
                         "WorkspaceId": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
                         "logs": [
@@ -117,9 +120,9 @@
         },
         {
             "apiVersion": "2015-11-01-preview",
-            "type": "Microsoft.OperationalInsights/workspaces",
             "name": "[variables('omsName')]",
             "location": "eastus",
+            "type": "Microsoft.OperationalInsights/workspaces",
             "properties": {
                 "sku": {
                     "Name": "Free"
@@ -127,11 +130,10 @@
             }
         },
         {
-            "name": "[variables('automationName')]",
-            "type": "Microsoft.Automation/automationAccounts",
             "apiVersion": "2015-01-01-preview",
+            "name": "[variables('automationName')]",
             "location": "[parameters('environmentReference').deployment.location]",
-            "tags": {},
+            "type": "Microsoft.Automation/automationAccounts",
             "dependsOn": [
                 "[concat('Microsoft.OperationalInsights/workspaces/' , variables('omsName'))]"
             ],
@@ -142,12 +144,12 @@
             },
             "resources": [
                 {
-                    "type": "providers/diagnosticSettings",
+                    "apiVersion": "2017-05-01-preview",
                     "name": "Microsoft.Insights/service",
+                    "type": "providers/diagnosticSettings",
                     "dependsOn": [
                         "[concat('Microsoft.Automation/automationAccounts/',variables('automationName'))]"
                     ],
-                    "apiVersion": "2017-05-01-preview",
                     "properties": {
                         "WorkspaceId": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'),'microsoft.operationalinsights/workspaces',variables('omsName'))]",
                         "logs": [
@@ -182,13 +184,13 @@
         },
         {
             "id": "[concat(resourceGroup().id, '/providers/Microsoft.OperationsManagement/solutions/', variables('solutionTypes')[copyIndex()], '(', variables('omsName'), ')')]",
-            "type": "Microsoft.OperationsManagement/solutions",
-            "name": "[concat(variables('solutionTypes')[copyIndex()], '(', variables('omsName'), ')')]",
             "apiVersion": "2015-11-01-preview",
+            "name": "[concat(variables('solutionTypes')[copyIndex()], '(', variables('omsName'), ')')]",
+            "location": "eastus",
+            "type": "Microsoft.OperationsManagement/solutions",
             "dependsOn": [
                 "[concat('Microsoft.OperationalInsights/workspaces/' , variables('omsName'))]"
             ],
-            "location": "eastus",
             "copy": {
                 "name": "solutionsCopy",
                 "count": "[length(variables('solutionTypes'))]"
@@ -205,11 +207,11 @@
         },
         {
             "id": "[concat(resourceGroup().id, '/providers/Microsoft.OperationalInsights/workspaces/', variables('omsName'), '/datasources/', subscription().subscriptionId)]",
+            "apiVersion": "2015-11-01-preview",
+            "name": "[concat(variables('omsName'), '/', subscription().subscriptionId)]",
+            "location": "eastus",
             "type": "Microsoft.OperationalInsights/workspaces/datasources",
             "kind": "AzureActivityLog",
-            "name": "[concat(variables('omsName'), '/', subscription().subscriptionId)]",
-            "apiVersion": "2015-11-01-preview",
-            "location": "eastus",
             "dependsOn": [
                 "[concat('Microsoft.OperationalInsights/workspaces/' , variables('omsName'))]"
             ],

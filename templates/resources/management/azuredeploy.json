@@ -38,9 +38,9 @@
     "resources": [
         {
             "apiVersion": "2016-03-30",
-            "type": "Microsoft.Network/networkInterfaces",
             "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-nic')]",
             "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/networkInterfaces",
             "properties": {
                 "ipConfigurations": [
                     {
@@ -101,10 +101,10 @@
             },
             "resources": [
                 {
-                    "name": "dsc",
-                    "type": "extensions",
-                    "location": "[parameters('environmentReference').deployment.location]",
                     "apiVersion": "2016-03-30",
+                    "name": "dsc",
+                    "location": "[parameters('environmentReference').deployment.location]",
+                    "type": "extensions",
                     "dependsOn": [
                         "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-vm')]"
                     ],
@@ -136,9 +136,9 @@
             ]
         },
         {
+            "apiVersion": "2017-05-10",
             "name": "commonExtensions",
             "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2017-05-10",
             "dependsOn": [
                 "[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-VM'), 'dsc')]"
             ],
