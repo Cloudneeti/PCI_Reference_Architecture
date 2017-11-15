@@ -46,7 +46,7 @@ function Orchestrate-ArmDeployment {
     }
 
     Invoke-ArmDeployment @invoker -steps 2, 1 -prerequisiteRefresh | Out-Null
-    Wait-ArmDeployment $hash 40
+    Wait-ArmDeployment $hash 30
     if ( $complete.IsPresent ) {
         Invoke-ArmDeployment @invoker -steps 5, 4, 3, 6, 7 -ErrorAction Stop | Out-Null    
     }
@@ -57,7 +57,7 @@ function Orchestrate-ArmDeployment {
         "Starting steps: {0}." -f ($steps -join ", ")
         Invoke-ArmDeployment @invoker -steps $steps -ErrorAction Stop | Out-Null
     }
-    Wait-ArmDeployment $hash 35
+    Wait-ArmDeployment $hash 120
     $resultTime = (Get-Date) - $startTime
     "All went well, giving back control: {0}. ( total time: {1}:{2}. )" -f (Get-Date -f "HH:mm"), $resultTime.Minutes, $resultTime.Seconds
 }
@@ -212,7 +212,7 @@ function Remove-ArmDeployment ($rg, $dp, $subId) {
             )
             Set-AzureRmContext -SubscriptionId $subId
             if ($component -eq 'networking') {
-                Start-Sleep -Seconds 150
+                Start-Sleep -Seconds 210
             }
             Remove-AzureRmResourceGroup -Name $rgName -Force
         }.GetNewClosure()

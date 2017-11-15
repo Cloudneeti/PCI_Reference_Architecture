@@ -15,8 +15,7 @@
     "variables": {
         "dnsForDomain": "[concat(parameters('dnsSettings'), variables('internetDNS'))]",
         "internetDNS": [
-            "8.8.8.8",
-            "77.88.8.8"
+            "168.63.129.16"
         ]
 
     },

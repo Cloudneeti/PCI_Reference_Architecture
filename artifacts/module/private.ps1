@@ -88,7 +88,7 @@ function Wait-ArmDeployment ($hash, $sleep) {
     do {
         Start-Sleep $sleep
         $jobs = Get-Job | Where-Object { $PSItem.Name -like "create*$hash" -and $PSItem.State -ne "Completed" }
-        "Waiting for {0} jobs to complete or fail" -f $jobs.Count
+        "Waiting for {0} job(s) to complete or fail" -f $jobs.Count
         if ($jobs.State -contains "Failed") {
             Throw "Some jobs failes, check job(s) output ( gjb | ? name -like 'create*{0}' | rcjb )." -f $hash
         }

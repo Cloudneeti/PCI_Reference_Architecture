@@ -20,6 +20,7 @@ configuration sql-primary {
         [String]$SqlAlwaysOnAvailabilityGroupListenerIp,
 
         # Minor things
+        [String]$dbName = "ContosoClinic",
         [String]$bacpacUri = "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac",
         [UInt32]$DatabaseEnginePort = 1433,
         [UInt32]$DatabaseMirrorPort = 5022
@@ -34,7 +35,6 @@ configuration sql-primary {
     Enable-CredSSPNTLM -DomainName $DomainName
     $features = @("Failover-Clustering", "RSAT-Clustering-Mgmt", "RSAT-Clustering-PowerShell", "RSAT-AD-PowerShell")
     $ports = @(59999, $DatabaseEnginePort, $DatabaseMirrorPort)
-    WaitForSqlSetup
 
     Node localhost {
         LocalConfigurationManager {
@@ -53,27 +53,6 @@ configuration sql-primary {
             Name                 = $features
 
             Ensure               = "Present"
-        }
-        File SetupFolder {
-            DestinationPath = "C:\setup"
-            Type            = "Directory"
-
-            Ensure          = "Present"
-        }
-        xSmbShare MySMBShare {
-            Name       = "Setup"
-            Path       = "C:\Setup"
-            FullAccess = "Everyone"
-
-            DependsOn  = "[File]SetupFolder"
-            Ensure     = "Present"
-        }
-        xRemoteFile FileDownload {
-            DestinationPath = "C:\setup\ContosoPayments.bacpac"
-            MatchSource     = $true
-            Uri             = $bacpacUri
-
-            DependsOn       = "[File]SetupFolder"
         }
         foreach ($port in $ports) {
             xFirewall "rule-$port" {
@@ -226,6 +205,39 @@ configuration sql-primary {
             Ensure               = "Present"
             PsDscRunAsCredential = $SQLCreds
         }
+
+        File SetupFolder {
+            DestinationPath = "C:\setup"
+            Type            = "Directory"
+
+            Ensure          = "Present"
+        }
+        xSmbShare MySMBShare {
+            Name       = "Setup"
+            Path       = "C:\Setup"
+            FullAccess = "Everyone"
+
+            DependsOn  = "[File]SetupFolder"
+            Ensure     = "Present"
+        }
+        xRemoteFile FileDownload {
+            DestinationPath = "C:\setup\payload.bacpac"
+            MatchSource     = $true
+            Uri             = $bacpacUri
+
+            DependsOn       = "[File]SetupFolder"
+        }
+        xDatabase DeployBacPac {
+            Credentials      = $DomainCreds
+            BacPacPath       = "C:\setup\payload.bacpac"
+            DatabaseName     = $dbName
+            SqlServer        = $env:COMPUTERNAME
+            SqlServerVersion = "2016-SP1"
+
+            DependsOn        = @( "[xSQLServerAlwaysOnAvailabilityGroup]AvailabilityGroup", "[xRemoteFile]FileDownload" )
+            Ensure           = "Present"
+        }
+        
         xSQLServerAvailabilityGroupListener AvailabilityGroupListener {
             AvailabilityGroup    = "${deploymentPrefix}-sql-ag"
             IpAddress            = "$SqlAlwaysOnAvailabilityGroupListenerIp/255.255.255.0"
@@ -238,25 +250,14 @@ configuration sql-primary {
             Ensure               = "Present"
             PsDscRunAsCredential = $DomainCreds
         }
-
-        xDatabase DeployBacPac {
-            Credentials      = $DomainCreds
-            BacPacPath       = "C:\setup\ContosoPayments.bacpac"
-            DatabaseName     = "ContosoClinic"
-            SqlServer        = $env:COMPUTERNAME
-            SqlServerVersion = "2016-SP1"
-
-            DependsOn        = @( "[xSQLServerAlwaysOnAvailabilityGroup]AvailabilityGroup", "[xRemoteFile]FileDownload" )
-            Ensure           = "Present"
-        }
         xSQLServerAlwaysOnAvailabilityGroupDatabaseMembership DatabaseToAlwaysOn {
             AvailabilityGroupName = "${deploymentPrefix}-sql-ag"
             BackupPath            = "\\${deploymentPrefix}-sql-0\setup\"
-            DatabaseName          = "ContosoClinic"
+            DatabaseName          = $dbName
             SQLServer             = $env:COMPUTERNAME
             SQLInstanceName       = "MSSQLSERVER"
 
-            DependsOn             = @("[xDatabase]DeployBacPac", "[xSQLServerAlwaysOnAvailabilityGroup]AvailabilityGroup" )
+            DependsOn             = @("[xDatabase]DeployBacPac", "[xSQLServerAvailabilityGroupListener]AvailabilityGroupListener", "[xSmbShare]MySMBShare" )
             Ensure                = "Present"
             PsDscRunAsCredential  = $SQLCreds
         }
@@ -292,7 +293,6 @@ configuration sql-secondary {
     # Prepare for configuration
     $features = @("Failover-Clustering", "RSAT-Clustering-Mgmt", "RSAT-Clustering-PowerShell", "RSAT-AD-PowerShell")
     $ports = @(59999, $DatabaseEnginePort, $DatabaseMirrorPort)
-    WaitForSqlSetup
 
     Node localhost {
         LocalConfigurationManager {
@@ -451,7 +451,6 @@ configuration sql-secondary {
             DependsOn    = "[xSQLServerEndpoint]endpointHadr"
         }
 
-
         xWaitForAvailabilityGroup waitforAG {
             Name                 = "${deploymentPrefix}-sql-ag"
             RetryIntervalSec     = $RetryIntervalSec
@@ -472,18 +471,6 @@ configuration sql-secondary {
             DependsOn                     = "[xWaitForAvailabilityGroup]waitforAG"
             Ensure                        = "Present"
             PsDscRunAsCredential          = $SQLCreds
-        }
-    }
-}
-
-function WaitForSqlSetup {
-    while ($true) {
-        try {
-            Get-ScheduledTaskInfo "\ConfigureSqlImageTasks\RunConfigureImage" -ErrorAction Stop
-            Start-Sleep -Seconds 5
-        }
-        catch {
-            break
         }
     }
 }

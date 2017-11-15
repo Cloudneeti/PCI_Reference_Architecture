@@ -192,6 +192,7 @@
             }
         },
         {
+            "condition": false,
             "apiVersion": "2016-04-30-preview",
             "name": "[variables('vmQualys')]",
             "location": "[parameters('environmentReference').deployment.location]",
@@ -262,6 +263,7 @@
             }
         },
         {
+            "condition": false,
             "apiVersion": "2016-04-30-preview",
             "name": "[variables('vmlogic')]",
             "location": "[parameters('environmentReference').deployment.location]",
@@ -331,6 +333,7 @@
             }
         },
         {
+            "condition": false,
             "apiVersion": "2016-04-30-preview",
             "name": "[variables('vmCloudNeeti')]",
             "location": "[parameters('environmentReference').deployment.location]",

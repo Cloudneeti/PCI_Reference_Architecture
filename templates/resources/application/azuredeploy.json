@@ -413,6 +413,9 @@
 				"name": "vmssCopy",
 				"count": "[length(parameters('vmReference'))]"
 			},
+			"dependsOn": [
+				"virtualMachineLoop"
+			],
 			"properties": {
 				"mode": "Incremental",
 				"templateLink": {
