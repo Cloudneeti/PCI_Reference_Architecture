@@ -1,4 +1,11 @@
-function Get-DeploymentData ($hash, $kvContext, $rgp, $dp, $loc) {
+function Set-MarketPlaceTerms () {
+    Get-AzureRmMarketplaceTerms -Publisher alertlogic -Product alert-logic-tm -Name 202150001000 | Set-AzureRmMarketplaceTerms -Accept
+    Get-AzureRmMarketplaceTerms -Publisher qualysguard -Product qualys-virtual-scanner-v23b -Name qvsa-23 | Set-AzureRmMarketplaceTerms -Accept
+    Get-AzureRmMarketplaceTerms -Publisher trendmicro -Product deep-security-vm-byol -Name dxxnbyol | Set-AzureRmMarketplaceTerms -Accept
+    # Get-AzureRmMarketplaceTerms -Publisher cloudneeti -Product cloudneeti_enterprise -Name enterprise | Set-AzureRmMarketplaceTerms -Accept
+}
+
+function Get-DeploymentData ($hash, $kvContext, $rgp, $dp, $loc, $crtthb, $crtpwd) {
     if ($steps -notcontains 1) {
         $key = Get-DeploymentDataKV ( "{0}-{1}-kv" -f $rgp, $dp )
         if (!$key) {
@@ -15,6 +22,8 @@ function Get-DeploymentData ($hash, $kvContext, $rgp, $dp, $loc) {
     $parametersData.parameters.environmentReference.value.deployment.azureApplication = $kvContext[1]
     $parametersData.parameters.environmentReference.value.deployment.azureApplicationServicePrincipal = $kvContext[0]
     $parametersData.parameters.environmentReference.value.deployment.keyVersion = $key.Version
+    $parametersData.parameters.environmentReference.value.deployment.certificateThumbprint = $crtthb
+    $parametersData.parameters.environmentReference.value.deployment.certificateThumbprint = $crtpwd
     ( $parametersData | ConvertTo-Json -Depth 10 ) -replace "\\u0027", "'" | Out-File $tmp
     $deploymentName, $tmp
 }
@@ -64,10 +73,18 @@ function New-DeploymentContext ($hash, $rg, $loc) {
     if ( 'packages' -notin $ContainerList ) {
         $StorageAccount | New-AzureStorageContainer -Name 'packages' -Permission Container -ErrorAction Stop | Out-Null
     }
+    if ( 'misc' -notin $ContainerList ) {
+        $StorageAccount | New-AzureStorageContainer -Name 'misc' -Permission Container -ErrorAction Stop | Out-Null
+    }
     Get-ChildItem "$solutionRoot\artifacts\packages" -File -Filter *.zip | ForEach-Object {
         Compress-Archive -Path "$solutionRoot\artifacts\configurationscripts\$($_.BaseName).ps1" -DestinationPath $_.FullName -Update
         Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container 'packages' -File $_.FullName -Force -ErrorAction Stop | Out-Null
         Write-Output "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)."
+    }
+    'artifacts\sqlScripts\tde.sql', 'artifacts\cert.pfx' | ForEach-Object {
+        $File = Get-ChildItem "$solutionRoot\$PSItem"
+        Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container 'misc' -File $File.FullName -Force -ErrorAction Stop | Out-Null
+        Write-Output "Uploaded $($File.FullName) to $($StorageAccount.StorageAccountName)."
     }
 }
 
@@ -75,7 +92,7 @@ function New-DeploymentContextKV ($hash) {
     $bogusHttp = 'http://localhost/' + $hash
     $app = Get-AzureRmADApplication -DisplayNameStartWith $hash
     if (!$app) {
-        $app = New-AzureRmADApplication -DisplayName $hash -HomePage $bogusHttp -IdentifierUris $bogusHttp -Password $hash -ErrorAction SilentlyContinue
+        $app = New-AzureRmADApplication -DisplayName $hash -HomePage $bogusHttp -IdentifierUris $bogusHttp -Password ( ConvertTo-SecureString -Force -AsPlainText $hash ) -ErrorAction SilentlyContinue
         $sp = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId -ErrorAction SilentlyContinue
     }
     else {
@@ -83,6 +100,16 @@ function New-DeploymentContextKV ($hash) {
     }
     @( $sp.Id.Guid, $app.ApplicationId.Guid )
 }
+
+function New-SelfSignedCert ($hash, $loc) {
+    $cert = New-SelfSignedCertificate -CertStoreLocation 'Cert:\LocalMachine\My' -DnsName ( "{0}.{1}.cloudapp.azure.com" -f $hash, $loc )
+    Export-PfxCertificate -Cert ( 'Cert:\LocalMachine\My\' + $cert.Thumbprint ) -FilePath "$solutionRoot\artifacts\cert.pfx" -Password ( ConvertTo-SecureString -Force -AsPlainText $hash )
+    # $fileContentBytes = Get-Content ( $solutionRoot + '\cert.txt' ) -Encoding Byte
+    # [System.Convert]::ToBase64String($fileContentBytes) | Out-File ( $solutionRoot + '\artifacts\cert.pfx' )
+    $cert.Thumbprint, $hash
+    $hash | Out-File "$solutionRoot\artifacts\cert.txt" -Force
+}
+
 function Wait-ArmDeployment ($hash, $sleep) {
     $start = Get-Date
     do {

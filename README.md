@@ -21,21 +21,21 @@ To remove all the resource groups you can use the `Remove-ArmDeployment` functio
 ```powershell
 Remove-ArmDeployment -subId $subscriptionID -rg $resourceGroupPrefix -dp <dev | prod>
 ```
-Invoke-ArmDeployment function parameters rundown:
--subId               = SubscriptionId to which you are deploying
--resourceGroupPrefix = Resource Group naming prefix
--location            = Azure location to deploy to
--deploymentPrefix    = Prefix resource with this (dev or prod)
--steps               = Which steps to deploy (array of integers, explained further)
--complete            = Deploys Entire solutions (steps are ignored in this case)
+Orchestrate-ArmDeployment function parameters rundown:  
+- subId               = SubscriptionId to which you are deploying  
+- resourceGroupPrefix = Resource Group naming prefix  
+- location            = Azure location to deploy to  
+- deploymentPrefix    = Prefix resource with this (dev or prod)  
+- steps               = Which steps to deploy (array of integers, explained further)  
+- complete            = Deploys Entire solutions (steps are ignored in this case)
 
-Invoke-ArmDeployment function parameters rundown:
--subId               = SubscriptionId to which you are deploying
--resourceGroupPrefix = Resource Group naming prefix
--location            = Azure location to deploy to
--deploymentPrefix    = Prefix resource with this (dev or prod)
--steps               = Which steps to deploy (array of integers, explained further)
--prerequisiteRefresh = Upload\Reupload all the templates\DSC stuff
+Invoke-ArmDeployment function parameters rundown:  
+- subId               = SubscriptionId to which you are deploying  
+- resourceGroupPrefix = Resource Group naming prefix  
+- location            = Azure location to deploy to  
+- deploymentPrefix    = Prefix resource with this (dev or prod)  
+- steps               = Which steps to deploy (array of integers, explained further)  
+- prerequisiteRefresh = Upload\Reupload all the templates\DSC stuff
 
 Steps parameter is an array with the values 1 to 7 allowed. Each step correspond to deploying specific step in our workflow:
 
@@ -72,7 +72,7 @@ extensions are custom from the predefined pool
 os are custom from the predefined pool  
 vm's are registered to the azure automation (maybe configurations are assigned, not sure at this point)  
 every tier tied to ilb  
-every tier can be deployed into specific vnet\subnet
+every tier can be deployed into specific vnet\subnet  
 sql tier cannot be altered (except for vmCount, vmSize, diskCount, diskSize)
 
 a. OMS Log Analytics Extension    vm extension  
@@ -83,7 +83,7 @@ e. TrendMicro                     vm extension
 f. Qualys Virtual Scanner         agents (probably dsc?)  
 g. Threat manager extension       Script exists (TBI)  
 h. Network Watcher                vm extension  
-i. AD                             dsc resource "[xComputer]DomainJoin"
+i. AD                             dsc resource "[xComputer]DomainJoin"  
 j. disable local administrator    dsc resource "[User]DisableLocalAdmin"  
 
 ### Jumpbox   

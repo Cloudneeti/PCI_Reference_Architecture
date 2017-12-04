@@ -11,7 +11,9 @@
                     "buildingBlocksEndpoint": "https://raw.githubusercontent.com/AvyanConsultingCorp/PCI_Reference_Architecture/master/templates/buildingBlocks/",
                     "azureApplication": "ad-application-guid",
                     "azureApplicationServicePrincipal": "service-principal-guid",
-                    "keyVersion": "key-version-string"
+                    "keyVersion": "key-version-string",
+                    "certificateThumbprint": "certificate-thumbprint",
+                    "certificatePassword": "certificate-password"
                 },
                 "sql": {
                     "bacpacUri": "https://github.com/AvyanConsultingCorp/pci-paas-webapp-ase-sqldb-appgateway-keyvault-oms/raw/master/artifacts/ContosoPayments.bacpac",

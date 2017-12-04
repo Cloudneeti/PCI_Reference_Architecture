@@ -87,10 +87,10 @@
         }
 
         xDnsRecord TestRecord {
-            Name = "${deploymentPrefix}-sql-ag"
+            Name   = "${deploymentPrefix}-sql-ag"
             Target = $SqlAlwaysOnAvailabilityGroupListenerIp
-            Zone = $DomainName
-            Type = "ARecord"
+            Zone   = $DomainName
+            Type   = "ARecord"
             Ensure = "Present"
         }
     }

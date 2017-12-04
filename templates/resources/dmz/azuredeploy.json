@@ -239,7 +239,10 @@
             "location": "[parameters('environmentReference').deployment.location]",
             "type": "Microsoft.Network/publicIPAddresses",
             "properties": {
-                "publicIPAllocationMethod": "Static"
+                "publicIPAllocationMethod": "Static",
+                "dnsSettings": {
+                    "domainNameLabel": "[substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24)]"
+                }
             }
         },
         {

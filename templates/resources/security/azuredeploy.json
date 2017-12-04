@@ -90,9 +90,9 @@
             "location": "[parameters('environmentReference').deployment.location]",
             "type": "Microsoft.Compute/virtualMachines",
             "plan": {
+                "name": "dxxnbyol",
                 "publisher": "trendmicro",
-                "product": "deep-security-vm-byol",
-                "name": "dxxnbyol"
+                "product": "deep-security-vm-byol"
             },
             "properties": {
                 "hardwareProfile": {
@@ -202,8 +202,8 @@
             ],
             "plan": {
                 "name": "qvsa-23",
-                "product": "qualys-virtual-scanner-v23b",
-                "publisher": "qualysguard"
+                "publisher": "qualysguard",
+                "product": "qualys-virtual-scanner-v23b"
             },
             "properties": {
                 "hardwareProfile": {

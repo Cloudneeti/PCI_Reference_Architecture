@@ -29,6 +29,14 @@ function Orchestrate-ArmDeployment {
             ValueFromPipelineByPropertyName = $true,
             Position = 4)]
         [int[]]$steps = @(7),
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 5)]
+        [string]$crtPath,
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 6)]
+        [string]$crtPwd,
         [switch]$complete
     )
     $startTime = Get-Date
@@ -37,15 +45,19 @@ function Orchestrate-ArmDeployment {
     "Invoke-ArmDeployment -s {0} -r {1} -l '{2}' -d {3} -steps x,x,x -p" -f $subId, $resourceGroupPrefix, $location, $deploymentPrefix
     "To remove deployment completely use:"
     "Remove-ArmDeployment {0} {1} {2}" -f $resourceGroupPrefix, $deploymentPrefix, $subId
+    
     $hash = Get-StringHash (($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
     $invoker = @{
         resourceGroupPrefix = $resourceGroupPrefix
         subId               = $subId
         location            = $location
         deploymentPrefix    = $deploymentPrefix
+        crtPwd              = $crtPwd
+        crtPath             = $crtPath
     }
+    if (!$crtPath -and !$crtPwd) { $crtPath = "$solutionRoot\artifacts\cert.pfx"; $crtPwd = $hash }
 
-    Invoke-ArmDeployment @invoker -steps 2, 1 -prerequisiteRefresh | Out-Null
+    Invoke-ArmDeployment @invoker -steps 2, 1 -prerequisiteRefresh | Out-Null  
     Wait-ArmDeployment $hash 30
     if ( $complete.IsPresent ) {
         Invoke-ArmDeployment @invoker -steps 5, 4, 3, 6, 7 -ErrorAction Stop | Out-Null    
@@ -122,21 +134,24 @@ function Invoke-ArmDeployment {
 
     try {
         # Main routine block
+        Set-MarketPlaceTerms
         $deploymentHash = Get-StringHash (($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
         $kvContext = New-DeploymentContextKV $deploymentHash
         if ($prerequisiteRefresh) {
+            if (!$crtPath -and !$crtPwd -and ($crtPwd -ne $deploymentHash)) {
+                $thumb, $crtPwd = New-SelfSignedCert $deploymentHash $location
+            }
+            else {
+                $certificateObject = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+                $certificateObject.Import($crtPath, $crtPwd, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::DefaultKeySet)
+                $thumb = $certificateObject.Thumbprint
+                Copy-Item $crtPwd "$solutionRoot\artifacts\cert.pfx"
+            }
             $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupPrefix, $deploymentPrefix, $_) -join '-') -Location $location -Force }
             New-DeploymentContext $deploymentHash "$resourceGroupPrefix-$deploymentPrefix-operations" $location
-            # if (!$crtPath -and !$crtPwd) {
-            #     $crtPwd = Get-StringHash (($subId, $resourceGroupPrefix, $deploymentPrefix, (Get-Date).ToString()) -join '-')
-            #     $cert = New-SelfSignedCertificate -CertStoreLocation 'Cert:\LocalMachine\My' -DnsName ( "{0}.{1}.cloudapp.azure.com" -f 'bla-bla', $location )
-            #     Export-PfxCertificate -Cert ( 'Cert:\LocalMachine\My\' + $cert.Thumbprint ) -FilePath ( $solutionRoot + '\cert.txt' ) -Password ( ConvertTo-SecureString -Force -AsPlainText $crtPwd )
-            #     $fileContentBytes = Get-Content ( $solutionRoot + '\cert.txt' ) -Encoding Byte
-            #     [System.Convert]::ToBase64String($fileContentBytes) | Out-File ( $solutionRoot + '\cert.pfx' )
-            # }
         }
 
-        $deploymentData = Get-DeploymentData $deploymentHash $kvContext $resourceGroupPrefix $deploymentPrefix $location
+        $deploymentData = Get-DeploymentData $deploymentHash $kvContext $resourceGroupPrefix $deploymentPrefix $location $thumb $crtPwd
         foreach ($step in $steps) {
             $deploymentScriptblock = {
                 param(
@@ -154,7 +169,7 @@ function Invoke-ArmDeployment {
                     -TemplateParameterFile $pathParameters `
                     -Name $deploymentName `
                     -ErrorAction Stop | Out-Null
-    
+
                 if ($rgName -like "*operations") {
                     do {
                         # hack to wait until kv name resolves
@@ -185,7 +200,7 @@ function Invoke-ArmDeployment {
         $token = Get-Token
         $url = "https://management.azure.com/subscriptions/$subId/providers/microsoft.security/policies/default?api-version=2015-06-01-preview"
         $token, $url, $request | Out-Null
-        # $result = $result = Invoke-WebRequest -Uri $url -Method Put -Headers @{ Authorization = "Bearer $token"} -Body $request  -ContentType "application/json" -UseBasicParsing
+        # $result = $result = Invoke-WebRequest -Uri $url -Method Put -Headers @{ Authorization = "Bearer $token"} -Body $request -ContentType "application/json" -UseBasicParsing
         # if ($result.StatusCode -ne 200) {
         #     Write-Error "Security Center request failed"
         #     $result.content

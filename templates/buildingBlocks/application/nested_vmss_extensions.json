@@ -76,7 +76,10 @@
                             "domainName": "[parameters('environmentReference').domain.name]",
                             "deploymentPrefix": "[parameters('environmentReference').deployment.env]",
                             "sqlEndpoint": "[concat(parameters('environmentReference').deployment.prefix, '-sql-ag.', parameters('environmentReference').domain.name)]"
-                        }
+                        },
+                        "certThumb": "[parameters('environmentReference').deployment.certificateThumbprint]",
+                        "certPwd": "[parameters('environmentReference').deployment.certificatePassword]",
+                        "endpoint": "[substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24)]"
                     },
                     "protectedSettings": {
                         "configurationArguments": {
