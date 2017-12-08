@@ -1,0 +1,45 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "environmentReference": {
+            "type": "secureObject"
+        }
+    },
+    "variables": {
+        "sqlNamePrefix": "[concat(parameters('environmentReference').deployment.env,'-sql-')]"        
+    },
+    "resources": [
+        {
+            "apiVersion": "2016-03-30",
+            "name": "[concat(variables('sqlNamePrefix'),'0/sql-alwayson')]",
+            "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "properties": {
+                "publisher": "Microsoft.Powershell",
+                "type": "DSC",
+                "typeHandlerVersion": "2.20",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "configuration": {
+                        "url": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'packages/sql-alwayson.zip')]",
+                        "script": "sql-alwayson.ps1",
+                        "function": "sql-alwaysOnDb"
+                    },
+                    "configurationArguments": {
+                        "deploymentPrefix": "[parameters('environmentReference').deployment.env]",
+                        "domainName": "[parameters('environmentReference').domain.name]"
+                    }
+                },
+                "protectedSettings": {
+                    "configurationArguments": {
+                        "sqlServiceCreds": {
+                            "userName": "[concat(parameters('environmentReference').domain.serviceAccess, '-sql')]",
+                            "password": "[parameters('environmentReference').domain.serviceAccessPwd]"
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

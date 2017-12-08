@@ -407,15 +407,36 @@
 		},
 		{
 			"apiVersion": "2015-01-01",
+			"name": "[concat(parameters('environmentReference').deployment.env, '-sql-alwaysOnDb')]",
+			"type": "Microsoft.Resources/deployments",
+			"dependsOn": [
+				"extensionsLoop",
+				"[resourceId('Microsoft.Compute/virtualMachines/extensions', concat(variables('sqlNamePrefix'),'0'), 'sql-alwayson')]"
+			],
+			"properties": {
+				"mode": "Incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'application/nested_sql_alwayson.json')]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"environmentReference": {
+						"value": "[parameters('environmentReference')]"
+					}
+				}
+			}
+		},
+		{
+			"apiVersion": "2015-01-01",
 			"name": "[concat(parameters('environmentReference').deployment.env, 'vmss-', copyIndex())]",
 			"type": "Microsoft.Resources/deployments",
+			"dependsOn": [
+				"virtualMachineLoop"
+			],
 			"copy": {
 				"name": "vmssCopy",
 				"count": "[length(parameters('vmReference'))]"
 			},
-			"dependsOn": [
-				"virtualMachineLoop"
-			],
 			"properties": {
 				"mode": "Incremental",
 				"templateLink": {

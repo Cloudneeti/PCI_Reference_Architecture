@@ -1,10 +1,11 @@
-function Set-MarketPlaceTerms () {
+function Set-AzurePrerequisites () {
+    Get-AzureRmResourceProvider -ListAvailable | Where-Object { $_.RegistrationState -eq 'NotRegistered'} | Register-AzureRmResourceProvider
     Get-AzureRmMarketplaceTerms -Publisher alertlogic -Product alert-logic-tm -Name 202150001000 | Set-AzureRmMarketplaceTerms -Accept
     Get-AzureRmMarketplaceTerms -Publisher qualysguard -Product qualys-virtual-scanner-v23b -Name qvsa-23 | Set-AzureRmMarketplaceTerms -Accept
     Get-AzureRmMarketplaceTerms -Publisher trendmicro -Product deep-security-vm-byol -Name dxxnbyol | Set-AzureRmMarketplaceTerms -Accept
-    # Get-AzureRmMarketplaceTerms -Publisher cloudneeti -Product cloudneeti_enterprise -Name enterprise | Set-AzureRmMarketplaceTerms -Accept
+    Get-AzureRmMarketplaceTerms -Publisher barracudanetworks -Product barracuda-ng-firewall -Name byol | Set-AzureRmMarketplaceTerms -Accept
+    # Get-AzureRmMarketplaceTerms -Publisher cloudneeti -Product cloudneeti_enterprise -Name enterprise | Set-AzureRmMarketplaceTerms -Accept 
 }
-
 function Get-DeploymentData ($hash, $kvContext, $rgp, $dp, $loc, $crtthb, $crtpwd) {
     if ($steps -notcontains 1) {
         $key = Get-DeploymentDataKV ( "{0}-{1}-kv" -f $rgp, $dp )
@@ -23,7 +24,7 @@ function Get-DeploymentData ($hash, $kvContext, $rgp, $dp, $loc, $crtthb, $crtpw
     $parametersData.parameters.environmentReference.value.deployment.azureApplicationServicePrincipal = $kvContext[0]
     $parametersData.parameters.environmentReference.value.deployment.keyVersion = $key.Version
     $parametersData.parameters.environmentReference.value.deployment.certificateThumbprint = $crtthb
-    $parametersData.parameters.environmentReference.value.deployment.certificateThumbprint = $crtpwd
+    $parametersData.parameters.environmentReference.value.deployment.certificatePassword = $crtpwd
     ( $parametersData | ConvertTo-Json -Depth 10 ) -replace "\\u0027", "'" | Out-File $tmp
     $deploymentName, $tmp
 }
@@ -103,11 +104,11 @@ function New-DeploymentContextKV ($hash) {
 
 function New-SelfSignedCert ($hash, $loc) {
     $cert = New-SelfSignedCertificate -CertStoreLocation 'Cert:\LocalMachine\My' -DnsName ( "{0}.{1}.cloudapp.azure.com" -f $hash, $loc )
-    Export-PfxCertificate -Cert ( 'Cert:\LocalMachine\My\' + $cert.Thumbprint ) -FilePath "$solutionRoot\artifacts\cert.pfx" -Password ( ConvertTo-SecureString -Force -AsPlainText $hash )
+    Export-PfxCertificate -Cert ( 'Cert:\LocalMachine\My\' + $cert.Thumbprint ) -FilePath "$solutionRoot\artifacts\cert.pfx" -Password ( ConvertTo-SecureString -Force -AsPlainText $hash ) | Out-Null
     # $fileContentBytes = Get-Content ( $solutionRoot + '\cert.txt' ) -Encoding Byte
     # [System.Convert]::ToBase64String($fileContentBytes) | Out-File ( $solutionRoot + '\artifacts\cert.pfx' )
-    $cert.Thumbprint, $hash
-    $hash | Out-File "$solutionRoot\artifacts\cert.txt" -Force
+    $cert.Thumbprint
+    $hash
 }
 
 function Wait-ArmDeployment ($hash, $sleep) {

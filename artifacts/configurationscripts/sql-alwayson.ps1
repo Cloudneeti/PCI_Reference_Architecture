@@ -1,3 +1,36 @@
+configuration sql-alwaysOnDb {
+    Param (
+        [Parameter(Mandatory)]
+        [String]$deploymentPrefix,
+        [Parameter(Mandatory)]
+        [String]$DomainName,
+        [String]$DomainNetbiosName = (Get-NetBIOSName -DomainName $DomainName),
+
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$SQLServiceCreds,
+        [String]$dbName = "ContosoClinic"
+    )
+
+    Import-DscResource -ModuleName xSQLServer
+    [System.Management.Automation.PSCredential]$SQLCreds = New-Object System.Management.Automation.PSCredential ("${DomainNetbiosName}\$($SQLServiceCreds.UserName)", $SQLServiceCreds.Password)
+    Node localhost {
+        LocalConfigurationManager {
+            ConfigurationMode  = "ApplyOnly"
+            RebootNodeIfNeeded = $true
+        }
+        xSQLServerAlwaysOnAvailabilityGroupDatabaseMembership DatabaseToAlwaysOn {
+            AvailabilityGroupName = "${deploymentPrefix}-sql-ag"
+            BackupPath            = "\\${deploymentPrefix}-sql-0\setup\"
+            DatabaseName          = $dbName
+            SQLServer             = $env:COMPUTERNAME
+            SQLInstanceName       = "MSSQLSERVER"
+    
+            Ensure                = "Present"
+            PsDscRunAsCredential  = $SQLCreds
+        }
+    }
+}
+
 configuration sql-primary {
     Param (
         # Get deployment details
@@ -249,17 +282,6 @@ configuration sql-primary {
             DependsOn            = "[xSQLServerAlwaysOnAvailabilityGroup]AvailabilityGroup"
             Ensure               = "Present"
             PsDscRunAsCredential = $DomainCreds
-        }
-        xSQLServerAlwaysOnAvailabilityGroupDatabaseMembership DatabaseToAlwaysOn {
-            AvailabilityGroupName = "${deploymentPrefix}-sql-ag"
-            BackupPath            = "\\${deploymentPrefix}-sql-0\setup\"
-            DatabaseName          = $dbName
-            SQLServer             = $env:COMPUTERNAME
-            SQLInstanceName       = "MSSQLSERVER"
-
-            DependsOn             = @("[xDatabase]DeployBacPac", "[xSQLServerAvailabilityGroupListener]AvailabilityGroupListener", "[xSmbShare]MySMBShare" )
-            Ensure                = "Present"
-            PsDscRunAsCredential  = $SQLCreds
         }
     }
 }

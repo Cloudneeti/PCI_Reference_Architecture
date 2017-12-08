@@ -20,12 +20,6 @@ Configuration iis-webdeploy {
     Import-DscResource -ModuleName PSDesiredStateConfiguration, xPSDesiredStateConfiguration, xNetworking, xWebDeploy, xComputerManagement, xWebAdministration
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainNetbiosName}\$($Admincreds.UserName)", $Admincreds.Password)
 
-    $features = @( "Web-Server", "Web-WebServer", "Web-Common-Http", "Web-Default-Doc", "Web-Dir-Browsing", "Web-Http-Errors", "Web-Static-Content", "NET-Framework-Core",  
-        "Web-Http-Redirect", "Web-Health", "Web-Http-Logging", "Web-Log-Libraries", "Web-Request-Monitor", "Web-Http-Tracing", "Web-Performance", "Web-Mgmt-Service",
-        "Web-Stat-Compression", "Web-Dyn-Compression", "Web-Security", "Web-Filtering", "Web-IP-Security", "Web-Windows-Auth", "Web-App-Dev", "Telnet-Client",
-        "Web-Net-Ext45", "Web-Asp-Net45", "Web-CGI", "Web-ISAPI-Ext", "Web-ISAPI-Filter", "Web-WebSockets", "Web-Mgmt-Tools", "Web-Mgmt-Console",
-        "NET-Framework-45-Features", "NET-Framework-45-Core", "NET-Framework-45-ASPNET", "NET-WCF-Services45", "NET-WCF-HTTP-Activation45" )
-
     Node localhost {
         LocalConfigurationManager {
             ConfigurationMode  = "ApplyOnly"
@@ -33,7 +27,9 @@ Configuration iis-webdeploy {
         }
 
         WindowsFeatureSet Prereqs {
-            Name   = $features
+            Name   = @( "Web-Server", "Web-WebServer", "Web-Common-Http", "Web-Default-Doc", "Web-Dir-Browsing", "Web-Http-Errors", "Web-Static-Content", "Web-Health", "Web-Http-Logging", "Web-Performance",
+                "Web-Stat-Compression", "Web-Security", "Web-Filtering", "Web-App-Dev", "Web-Net-Ext45", "Web-Asp-Net45", "Web-ISAPI-Ext", "Web-ISAPI-Filter", "Web-Mgmt-Tools",
+                "NET-Framework-45-Features", "NET-Framework-45-Core", "NET-Framework-45-ASPNET", "NET-WCF-Services45", "NET-WCF-TCP-PortSharing45" )
             Source = "c:\WinSxs"
 
             Ensure = "Present"
@@ -50,85 +46,43 @@ Configuration iis-webdeploy {
             
             Ensure      = "Present"
         }
-        File SetupFolder {
+        File setupFolder {
             DestinationPath = "C:\setup"
             Type            = "Directory"
             
             Ensure          = "Present"
         }
+        File websiteFolder {
+            DestinationPath = "C:\setup\website"
+            Type            = "Directory"
+            
+            DependsOn       = "[File]setupFolder"
+            Ensure          = "Present"
+        }
         xRemoteFile packageDL {
             DestinationPath = "C:\setup\package.zip"
-            MatchSource     = $true
             Uri             = $packageUri
             
-            DependsOn       = "[File]SetupFolder"
+            DependsOn       = "[File]setupFolder"
         }        
         xRemoteFile webdeployDL {
             DestinationPath = "C:\setup\webdeploy.msi"
-            MatchSource     = $true
             Uri             = $webDeployUri
             
-            DependsOn       = "[File]SetupFolder"
+            DependsOn       = "[File]setupFolder"
         }
         xRemoteFile certificate {
             DestinationPath = "C:\setup\cert.pfx"
-            MatchSource     = $true
-            Uri             = "https://{0}.blob.core.windows.net/misc/cert.pfx" -f $endpoint
+            Uri             = "https://$endpoint.blob.core.windows.net/misc/cert.pfx"
             
-            DependsOn       = "[File]SetupFolder"
-        }
-        xWebAppPool applicationPool {
-            Credential   = $DomainCreds
-            Name         = 'DefaultAppPool'
-            IdentityType = 'SpecificUser'
-            State        = 'Started'
-            
-            Ensure       = 'Present'
+            DependsOn       = "[File]setupFolder"
         }
         script importCertificate {
             GetScript  = { return @{ "Result" = "Import Certificate" } }
             TestScript = { $false }
             SetScript  = { Import-PfxCertificate -FilePath C:\setup\cert.pfx -CertStoreLocation Cert:\LocalMachine\My -Password ( ConvertTo-SecureString -Force -AsPlainText $using:certPwd ) }
-        }
-        xWebsite website {
-            Name   = "Default Web Site"
-            State  = "Started"
-            Ensure = "Present"
-            
-            BindingInfo     = MSFT_xWebBindingInformation {
-                Protocol              = 'https'
-                Port                  = '443'
-                CertificateStoreName  = 'MY'
-                CertificateThumbprint = $certThumb
-                HostName              = '*'
-                IPAddress             = '*'
-                SSLFlags              = '0'
-            }
-        }
-        xWebDeploy Deploy {
-            Destination = "Default Web Site"
-            SourcePath  = "C:\setup\package.zip"
-            
-            DependsOn   = @( "[xRemoteFile]webdeployDL", "[xRemoteFile]packageDL" )
-            Ensure      = "Present"
-        }
-        Script webConfig {
-            GetScript  = { return @{ "Result" = "Update web.config" } }
-            TestScript = { $false }
-            SetScript  = { 
-                $path = 'c:\inetpub\wwwroot\web.config'
-                [xml]$webCfg = Get-Content $path 
-                $webCfg.configuration.ChildNodes | Where-Object { $_.Name -eq 'connectionStrings' } | ForEach-Object { $_.ParentNode.RemoveChild($_) }
-                [xml]$myXml = @"
-<connectionStrings>
-    <add name="DefaultConnection" connectionString="Data Source=tcp:{0},1433;Initial Catalog=ContosoClinic;Integrated Security=True;Column Encryption Setting=Enabled;Encrypt=True;TrustServerCertificate=False;Connection Timeout=300;" providerName="System.Data.SqlClient" />
-</connectionStrings>
-"@ -f $using:sqlEndpoint
-                $webCFG.configuration.AppendChild($webCFG.ImportNode($myXML.connectionStrings, $true))
-                $webCFG.Save($path)
-            }
-
-            DependsOn  = "[xWebDeploy]Deploy"
+        
+            DependsOn  = "[xRemoteFile]certificate"
         }
 
         xComputer DomainJoin {
@@ -142,6 +96,58 @@ Configuration iis-webdeploy {
 
             DependsOn = "[xComputer]DomainJoin"
             Ensure    = "Present"
+        }
+
+        xWebAppPool applicationPool {
+            Credential   = $DomainCreds
+            Name         = 'DefaultAppPool'
+            IdentityType = 'SpecificUser'
+            State        = 'Started'
+            
+            DependsOn    = @( "[WindowsFeatureSet]Prereqs", "[xComputer]DomainJoin" )
+            Ensure       = 'Present'
+        }
+        xWebsite website {
+            Name         = "Default Web Site"
+            State        = "Started"
+            PhysicalPath = "c:\setup\website"
+            BindingInfo  = MSFT_xWebBindingInformation {
+                Protocol              = 'https'
+                Port                  = '443'
+                CertificateStoreName  = 'MY'
+                CertificateThumbprint = $certThumb
+                HostName              = '*'
+                IPAddress             = '*'
+                SSLFlags              = '0'
+            }
+
+            DependsOn    = @( "[script]importCertificate", "[xWebAppPool]applicationPool", "[File]websiteFolder" )
+            Ensure       = "Present"
+        }
+        xWebDeploy Deploy {
+            Destination = "Default Web Site"
+            SourcePath  = "C:\setup\package.zip"
+            
+            DependsOn   = @( "[xRemoteFile]webdeployDL", "[xRemoteFile]packageDL", "[xWebsite]website" )
+            Ensure      = "Present"
+        }
+        Script webConfig {
+            GetScript  = { return @{ "Result" = "Update web.config" } }
+            TestScript = { $false }
+            SetScript  = { 
+                $path = 'c:\setup\website\web.config'
+                [xml]$webCfg = Get-Content $path 
+                $webCfg.configuration.ChildNodes | Where-Object { $_.Name -eq 'connectionStrings' } | ForEach-Object { $_.ParentNode.RemoveChild($_) }
+                [xml]$myXml = @"
+<connectionStrings>
+    <add name="DefaultConnection" connectionString="Data Source=tcp:{0},1433;Initial Catalog=ContosoClinic;Integrated Security=True;Column Encryption Setting=Enabled;Encrypt=True;TrustServerCertificate=False;Connection Timeout=300;" providerName="System.Data.SqlClient" />
+</connectionStrings>
+"@ -f $using:sqlEndpoint
+                $webCFG.configuration.AppendChild($webCFG.ImportNode($myXML.connectionStrings, $true))
+                $webCFG.Save($path)
+            }
+
+            DependsOn  = "[xWebDeploy]Deploy"
         }
     }
 }

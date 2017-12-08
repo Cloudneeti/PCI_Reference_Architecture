@@ -122,7 +122,6 @@
                 "capacity": "[parameters('bossObject').count]"
             },
             "properties": {
-                "overprovision": false,
                 "upgradePolicy": {
                     "mode": "Manual"
                 },

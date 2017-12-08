@@ -75,18 +75,18 @@
                         "configurationArguments": {
                             "domainName": "[parameters('environmentReference').domain.name]",
                             "deploymentPrefix": "[parameters('environmentReference').deployment.env]",
-                            "sqlEndpoint": "[concat(parameters('environmentReference').deployment.prefix, '-sql-ag.', parameters('environmentReference').domain.name)]"
-                        },
-                        "certThumb": "[parameters('environmentReference').deployment.certificateThumbprint]",
-                        "certPwd": "[parameters('environmentReference').deployment.certificatePassword]",
-                        "endpoint": "[substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24)]"
+                            "sqlEndpoint": "[concat(parameters('environmentReference').deployment.env, '-sql-ag.', parameters('environmentReference').domain.name)]",
+                            "certThumb": "[parameters('environmentReference').deployment.certificateThumbprint]",
+                            "endpoint": "[substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24)]"
+                        }
                     },
                     "protectedSettings": {
                         "configurationArguments": {
                             "adminCreds": {
                                 "userName": "[parameters('environmentReference').domain.serviceAccess]",
                                 "password": "[parameters('environmentReference').domain.serviceAccessPwd]"
-                            }
+                            },
+                            "certPwd": "[parameters('environmentReference').deployment.certificatePassword]"
                         }
                     }
                 }

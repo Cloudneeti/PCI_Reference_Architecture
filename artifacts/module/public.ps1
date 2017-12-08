@@ -1,7 +1,6 @@
 function Orchestrate-ArmDeployment {
     [CmdletBinding()]
-    Param
-    (
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipelineByPropertyName = $true,
             Position = 0)]
@@ -42,11 +41,12 @@ function Orchestrate-ArmDeployment {
     $startTime = Get-Date
     "Azure PCI IaaS deployment routine started: {0}." -f $startTime.ToShortTimeString()
     "To rerun steps use:"
-    "Invoke-ArmDeployment -s {0} -r {1} -l '{2}' -d {3} -steps x,x,x -p" -f $subId, $resourceGroupPrefix, $location, $deploymentPrefix
+    "Invoke-ArmDeployment -s {0} -r {1} -l '{2}' -d {3} -steps 5,6,7 -p" -f $subId, $resourceGroupPrefix, $location, $deploymentPrefix
     "To remove deployment completely use:"
     "Remove-ArmDeployment {0} {1} {2}" -f $resourceGroupPrefix, $deploymentPrefix, $subId
     
     $hash = Get-StringHash (($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
+    if (!$crtPath -and !$crtPwd) { $crtPath = "$solutionRoot\artifacts\cert.pfx"; $crtPwd = $hash }
     $invoker = @{
         resourceGroupPrefix = $resourceGroupPrefix
         subId               = $subId
@@ -55,28 +55,24 @@ function Orchestrate-ArmDeployment {
         crtPwd              = $crtPwd
         crtPath             = $crtPath
     }
-    if (!$crtPath -and !$crtPwd) { $crtPath = "$solutionRoot\artifacts\cert.pfx"; $crtPwd = $hash }
 
     Invoke-ArmDeployment @invoker -steps 2, 1 -prerequisiteRefresh | Out-Null  
     Wait-ArmDeployment $hash 30
     if ( $complete.IsPresent ) {
-        Invoke-ArmDeployment @invoker -steps 5, 4, 3, 6, 7 -ErrorAction Stop | Out-Null    
+        Invoke-ArmDeployment @invoker -ErrorAction Stop -steps 5, 4, 7 | Out-Null # 3, 6,     
     }
     else {
-        "Starting AD and sleeping for 5 minutes afterwards."
-        Invoke-ArmDeployment @invoker -steps 5 -ErrorAction Stop | Out-Null
-        Start-Sleep 300
         "Starting steps: {0}." -f ($steps -join ", ")
-        Invoke-ArmDeployment @invoker -steps $steps -ErrorAction Stop | Out-Null
+        Invoke-ArmDeployment @invoker -ErrorAction Stop -steps $steps | Out-Null
     }
     Wait-ArmDeployment $hash 120
     $resultTime = (Get-Date) - $startTime
     "All went well, giving back control: {0}. ( total time: {1}:{2}. )" -f (Get-Date -f "HH:mm"), $resultTime.Minutes, $resultTime.Seconds
 }
+
 function Invoke-ArmDeployment {
     [CmdletBinding()]
-    Param
-    (
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipelineByPropertyName = $true,
             Position = 0)]
@@ -120,6 +116,7 @@ function Invoke-ArmDeployment {
     )
 
     Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'): Login to your Azure account if prompted"
+    $deploymentHash = Get-StringHash (($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
     Try {
         Set-AzureRmContext -SubscriptionId $subId | Out-Null
     }
@@ -134,27 +131,25 @@ function Invoke-ArmDeployment {
 
     try {
         # Main routine block
-        Set-MarketPlaceTerms
-        $deploymentHash = Get-StringHash (($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
         $kvContext = New-DeploymentContextKV $deploymentHash
         if ($prerequisiteRefresh) {
-            if (!$crtPath -and !$crtPwd -and ($crtPwd -ne $deploymentHash)) {
+            Set-AzurePrerequisites
+            if ( !$crtPath -and !$crtPwd -or ($crtPath -eq "$solutionRoot\artifacts\cert.pfx" -and $crtPwd -eq $deploymentHash -and $steps -contains 1)) {
                 $thumb, $crtPwd = New-SelfSignedCert $deploymentHash $location
             }
             else {
                 $certificateObject = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
                 $certificateObject.Import($crtPath, $crtPwd, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::DefaultKeySet)
                 $thumb = $certificateObject.Thumbprint
-                Copy-Item $crtPwd "$solutionRoot\artifacts\cert.pfx"
             }
             $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupPrefix, $deploymentPrefix, $_) -join '-') -Location $location -Force }
             New-DeploymentContext $deploymentHash "$resourceGroupPrefix-$deploymentPrefix-operations" $location
         }
-
         $deploymentData = Get-DeploymentData $deploymentHash $kvContext $resourceGroupPrefix $deploymentPrefix $location $thumb $crtPwd
+
         foreach ($step in $steps) {
             $deploymentScriptblock = {
-                param(
+                Param(
                     $rgName,
                     $pathTemplate,
                     $pathParameters,
@@ -207,6 +202,7 @@ function Invoke-ArmDeployment {
         # }
     }
     catch {
+        foreach ($step in $steps) { $deployments.($step) }
         Write-Error $_
         if ($env:destroy) {
             Remove-Item $deploymentData[1]
@@ -218,13 +214,15 @@ function Invoke-ArmDeployment {
 function Remove-ArmDeployment ($rg, $dp, $subId) {
     $hash = Get-StringHash(($subId, $rg, $dp) -join '-')
     Get-AzureRmADApplication -DisplayNameStartWith $hash -ErrorAction Stop | Remove-AzureRmADApplication -Force
+    Remove-Item -Path "$solutionRoot\artifacts\cert.pfx"
     $components | ForEach-Object {
         $deploymentScriptblock = {
-            param(
+            Param (
                 $rgName,
                 $subId,
                 $component
             )
+            Get-Random -Maximum 15 | Start-Sleep
             Set-AzureRmContext -SubscriptionId $subId
             if ($component -eq 'networking') {
                 Start-Sleep -Seconds 210

@@ -86,7 +86,7 @@
             DependsOn  = "[xPendingReboot]RebootAfterPromotion"
         }
 
-        xDnsRecord TestRecord {
+        xDnsRecord sqlAlwaysOnEndpoint {
             Name   = "${deploymentPrefix}-sql-ag"
             Target = $SqlAlwaysOnAvailabilityGroupListenerIp
             Zone   = $DomainName
