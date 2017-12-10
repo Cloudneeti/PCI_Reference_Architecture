@@ -241,7 +241,7 @@
             "properties": {
                 "publicIPAllocationMethod": "Static",
                 "dnsSettings": {
-                    "domainNameLabel": "[substring(parameters('environmentReference').deployment.buildingBlocksEndpoint, 8, 24)]"
+                    "domainNameLabel": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]"
                 }
             }
         },

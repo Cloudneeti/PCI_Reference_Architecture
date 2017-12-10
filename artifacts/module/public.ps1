@@ -45,7 +45,7 @@ function Orchestrate-ArmDeployment {
     "To remove deployment completely use:"
     "Remove-ArmDeployment {0} {1} {2}" -f $resourceGroupPrefix, $deploymentPrefix, $subId
     
-    $hash = Get-StringHash (($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
+    $hash = Get-StringHash(($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
     if (!$crtPath -and !$crtPwd) { $crtPath = "$solutionRoot\artifacts\cert.pfx"; $crtPwd = $hash }
     $invoker = @{
         resourceGroupPrefix = $resourceGroupPrefix
@@ -55,19 +55,19 @@ function Orchestrate-ArmDeployment {
         crtPwd              = $crtPwd
         crtPath             = $crtPath
     }
-
+    
+    "Starting Paas and Networking"
     Invoke-ArmDeployment @invoker -steps 2, 1 -prerequisiteRefresh | Out-Null  
-    Wait-ArmDeployment $hash 30
-    if ( $complete.IsPresent ) {
-        Invoke-ArmDeployment @invoker -ErrorAction Stop -steps 5, 4, 7 | Out-Null # 3, 6,     
-    }
-    else {
-        "Starting steps: {0}." -f ($steps -join ", ")
-        Invoke-ArmDeployment @invoker -ErrorAction Stop -steps $steps | Out-Null
-    }
-    Wait-ArmDeployment $hash 120
+    Wait-ArmDeployment $hash 60
+
+    if ( $complete.IsPresent ) { $steps = 5, 4, 3, 6, 7 }
+
+    "Starting steps: {0}" -f ($steps -join ", ")
+    Invoke-ArmDeployment @invoker -ErrorAction Stop -steps $steps | Out-Null
+    Wait-ArmDeployment $hash 240
+    
     $resultTime = (Get-Date) - $startTime
-    "All went well, giving back control: {0}. ( total time: {1}:{2}. )" -f (Get-Date -f "HH:mm"), $resultTime.Minutes, $resultTime.Seconds
+    "All went well, giving back control: {0} ( total time: {1}:{2} )" -f (Get-Date -f "HH:mm"), $resultTime.Minutes, $resultTime.Seconds
 }
 
 function Invoke-ArmDeployment {
@@ -116,7 +116,7 @@ function Invoke-ArmDeployment {
     )
 
     Write-Output "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'): Login to your Azure account if prompted"
-    $deploymentHash = Get-StringHash (($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
+    $deploymentHash = Get-StringHash(($subId, $resourceGroupPrefix, $deploymentPrefix) -join '-')
     Try {
         Set-AzureRmContext -SubscriptionId $subId | Out-Null
     }
@@ -129,22 +129,21 @@ function Invoke-ArmDeployment {
         return
     }
 
-    try {
-        # Main routine block
-        $kvContext = New-DeploymentContextKV $deploymentHash
+    try { # Main routine block
+        if ( !$crtPath -and !$crtPwd -or ($crtPath -eq "$solutionRoot\artifacts\cert.pfx" -and $crtPwd -eq $deploymentHash -and $steps -contains 1)) {
+            $thumb, $crtPwd = New-SelfSignedCert ($resourceGroupPrefix + '-' + $deploymentPrefix) $location $deploymentHash
+        }
+        else {
+            $certificateObject = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+            $certificateObject.Import($crtPath, $crtPwd, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::DefaultKeySet)
+            $thumb = $certificateObject.Thumbprint
+        }
         if ($prerequisiteRefresh) {
             Set-AzurePrerequisites
-            if ( !$crtPath -and !$crtPwd -or ($crtPath -eq "$solutionRoot\artifacts\cert.pfx" -and $crtPwd -eq $deploymentHash -and $steps -contains 1)) {
-                $thumb, $crtPwd = New-SelfSignedCert $deploymentHash $location
-            }
-            else {
-                $certificateObject = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
-                $certificateObject.Import($crtPath, $crtPwd, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::DefaultKeySet)
-                $thumb = $certificateObject.Thumbprint
-            }
             $components | ForEach-Object { New-AzureRmResourceGroup -Name (($resourceGroupPrefix, $deploymentPrefix, $_) -join '-') -Location $location -Force }
             New-DeploymentContext $deploymentHash "$resourceGroupPrefix-$deploymentPrefix-operations" $location
         }
+        $kvContext = New-DeploymentContextKV $deploymentHash
         $deploymentData = Get-DeploymentData $deploymentHash $kvContext $resourceGroupPrefix $deploymentPrefix $location $thumb $crtPwd
 
         foreach ($step in $steps) {
@@ -166,8 +165,7 @@ function Invoke-ArmDeployment {
                     -ErrorAction Stop | Out-Null
 
                 if ($rgName -like "*operations") {
-                    do {
-                        # hack to wait until kv name resolves
+                    do { # hack to wait until kv name resolves
                         $noKey = $noPermissions = $null
                         $user = ( Get-AzureRmSubscription | Where-Object id -eq $subId ).ExtendedProperties.Account
                         if ($user -like '*@*') {
@@ -189,17 +187,12 @@ function Invoke-ArmDeployment {
 
             Start-job -Name "create-$step-$deploymentHash" -ScriptBlock $deploymentScriptblock -ArgumentList (($resourceGroupPrefix, $deploymentPrefix, ($deployments.$step).rg) -join '-'), `
                 "$solutionRoot\templates\resources\$(($deployments.$step).name)\azuredeploy.json", $deploymentData[1], (($deploymentData[0], ($deployments.$step).name) -join '-'), $subId
+            Start-Sleep 15
             Write-Host ("Started Job {0}" -f ($deployments.$step).name) -ForegroundColor Yellow
         }
 
-        $token = Get-Token
-        $url = "https://management.azure.com/subscriptions/$subId/providers/microsoft.security/policies/default?api-version=2015-06-01-preview"
-        $token, $url, $request | Out-Null
-        # $result = $result = Invoke-WebRequest -Uri $url -Method Put -Headers @{ Authorization = "Bearer $token"} -Body $request -ContentType "application/json" -UseBasicParsing
-        # if ($result.StatusCode -ne 200) {
-        #     Write-Error "Security Center request failed"
-        #     $result.content
-        # }
+        $asc = Set-ASCPolicy -PolicyName default -JSON ( Build-AscPolicy -PolicyName Default -DataCollection On -SecurityContactEmail 'hello@world.com' )
+        if ( $asc -ne 'OK' ) { "Azure Security Center configuration failed."}
     }
     catch {
         foreach ($step in $steps) { $deployments.($step) }
@@ -214,7 +207,7 @@ function Invoke-ArmDeployment {
 function Remove-ArmDeployment ($rg, $dp, $subId) {
     $hash = Get-StringHash(($subId, $rg, $dp) -join '-')
     Get-AzureRmADApplication -DisplayNameStartWith $hash -ErrorAction Stop | Remove-AzureRmADApplication -Force
-    Remove-Item -Path "$solutionRoot\artifacts\cert.pfx"
+    Remove-Item -Path "$solutionRoot\artifacts\cert.pfx" -ErrorAction SilentlyContinue
     $components | ForEach-Object {
         $deploymentScriptblock = {
             Param (

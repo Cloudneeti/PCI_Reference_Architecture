@@ -57,6 +57,18 @@
             }
         },
         {
+            "apiVersion": "2017-06-01",
+            "name": "[concat(parameters('environmentReference').deployment.env, '-jumpbox-ip')]",
+            "location": "[parameters('environmentReference').deployment.location]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "properties": {
+                "publicIPAllocationMethod": "Static",
+                "dnsSettings": {
+                    "domainNameLabel": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-jumpbox')]"
+                }
+            }
+        },
+        {
             "apiVersion": "2016-04-30-preview",
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[concat(parameters('environmentReference').deployment.env, '-', parameters('environmentReference').security.jumpbox, '-VM')]",

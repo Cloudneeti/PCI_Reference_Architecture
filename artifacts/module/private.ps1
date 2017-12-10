@@ -82,7 +82,7 @@ function New-DeploymentContext ($hash, $rg, $loc) {
         Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container 'packages' -File $_.FullName -Force -ErrorAction Stop | Out-Null
         Write-Output "Uploaded $($_.FullName) to $($StorageAccount.StorageAccountName)."
     }
-    'artifacts\sqlScripts\tde.sql', 'artifacts\cert.pfx' | ForEach-Object {
+    'artifacts\sqlScripts\tde.sql', 'artifacts\cert.pfx', 'artifacts\customScript.ps1' | ForEach-Object {
         $File = Get-ChildItem "$solutionRoot\$PSItem"
         Set-AzureStorageBlobContent -Context $StorageAccount.Context -Container 'misc' -File $File.FullName -Force -ErrorAction Stop | Out-Null
         Write-Output "Uploaded $($File.FullName) to $($StorageAccount.StorageAccountName)."
@@ -102,13 +102,13 @@ function New-DeploymentContextKV ($hash) {
     @( $sp.Id.Guid, $app.ApplicationId.Guid )
 }
 
-function New-SelfSignedCert ($hash, $loc) {
-    $cert = New-SelfSignedCertificate -CertStoreLocation 'Cert:\LocalMachine\My' -DnsName ( "{0}.{1}.cloudapp.azure.com" -f $hash, $loc )
-    Export-PfxCertificate -Cert ( 'Cert:\LocalMachine\My\' + $cert.Thumbprint ) -FilePath "$solutionRoot\artifacts\cert.pfx" -Password ( ConvertTo-SecureString -Force -AsPlainText $hash ) | Out-Null
+function New-SelfSignedCert ($dnsName, $loc, $crtPwd) {
+    $cert = New-SelfSignedCertificate -CertStoreLocation 'Cert:\LocalMachine\My' -DnsName ( "{0}.{1}.cloudapp.azure.com" -f $dnsName, ( $loc -replace ' ','' ) )
+    Export-PfxCertificate -Cert ( 'Cert:\LocalMachine\My\' + $cert.Thumbprint ) -FilePath "$solutionRoot\artifacts\cert.pfx" -Password ( ConvertTo-SecureString -Force -AsPlainText $crtPwd ) | Out-Null
     # $fileContentBytes = Get-Content ( $solutionRoot + '\cert.txt' ) -Encoding Byte
     # [System.Convert]::ToBase64String($fileContentBytes) | Out-File ( $solutionRoot + '\artifacts\cert.pfx' )
     $cert.Thumbprint
-    $hash
+    $crtPwd
 }
 
 function Wait-ArmDeployment ($hash, $sleep) {

@@ -112,6 +112,18 @@
                 }
             }
         },
+        "extraExtensions": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.8",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+                "fileUris": [
+                    "[concat(parameters('environmentReference').deployment.buildingBlocksEndpoint, 'misc/customScript.ps1')]"
+                ],
+                "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File customScript.ps1"
+            }
+        },
         "paasPrefix": "[concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env)]",
         "kvUri": "[concat('https://', variables('paasPrefix'), '-kv.vault.azure.net/')]",
         "kvId": "[resourceId(concat(parameters('environmentReference').deployment.prefix, '-', parameters('environmentReference').deployment.env, '-operations'), 'Microsoft.KeyVault/vaults', concat(variables('paasPrefix'), '-kv'))]",
